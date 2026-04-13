@@ -1,0 +1,27 @@
+# Environment files — NEVER commit secrets
+.env
+.env.local
+.env*.local
+.env.production
+.env.development
+
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Capacitor build output (ios/android are generated from source + out/)
+ios/App/App/public/
+ios/App/build/
+ios/App/Pods/
+ios/App/DerivedData/
+ios/.DS_Store
+android/app/build/
+android/.gradle/
+
+# Misc
+.DS_Store
+*.log
+.vercel
