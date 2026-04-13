@@ -51,7 +51,7 @@ async function signInWithOAuth(provider) {
   const redirectTo = isNativePlatform()
     ? "com.pivottraining.courtiq://login-callback"
     : typeof window !== "undefined"
-    ? `${window.location.origin}/auth/callback`
+    ? `${window.location.origin}/login`
     : "";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
