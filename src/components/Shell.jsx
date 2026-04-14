@@ -22,8 +22,8 @@ import { signOutUser } from "@/lib/firebase";
 
 const TITLES = {
   home: null, // show logo instead
-  train: "Track Stats",
-  gametime: "Gametime",
+  train: "Drills",
+  gametime: "Drills",
   skills: "Skills",
   iq: "My IQ",
   shots: "Sessions",
@@ -31,10 +31,11 @@ const TITLES = {
   journal: "Journal",
   gamelog: "Game Log",
   "pro-upgrade": "Court IQ Pro",
+  "teamiq-upgrade": "Team IQ",
 };
 
 export default function Shell() {
-  const { screen, setScreen: navTo, player, refreshData, isPro } = useApp();
+  const { screen, setScreen: navTo, player, refreshData, isPro, isTeamIQ } = useApp();
   const scrollRef = useRef(null);
   const [showLogger, setShowLogger] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -96,7 +97,7 @@ export default function Shell() {
   const renderScreen = () => {
     switch (displayScreen) {
       case "home": return <HomeDashboard />;
-      case "train": return <TrainScreen />;
+      case "train":
       case "gametime": return <TrainScreen />;
       case "skills": return <SkillsScreen />;
       case "iq": return isPro ? <IQScreen /> : <ProUpgradeScreen featureName="Advanced IQ & Radar Chart" />;
@@ -105,9 +106,13 @@ export default function Shell() {
       case "journal": return <JournalScreen />;
       case "gamelog": return <GameLogScreen />;
       case "pro-upgrade": return <ProUpgradeScreen />;
+      case "teamiq-upgrade": return <ProUpgradeScreen teamMode />;
       default: return <HomeDashboard />;
     }
   };
+
+  // Hide FAB on My IQ screen — it's analytics-only, not a place to start a game
+  const showFab = displayScreen !== "iq";
 
   return (
     <div style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -116,10 +121,10 @@ export default function Shell() {
         {/* ═══ HEADER ═══ */}
         <header style={{
           position: "sticky", top: 0, zIndex: 50,
-          background: isPro ? "#0A2A1F" : "var(--color-bg)",
+          background: isTeamIQ ? "#0F0A2A" : isPro ? "#0A2A1F" : "var(--color-bg)",
           paddingTop: "max(12px, env(safe-area-inset-top, 12px))",
           paddingLeft: 20, paddingRight: 20, paddingBottom: 8,
-          borderBottom: isPro ? "1px solid rgba(34,197,94,0.2)" : "1px solid var(--color-border)",
+          borderBottom: isTeamIQ ? "1px solid rgba(139,92,246,0.25)" : isPro ? "1px solid rgba(34,197,94,0.2)" : "1px solid var(--color-border)",
           transition: "background 0.4s ease",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -140,41 +145,33 @@ export default function Shell() {
                 {isHome ? (
                   /* Greeting on home — logo moved to dashboard */
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: isPro ? "#22C55E" : "var(--color-text)", letterSpacing: -0.3 }}>Court IQ</span>
-                    {isPro && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 800, color: "#22C55E",
-                        background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
-                        borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase",
-                      }}>
-                        PRO
-                      </span>
-                    )}
+                    <span style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : isPro ? "#22C55E" : "var(--color-text)", letterSpacing: -0.3 }}>Court IQ</span>
+                    {isTeamIQ ? (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>TEAM</span>
+                    ) : isPro ? (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: "#22C55E", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>PRO</span>
+                    ) : null}
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <h1 style={{ fontSize: 18, fontWeight: 800, color: isPro ? "#22C55E" : "var(--color-text)", margin: 0, letterSpacing: -0.3 }}>
+                    <h1 style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : isPro ? "#22C55E" : "var(--color-text)", margin: 0, letterSpacing: -0.3 }}>
                       {TITLES[screen] || "Court IQ"}
                     </h1>
-                    {isPro && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 800, color: "#22C55E",
-                        background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)",
-                        borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase",
-                      }}>
-                        PRO
-                      </span>
-                    )}
+                    {isTeamIQ ? (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>TEAM</span>
+                    ) : isPro ? (
+                      <span style={{ fontSize: 9, fontWeight: 800, color: "#22C55E", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>PRO</span>
+                    ) : null}
                   </div>
                 )}
                 {isHome && player && (
                   <button onClick={() => setShowSwitcher(true)} style={{
-                    fontSize: 12, color: isPro ? "rgba(34,197,94,0.7)" : "var(--color-text-sec)", margin: 0, background: "none",
+                    fontSize: 12, color: isTeamIQ ? "rgba(139,92,246,0.7)" : isPro ? "rgba(34,197,94,0.7)" : "var(--color-text-sec)", margin: 0, background: "none",
                     border: "none", cursor: "pointer", textAlign: "left", padding: 0,
                     display: "flex", alignItems: "center", gap: 4, minHeight: 24, marginTop: 2,
                   }}>
                     {getGreeting()}, {player.name.split(" ")[0]}!
-                    <Icon name="chevDown" size={10} color={isPro ? "#22C55E" : "var(--color-accent)"} />
+                    <Icon name="chevDown" size={10} color={isTeamIQ ? "#8B5CF6" : isPro ? "#22C55E" : "var(--color-accent)"} />
                   </button>
                 )}
               </div>
@@ -230,7 +227,7 @@ export default function Shell() {
                     }}>
                       <Icon name="user" size={16} color="var(--color-text-sec)" /> Edit Profile
                     </button>
-                    {isPro ? (
+                    {isPro && (
                       <button onClick={() => { setShowProfileMenu(false); setShowLinkAccount(true); }} style={{
                         display: "flex", alignItems: "center", gap: 10, width: "100%",
                         padding: "12px 16px", background: "none", border: "none",
@@ -239,7 +236,8 @@ export default function Shell() {
                       }}>
                         <Icon name="user" size={16} color="#22C55E" /> Link Account
                       </button>
-                    ) : (
+                    )}
+                    {!isPro && (
                       <button onClick={() => { setShowProfileMenu(false); navTo("pro-upgrade"); }} style={{
                         display: "flex", alignItems: "center", gap: 10, width: "100%",
                         padding: "12px 16px", background: "none", border: "none",
@@ -247,6 +245,16 @@ export default function Shell() {
                         textAlign: "left", borderTop: "1px solid var(--color-border)",
                       }}>
                         <Icon name="star" size={16} color="#22C55E" /> Upgrade to Pro
+                      </button>
+                    )}
+                    {!isTeamIQ && (
+                      <button onClick={() => { setShowProfileMenu(false); navTo("teamiq-upgrade"); }} style={{
+                        display: "flex", alignItems: "center", gap: 10, width: "100%",
+                        padding: "12px 16px", background: "none", border: "none",
+                        cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#8B5CF6",
+                        textAlign: "left", borderTop: "1px solid var(--color-border)",
+                      }}>
+                        <Icon name="user" size={16} color="#8B5CF6" /> Team IQ — $9.99/mo
                       </button>
                     )}
                     <button onClick={handleLogout} style={{
@@ -275,22 +283,24 @@ export default function Shell() {
         </main>
       </div>
 
-      {/* ═══ FAB — New Session ═══ */}
-      <button
-        onClick={() => { console.log("FAB clicked"); setShowLogger(true); }}
-        style={{
-          position: "fixed", zIndex: 200, bottom: 96, right: 20,
-          width: 56, height: 56, borderRadius: 28,
-          background: "#FF6B35", color: "white", border: "none",
-          cursor: "pointer", fontSize: 28, fontWeight: 700,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 8px 32px rgba(255,107,53,0.4)",
-          WebkitTapHighlightColor: "transparent",
-        }}
-        aria-label="Start Gametime"
-      >
-        <Icon name="plus" size={24} color="white" />
-      </button>
+      {/* ═══ FAB — New Session (hidden on My IQ which is analytics-only) ═══ */}
+      {showFab && (
+        <button
+          onClick={() => setShowLogger(true)}
+          style={{
+            position: "fixed", zIndex: 200, bottom: 96, right: 20,
+            width: 56, height: 56, borderRadius: 28,
+            background: "#FF6B35", color: "white", border: "none",
+            cursor: "pointer", fontSize: 28, fontWeight: 700,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 8px 32px rgba(255,107,53,0.4)",
+            WebkitTapHighlightColor: "transparent",
+          }}
+          aria-label="Start Gametime"
+        >
+          <Icon name="plus" size={24} color="white" />
+        </button>
+      )}
 
       <BottomNav />
 

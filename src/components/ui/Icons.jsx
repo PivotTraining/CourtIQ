@@ -72,6 +72,9 @@ const paths = {
   download: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3",
   info: "M12 2a10 10 0 100 20 10 10 0 000-20zM12 16v-4m0-4h.01",
   alert: "M12 2L2 22h20L12 2zm0 14h.01M12 10v4",
+  link: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
+  trendUp: "M23 6l-9.5 9.5-5-5L1 18",
+  trendDown: "M23 18l-9.5-9.5-5 5L1 6",
 };
 
 export default function Icon({ name, size = 20, color = "currentColor", style = {}, className = "" }) {

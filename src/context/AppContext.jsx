@@ -26,6 +26,12 @@ const EMPTY_SHOTS = {
 export function AppProvider({ children }) {
   const { playerProfile } = useAuth();
   const [screen, setScreen] = useState("home");
+  const [previousScreen, setPreviousScreen] = useState("home");
+
+  const navigateTo = useCallback((nextScreen) => {
+    setPreviousScreen((prev) => (prev !== nextScreen ? screen : prev));
+    setScreen(nextScreen);
+  }, [screen]);
   const [loading, setLoading] = useState(true);
 
   const [isPro, setIsPro] = useState(() => {
@@ -36,6 +42,19 @@ export function AppProvider({ children }) {
   });
   const upgradeToPro = () => {
     setIsPro(true);
+    localStorage.setItem("courtiq-pro", "true");
+  };
+
+  const [isTeamIQ, setIsTeamIQ] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("courtiq-teamiq") === "true";
+    }
+    return false;
+  });
+  const upgradeToTeamIQ = () => {
+    setIsTeamIQ(true);
+    setIsPro(true); // TeamIQ includes all Pro features
+    localStorage.setItem("courtiq-teamiq", "true");
     localStorage.setItem("courtiq-pro", "true");
   };
 
@@ -103,7 +122,8 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         screen,
-        setScreen,
+        setScreen: navigateTo,
+        previousScreen,
         player,
         shotData,
         weeklyTrend,
@@ -117,6 +137,8 @@ export function AppProvider({ children }) {
         playerId,
         isPro,
         upgradeToPro,
+        isTeamIQ,
+        upgradeToTeamIQ,
       }}
     >
       {children}

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Icon, { Emoji } from "@/components/ui/Icons";
 import { useApp } from "@/context/AppContext";
 import { COURT_ZONES, ZONE_CATEGORIES } from "@/lib/constants";
-import { createSession, insertShot, deleteShot, updateSessionStats } from "@/lib/queries";
+import { createSession, insertShot, deleteShot, updateSessionStats, findSessionByJoinCode } from "@/lib/queries";
 import { getHeatColor, calcPct } from "@/lib/utils";
 import { playSwish, playClank, playTap, playWhistle } from "@/lib/sounds";
+import { supabase } from "@/lib/supabase";
 
 function haptic() {
   if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
@@ -537,7 +538,7 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
 export default function ShotLogger({ onClose }) {
-  const { playerId, refreshData } = useApp();
+  const { playerId, refreshData, isPro, upgradeToPro } = useApp();
   const [step, setStep] = useState("setup"); // setup | logging | summary
   const [sessionType, setSessionType] = useState("practice");
   const [mode, setMode] = useState("individual");
@@ -546,14 +547,54 @@ export default function ShotLogger({ onClose }) {
   const [freeThrows, setFreeThrows] = useState([]); // FTs (no zone)
   const [selectedZone, setSelectedZone] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null); // user-visible save error
   const [tab, setTab] = useState("court"); // court | stats
   const [gameStats, setGameStats] = useState({ ast: 0, reb: 0, stl: 0, blk: 0, to: 0, pf: 0, min: 0 });
   const [undoStack, setUndoStack] = useState([]); // track actions for undo
   const [courtTheme, setCourtTheme] = useState("tan");
   const [focus, setFocus] = useState(""); // pre-session focus
   const [ripple, setRipple] = useState(null); // { zoneId, type: "made"|"missed" }
+  const [showProBanner, setShowProBanner] = useState(false); // inline Pro upgrade during game
+  const [proUpgraded, setProUpgraded] = useState(false);
 
   const [ending, setEnding] = useState(false);
+  const [joinMode, setJoinMode] = useState(false); // joining someone else's session
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [joiningSession, setJoiningSession] = useState(false);
+  const [teammates, setTeammates] = useState([]); // [{name, shotsAdded}]
+  const realtimeRef = useRef(null);
+
+  // ── REALTIME SYNC: subscribe to teammate shots when in a shared session ──
+  useEffect(() => {
+    if (!session || mode !== "team") return;
+    const channel = supabase
+      .channel(`courtiq-game-${session.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "shot_logs", filter: `session_id=eq.${session.id}` },
+        (payload) => {
+          const shot = payload.new;
+          if (shot.player_id === playerId) return; // own shots handled locally
+          setShots((prev) => {
+            if (prev.find((s) => s.id === shot.id)) return prev; // dedupe
+            return [...prev, { id: shot.id, zone_id: shot.zone_id, made: shot.made, fromTeammate: true }];
+          });
+          setTeammates((prev) => {
+            const idx = prev.findIndex((t) => t.player_id === shot.player_id);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], shotsAdded: updated[idx].shotsAdded + 1 };
+              return updated;
+            }
+            return [...prev, { player_id: shot.player_id, name: "Teammate", shotsAdded: 1 }];
+          });
+        }
+      )
+      .subscribe();
+    realtimeRef.current = channel;
+    return () => { supabase.removeChannel(channel); };
+  }, [session, mode, playerId]);
 
   const updateStat = (key, delta) => {
     haptic();
@@ -563,15 +604,43 @@ export default function ShotLogger({ onClose }) {
   };
 
   const startSession = async () => {
+    if (!playerId) {
+      setSaveError("No player profile found. Please restart the app.");
+      return;
+    }
     setSaving(true);
+    setSaveError(null);
     try {
       const s = await createSession(playerId, sessionType, mode);
       setSession(s);
       setStep("logging");
     } catch (err) {
       console.error("Failed to create session:", err);
+      setSaveError("Couldn't start session — check your connection and try again.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const joinSession = async () => {
+    if (!joinCodeInput.trim()) { setJoinError("Enter a 6-character game code."); return; }
+    setJoiningSession(true);
+    setJoinError("");
+    try {
+      const found = await findSessionByJoinCode(joinCodeInput);
+      if (!found) {
+        setJoinError("Code not found — make sure the game is still active.");
+        return;
+      }
+      setSession(found);
+      setSessionType(found.type || "game");
+      setMode("team");
+      setStep("logging");
+    } catch (err) {
+      console.error("Join session error:", err);
+      setJoinError("Something went wrong. Check your connection.");
+    } finally {
+      setJoiningSession(false);
     }
   };
 
@@ -583,13 +652,17 @@ export default function ShotLogger({ onClose }) {
     setRipple({ zoneId: selectedZone, type: made ? "made" : "missed" });
     setTimeout(() => setRipple(null), 600);
     setSaving(true);
+    setSaveError(null);
+    const zoneToLog = selectedZone;
+    setSelectedZone(null); // clear selection optimistically
     try {
-      const shot = await insertShot(session.id, playerId, selectedZone, made);
-      setShots((prev) => [...prev, { id: shot.id, zone_id: selectedZone, made }]);
+      const shot = await insertShot(session.id, playerId, zoneToLog, made);
+      setShots((prev) => [...prev, { id: shot.id, zone_id: zoneToLog, made }]);
       setUndoStack((prev) => [...prev, { type: "shot", id: shot.id }]);
-      setSelectedZone(null);
     } catch (err) {
       console.error("Failed to log shot:", err);
+      setSaveError("Shot didn't save — check connection.");
+      setTimeout(() => setSaveError(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -600,12 +673,15 @@ export default function ShotLogger({ onClose }) {
     haptic();
     if (made) playSwish(); else playClank();
     setSaving(true);
+    setSaveError(null);
     try {
       const shot = await insertShot(session.id, playerId, "free-throw", made);
       setFreeThrows((prev) => [...prev, { id: shot.id, made }]);
       setUndoStack((prev) => [...prev, { type: "ft", id: shot.id }]);
     } catch (err) {
       console.error("Failed to log FT:", err);
+      setSaveError("FT didn't save — check connection.");
+      setTimeout(() => setSaveError(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -659,42 +735,88 @@ export default function ShotLogger({ onClose }) {
       <div key="who" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Who's playing?</div>
         <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginBottom: 32 }}>Choose your tracking mode</div>
-        <div style={{ display: "flex", gap: 16, width: "100%", maxWidth: 320 }}>
-          {[
-            { id: "individual", icon: "basketball", label: "Just Me", sub: "Track your own stats" },
-            { id: "team", icon: "user", label: "Team", sub: "Track a team game" },
-          ].map((m) => (
-            <button key={m.id} onClick={() => { haptic(); setMode(m.id); setSetupStep(1); }} style={{
-              flex: 1, padding: "24px 12px", borderRadius: 16, border: `2px solid ${mode === m.id ? "var(--color-accent)" : "var(--color-border)"}`,
-              cursor: "pointer", textAlign: "center", background: mode === m.id ? "var(--color-accent-light)" : "var(--color-card)",
-            }}>
-              <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Icon name={m.icon} size={36} color={mode === m.id ? "var(--color-accent)" : "var(--color-text-sec)"} /></div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: mode === m.id ? "var(--color-accent)" : "var(--color-text)" }}>{m.label}</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-sec)", marginTop: 4 }}>{m.sub}</div>
-            </button>
-          ))}
+        <div style={{ display: "flex", gap: 12, width: "100%", maxWidth: 320, flexDirection: "column" }}>
+          <div style={{ display: "flex", gap: 12 }}>
+            {[
+              { id: "individual", icon: "basketball", label: "Just Me", sub: "Track your own stats" },
+              { id: "team", icon: "user", label: "Team", sub: "Start a shared game" },
+            ].map((m) => (
+              <button key={m.id} onClick={() => { haptic(); setMode(m.id); setJoinMode(false); setSetupStep(1); }} style={{
+                flex: 1, padding: "20px 12px", borderRadius: 16, border: `2px solid ${mode === m.id && !joinMode ? "var(--color-accent)" : "var(--color-border)"}`,
+                cursor: "pointer", textAlign: "center", background: mode === m.id && !joinMode ? "var(--color-accent-light)" : "var(--color-card)",
+              }}>
+                <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Icon name={m.icon} size={32} color={mode === m.id && !joinMode ? "var(--color-accent)" : "var(--color-text-sec)"} /></div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: mode === m.id && !joinMode ? "var(--color-accent)" : "var(--color-text)" }}>{m.label}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-sec)", marginTop: 3 }}>{m.sub}</div>
+              </button>
+            ))}
+          </div>
+          {/* Join an existing game */}
+          <button onClick={() => { haptic(); setJoinMode(true); setSetupStep(1); }} style={{
+            width: "100%", padding: "16px 12px", borderRadius: 16,
+            border: `2px solid ${joinMode ? "#8B5CF6" : "var(--color-border)"}`,
+            cursor: "pointer", textAlign: "center",
+            background: joinMode ? "rgba(139,92,246,0.08)" : "var(--color-card)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          }}>
+            <Icon name="link" size={20} color={joinMode ? "#8B5CF6" : "var(--color-text-sec)"} />
+            <div style={{ textAlign: "left" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: joinMode ? "#8B5CF6" : "var(--color-text)" }}>Join Game</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-sec)" }}>Enter a teammate's game code</div>
+            </div>
+          </button>
         </div>
       </div>,
-      // Step 1: What
-      <div key="what" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>What type?</div>
-        <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginBottom: 32 }}>Game or practice session</div>
-        <div style={{ display: "flex", gap: 16, width: "100%", maxWidth: 320 }}>
-          {[
-            { id: "practice", icon: "zap", label: "Practice", sub: "Drills & reps" },
-            { id: "game", icon: "trophy", label: "Gametime", sub: "Live competition" },
-          ].map((t) => (
-            <button key={t.id} onClick={() => { haptic(); setSessionType(t.id); setSetupStep(2); }} style={{
-              flex: 1, padding: "24px 12px", borderRadius: 16, border: `2px solid ${sessionType === t.id ? "var(--color-accent)" : "var(--color-border)"}`,
-              cursor: "pointer", textAlign: "center", background: sessionType === t.id ? "var(--color-accent-light)" : "var(--color-card)",
-            }}>
-              <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Icon name={t.icon} size={36} color={sessionType === t.id ? "var(--color-accent)" : "var(--color-text-sec)"} /></div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: sessionType === t.id ? "var(--color-accent)" : "var(--color-text)" }}>{t.label}</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-sec)", marginTop: 4 }}>{t.sub}</div>
-            </button>
-          ))}
+      // Step 1: What type — OR join code entry
+      joinMode ? (
+        <div key="join" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Enter Game Code</div>
+          <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginBottom: 32 }}>Ask the host for their 6-character code</div>
+          <input
+            value={joinCodeInput}
+            onChange={(e) => { setJoinCodeInput(e.target.value.toUpperCase().slice(0, 6)); setJoinError(""); }}
+            placeholder="A1B2C3"
+            maxLength={6}
+            style={{
+              width: "100%", maxWidth: 280, padding: "18px 20px", borderRadius: 16, marginBottom: 12,
+              border: "2px solid var(--color-border)", background: "var(--color-card)",
+              fontSize: 28, fontWeight: 900, textAlign: "center", color: "var(--color-text)",
+              letterSpacing: 8, textTransform: "uppercase", outline: "none",
+            }}
+          />
+          {joinError && (
+            <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 12, textAlign: "center" }}>{joinError}</div>
+          )}
+          <button onClick={joinSession} disabled={joiningSession || joinCodeInput.length < 6} style={{
+            width: "100%", maxWidth: 280, padding: "16px 24px", borderRadius: 16,
+            border: "none", cursor: joiningSession || joinCodeInput.length < 6 ? "not-allowed" : "pointer",
+            background: "#8B5CF6", color: "white", fontSize: 16, fontWeight: 800, minHeight: 52,
+            opacity: joiningSession || joinCodeInput.length < 6 ? 0.5 : 1,
+          }}>
+            {joiningSession ? "Connecting..." : "Join Game"}
+          </button>
         </div>
-      </div>,
+      ) : (
+        <div key="what" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>What type?</div>
+          <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginBottom: 32 }}>Game or practice session</div>
+          <div style={{ display: "flex", gap: 16, width: "100%", maxWidth: 320 }}>
+            {[
+              { id: "practice", icon: "zap", label: "Practice", sub: "Drills & reps" },
+              { id: "game", icon: "trophy", label: "Gametime", sub: "Live competition" },
+            ].map((t) => (
+              <button key={t.id} onClick={() => { haptic(); setSessionType(t.id); setSetupStep(2); }} style={{
+                flex: 1, padding: "24px 12px", borderRadius: 16, border: `2px solid ${sessionType === t.id ? "var(--color-accent)" : "var(--color-border)"}`,
+                cursor: "pointer", textAlign: "center", background: sessionType === t.id ? "var(--color-accent-light)" : "var(--color-card)",
+              }}>
+                <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}><Icon name={t.icon} size={36} color={sessionType === t.id ? "var(--color-accent)" : "var(--color-text-sec)"} /></div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: sessionType === t.id ? "var(--color-accent)" : "var(--color-text)" }}>{t.label}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-sec)", marginTop: 4 }}>{t.sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ),
       // Step 2: Focus
       <div key="focus" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Your focus?</div>
@@ -712,14 +834,19 @@ export default function ShotLogger({ onClose }) {
             </button>
           ))}
         </div>
-        <button onClick={startSession} disabled={saving} style={{
+        {saveError && (
+          <div style={{ width: "100%", maxWidth: 320, padding: "10px 16px", borderRadius: 12, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", marginBottom: 8 }}>
+            <p style={{ fontSize: 12, color: "#EF4444", margin: 0, textAlign: "center" }}>{saveError}</p>
+          </div>
+        )}
+        <button onClick={startSession} disabled={saving || !playerId} style={{
           width: "100%", maxWidth: 320, padding: "16px 24px", borderRadius: 16,
-          border: "none", cursor: "pointer", background: "#FF6B35", color: "white",
-          fontSize: 16, fontWeight: 800, minHeight: 52, opacity: saving ? 0.5 : 1,
+          border: "none", cursor: saving || !playerId ? "not-allowed" : "pointer", background: "#FF6B35", color: "white",
+          fontSize: 16, fontWeight: 800, minHeight: 52, opacity: saving || !playerId ? 0.5 : 1,
         }}>
           {saving ? "Starting..." : "Let's Go"}
         </button>
-        <button onClick={() => { setFocus(""); startSession(); }} disabled={saving} style={{
+        <button onClick={() => { setFocus(""); startSession(); }} disabled={saving || !playerId} style={{
           fontSize: 13, color: "var(--color-text-sec)", fontWeight: 700, background: "none", border: "none", cursor: "pointer", marginTop: 12, minHeight: 44,
         }}>
           Skip focus
@@ -737,10 +864,10 @@ export default function ShotLogger({ onClose }) {
             {setupStep > 0 ? "Back" : "Cancel"}
           </button>
           <div style={{ display: "flex", gap: 8 }}>
-            {[0, 1, 2].map((i) => (
+            {(joinMode ? [0, 1] : [0, 1, 2]).map((i) => (
               <div key={i} style={{
                 width: i === setupStep ? 16 : 6, height: 6, borderRadius: 3,
-                background: i <= setupStep ? "var(--color-accent)" : "var(--color-muted)",
+                background: i <= setupStep ? (joinMode ? "#8B5CF6" : "var(--color-accent)") : "var(--color-muted)",
                 transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
               }} />
             ))}
@@ -765,9 +892,65 @@ export default function ShotLogger({ onClose }) {
   };
   const ct = COURT_THEMES[courtTheme];
 
+  /* ── INLINE PRO UPGRADE OVERLAY (keeps game stats alive) ── */
+  if (showProBanner) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(10,26,31,0.97)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingLeft: 24, paddingRight: 24, paddingBottom: 12, flexShrink: 0 }}>
+          <button onClick={() => setShowProBanner(false)} style={{ background: "none", border: "none", color: "#22C55E", fontWeight: 700, fontSize: 15, cursor: "pointer", padding: "8px 0", minHeight: 44 }}>
+            ← Back to Game
+          </button>
+          <span style={{ fontSize: 10, fontWeight: 800, color: "#22C55E", textTransform: "uppercase", letterSpacing: 1.2 }}>Your stats are safe</span>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 40px" }}>
+          <div style={{ textAlign: "center", marginBottom: 24 }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 6 }}>Unlock Court IQ Pro</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Your in-progress game stats are saved — upgrade and continue right where you left off.</div>
+          </div>
+          {[
+            { icon: "brain", label: "Full IQ Radar & Analytics", desc: "Radar chart, percentile breakdowns, skill trends" },
+            { icon: "fire", label: "Advanced Heat Map", desc: "See exactly where you score and struggle on the court" },
+            { icon: "trophy", label: "Unlimited Game History", desc: "Every game archived — compare across seasons" },
+            { icon: "star", label: "Export Stats & Reports", desc: "Share polished stat reports with coaches or colleges" },
+          ].map((f) => (
+            <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Icon name={f.icon} size={18} color="#22C55E" />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{f.label}</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{f.desc}</div>
+              </div>
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              upgradeToPro();
+              setProUpgraded(true);
+              setShowProBanner(false);
+            }}
+            style={{ width: "100%", marginTop: 28, padding: "18px 24px", borderRadius: 18, background: "linear-gradient(135deg, #22C55E, #16A34A)", color: "white", fontSize: 16, fontWeight: 800, border: "none", cursor: "pointer", minHeight: 56, boxShadow: "0 8px 32px rgba(34,197,94,0.35)" }}
+          >
+            Upgrade to Pro — $4.99/mo
+          </button>
+          {proUpgraded && (
+            <div style={{ textAlign: "center", marginTop: 12, fontSize: 13, color: "#22C55E", fontWeight: 700 }}>✓ Pro unlocked! Tap "Back to Game" to continue.</div>
+          )}
+          <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Simulated purchase — your game stats are preserved</div>
+        </div>
+      </div>
+    );
+  }
+
   /* ── LOGGING SCREEN ── */
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#1A1D2E", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Save error toast */}
+      {saveError && (
+        <div style={{ position: "absolute", top: "max(60px, env(safe-area-inset-top, 60px))", left: 16, right: 16, zIndex: 10, background: "rgba(239,68,68,0.9)", borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>{saveError}</span>
+        </div>
+      )}
       {/* Header — with safe area for notch */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(12px, env(safe-area-inset-top, 12px))", paddingLeft: 20, paddingRight: 20, paddingBottom: 4, flexShrink: 0 }}>
         <button onClick={endSession} disabled={ending} style={{
@@ -791,6 +974,28 @@ export default function ShotLogger({ onClose }) {
 
       {/* Live Stats Ticker */}
       <LiveStatBar shots={shots} gameStats={gameStats} freeThrows={freeThrows} />
+
+      {/* Team join code banner — shows host's code or connected teammates */}
+      {mode === "team" && session?.game_stats?.join_code && !joinMode && (
+        <div style={{ margin: "0 16px 6px", padding: "8px 14px", borderRadius: 12, background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name="link" size={14} color="#8B5CF6" />
+            <span style={{ fontSize: 11, color: "rgba(139,92,246,0.8)", fontWeight: 700 }}>Game Code</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: "#8B5CF6", letterSpacing: 3 }}>{session.game_stats.join_code}</span>
+          </div>
+          {teammates.length > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.7)" }}>
+              {teammates.length} connected
+            </span>
+          )}
+        </div>
+      )}
+      {mode === "team" && joinMode && (
+        <div style={{ margin: "0 16px 6px", padding: "8px 14px", borderRadius: 12, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <Icon name="user" size={14} color="#22C55E" />
+          <span style={{ fontSize: 11, color: "#22C55E", fontWeight: 700 }}>Joined as teammate — syncing live</span>
+        </div>
+      )}
 
       {/* Tabs + Theme Toggle */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 24px 8px", flexShrink: 0 }}>
@@ -953,6 +1158,24 @@ export default function ShotLogger({ onClose }) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Pro upgrade prompt (only shown to non-Pro users) */}
+      {!isPro && (
+        <div style={{ padding: "0 20px 8px", flexShrink: 0 }}>
+          <button
+            onClick={() => setShowProBanner(true)}
+            style={{
+              width: "100%", padding: "10px 16px", borderRadius: 12,
+              background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
+              color: "#22C55E", fontSize: 12, fontWeight: 700, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <Icon name="star" size={14} color="#22C55E" />
+            Upgrade to Pro — unlock full IQ analytics after this game
+          </button>
         </div>
       )}
 

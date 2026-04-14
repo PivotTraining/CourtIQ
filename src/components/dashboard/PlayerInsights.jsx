@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import ShareStoryCard from "@/components/ShareStoryCard";
 import { fetchSessionHistory } from "@/lib/queries";
-import { computePlayerMemory, computeTrends, computeSkillRatings, computeSeasonStats } from "@/lib/intelligence";
+import { computePlayerMemory, computeTrends, computeSkillRatings, computeSeasonStats, computeCoachReport } from "@/lib/intelligence";
 import Icon from "@/components/ui/Icons";
 
 /* --- RADAR CHART (SVG) --- */
@@ -117,11 +117,13 @@ export default function PlayerInsights() {
     if (!playerId) return;
     fetchSessionHistory(playerId).then((sessions) => {
       if (sessions.length === 0) { setLoading(false); return; }
+      const ratings = computeSkillRatings(sessions);
       setData({
         memory: computePlayerMemory(sessions),
         trends: computeTrends(sessions),
-        ratings: computeSkillRatings(sessions),
+        ratings,
         season: computeSeasonStats(sessions),
+        coachReport: computeCoachReport(sessions, ratings),
       });
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -130,7 +132,7 @@ export default function PlayerInsights() {
   if (loading) return <div style={{ height: 192, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />;
   if (!data) return null;
 
-  const { memory, trends, ratings, season } = data;
+  const { memory, trends, ratings, season, coachReport } = data;
 
   return (
     <div>
@@ -199,6 +201,51 @@ export default function PlayerInsights() {
                   <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                     <span style={{ flexShrink: 0 }}>{item.iconName ? <Icon name={item.iconName} size={16} /> : <Icon name="info" size={16} />}</span>
                     <p style={{ fontSize: 12, color: "var(--color-text-sec)", lineHeight: 1.6, margin: 0 }}>{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Coach Report — deep, specific critique and genuine praise */}
+          {coachReport && coachReport.length > 0 && (
+            <div style={cardStyle}>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                <Icon name="star" size={16} color="#8B5CF6" /> Coach Analysis
+              </h3>
+              <p style={{ fontSize: 11, color: "var(--color-text-sec)", margin: "0 0 14px", lineHeight: 1.5 }}>
+                Based on your actual game data — specific, honest, and actionable.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                {coachReport.map((item, i) => (
+                  <div key={i} style={{
+                    paddingTop: i === 0 ? 0 : 14,
+                    paddingBottom: 14,
+                    borderBottom: i < coachReport.length - 1 ? "1px solid var(--color-muted)" : "none",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                        background: `${item.color}18`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        <Icon name={item.icon || "info"} size={14} color={item.color} />
+                      </div>
+                      <div>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: item.color }}>{item.title}</span>
+                        <span style={{
+                          marginLeft: 8, fontSize: 9, fontWeight: 700,
+                          color: item.type === "praise" ? "#22C55E" : item.type === "warning" ? "#EF4444" : "var(--color-text-sec)",
+                          background: item.type === "praise" ? "rgba(34,197,94,0.1)" : item.type === "warning" ? "rgba(239,68,68,0.1)" : "var(--color-muted)",
+                          borderRadius: 5, padding: "2px 6px", textTransform: "uppercase", letterSpacing: 0.5,
+                        }}>
+                          {item.type === "praise" ? "Strength" : item.type === "warning" ? "Critical" : "Note"}
+                        </span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--color-text-sec)", lineHeight: 1.65, margin: 0, paddingLeft: 36 }}>
+                      {item.text}
+                    </p>
                   </div>
                 ))}
               </div>
