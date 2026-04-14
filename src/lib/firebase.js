@@ -16,7 +16,6 @@ async function openBrowser(url) {
     const { Browser } = await import("@capacitor/browser");
     await Browser.open({ url, windowName: "_self" });
   } catch {
-    // Fallback for web or if plugin not available
     window.location.href = url;
   }
 }
@@ -39,7 +38,7 @@ export async function resetPassword(email) {
   const redirectTo = isNativePlatform()
     ? "com.pivottraining.courtiq://reset-password"
     : typeof window !== "undefined"
-    ? `${window.location.origin}/login`
+    ? `${window.location.origin}/auth/callback`
     : "";
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw new Error(error.message);
@@ -51,15 +50,13 @@ async function signInWithOAuth(provider) {
   const redirectTo = isNativePlatform()
     ? "com.pivottraining.courtiq://login-callback"
     : typeof window !== "undefined"
-    ? `${window.location.origin}/login`
+    ? `${window.location.origin}/auth/callback`
     : "";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
       redirectTo,
-      // On native we get back the URL and open it ourselves so the
-      // Supabase client doesn't try to navigate.
       skipBrowserRedirect: isNativePlatform(),
     },
   });
@@ -82,7 +79,6 @@ export async function signInWithApple() {
 // ─── Misc ─────────────────────────────────────────────────────────────────────
 
 export async function checkRedirectResult() {
-  // Called on app boot — resolves any in-flight OAuth session from a redirect.
   const { data } = await supabase.auth.getSession();
   return data?.session ?? null;
 }
@@ -92,5 +88,4 @@ export async function signOutUser() {
   if (error) throw new Error(error.message);
 }
 
-// Legacy — callers that imported `auth` from firebase.js get the supabase client.
 export { supabase as auth };
