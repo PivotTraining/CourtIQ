@@ -75,8 +75,14 @@ export function AuthProvider({ children }) {
         .then(({ App }) => {
           App.addListener("appUrlOpen", async ({ url }) => {
             if (url.includes("login-callback") || url.includes("access_token") || url.includes("code=")) {
-              const { error } = await supabase.auth.exchangeCodeForSession(url);
-              if (error) console.error("[Auth] exchangeCodeForSession error:", error.message);
+              if (url.includes("code=")) {
+                // PKCE flow — exchange the auth code for a session.
+                // This is the default for Supabase v2 OAuth.
+                const { error } = await supabase.auth.exchangeCodeForSession(url);
+                if (error) console.error("[Auth] exchangeCodeForSession error:", error.message);
+              }
+              // For implicit flow (access_token in URL hash), the onAuthStateChange
+              // listener above picks it up automatically — no manual exchange needed.
               closeBrowser();
             }
           });

@@ -74,9 +74,14 @@ function GameCard({ session }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)" }}>
-              Game
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)" }}>Game</span>
+              {session.mode === "team" && (
+                <span style={{ fontSize: 9, fontWeight: 800, color: "#8B5CF6", background: "rgba(139,92,246,0.12)", borderRadius: 6, padding: "2px 6px", textTransform: "uppercase" }}>
+                  Team
+                </span>
+              )}
+            </div>
             <span style={{ fontSize: 11, color: "var(--color-text-sec)", fontWeight: 600 }}>
               {formatDate(session.created_at)}
             </span>
@@ -192,6 +197,7 @@ export default function GameLogScreen() {
   const { playerId } = useApp();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("individual"); // individual | team
 
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
@@ -214,13 +220,17 @@ export default function GameLogScreen() {
     );
   }
 
+  const filteredSessions = sessions.filter((s) =>
+    tab === "team" ? s.mode === "team" : s.mode !== "team"
+  );
+
   // Summary stats
-  const totalGames = sessions.length;
-  const allPts = sessions.map(calcPoints);
+  const totalGames = filteredSessions.length;
+  const allPts = filteredSessions.map(calcPoints);
   const avgPPG = totalGames > 0
     ? (allPts.reduce((a, b) => a + b, 0) / totalGames).toFixed(1)
     : "0.0";
-  const allFGPcts = sessions.map((s) => {
+  const allFGPcts = filteredSessions.map((s) => {
     const shots = s.shot_logs || [];
     const made = shots.filter((sh) => sh.made).length;
     return calcPct(made, shots.length);
@@ -231,6 +241,30 @@ export default function GameLogScreen() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
+
+      {/* Individual / Team Tabs */}
+      <div style={{ display: "flex", background: "var(--color-muted)", borderRadius: 12, padding: 3 }}>
+        {[
+          { id: "individual", label: "Individual", icon: "basketball" },
+          { id: "team", label: "Team", icon: "user" },
+        ].map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, padding: "10px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 700,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+            minHeight: 44, transition: "all 0.2s",
+            background: tab === t.id ? "var(--color-card)" : "transparent",
+            color: tab === t.id ? "var(--color-accent)" : "var(--color-text-sec)",
+            boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+          }}>
+            <Icon name={t.icon} size={13} /> {t.label}
+            {t.id === "team" && sessions.filter((s) => s.mode === "team").length > 0 && (
+              <span style={{ fontSize: 9, fontWeight: 800, color: "#8B5CF6", background: "rgba(139,92,246,0.12)", borderRadius: 8, padding: "1px 6px" }}>
+                {sessions.filter((s) => s.mode === "team").length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {/* Summary Header Card */}
       {totalGames > 0 && (
@@ -270,9 +304,9 @@ export default function GameLogScreen() {
       )}
 
       {/* Games List */}
-      {sessions.length > 0 ? (
+      {filteredSessions.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {sessions.map((s) => (
+          {filteredSessions.map((s) => (
             <GameCard key={s.id} session={s} />
           ))}
         </div>
@@ -293,10 +327,12 @@ export default function GameLogScreen() {
             <Icon name="trophy" size={32} color="#D97706" />
           </div>
           <div style={{ fontSize: 17, fontWeight: 800, color: "var(--color-text)", marginBottom: 8 }}>
-            No games logged yet
+            {tab === "team" ? "No team games yet" : "No games logged yet"}
           </div>
           <div style={{ fontSize: 13, color: "var(--color-text-sec)", lineHeight: 1.6 }}>
-            Tap + to start Gametime and track your first game.
+            {tab === "team"
+              ? 'Tap + and choose "Team" to start a shared game. Share the code with teammates.'
+              : "Tap + to start Gametime and track your first game."}
           </div>
         </div>
       )}

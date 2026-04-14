@@ -5,7 +5,7 @@ import Icon from "@/components/ui/Icons";
 
 const NAV_ITEMS = [
   { id: "home", icon: "home", label: "Home" },
-  { id: "gametime", icon: "train", label: "Gametime" },
+  { id: "train", icon: "dumbbell", label: "Drills" },
   { id: "skills", icon: "skills", label: "Skills" },
   { id: "iq", icon: "brain", label: "My IQ" },
   { id: "gamelog", icon: "trophy", label: "Game Log" },

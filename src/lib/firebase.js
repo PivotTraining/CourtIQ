@@ -14,7 +14,11 @@ function isNativePlatform() {
 async function openBrowser(url) {
   try {
     const { Browser } = await import("@capacitor/browser");
-    await Browser.open({ url, windowName: "_self" });
+    // Do NOT pass windowName: "_self" — that forces OAuth into the WKWebView which
+    // cannot handle custom-scheme redirects.  Without it, Capacitor uses
+    // SFSafariViewController (iOS) / Chrome Custom Tab (Android), both of which
+    // intercept com.pivottraining.courtiq:// and fire appUrlOpen correctly.
+    await Browser.open({ url, presentationStyle: "popover" });
   } catch {
     window.location.href = url;
   }

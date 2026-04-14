@@ -216,14 +216,35 @@ export async function insertJournalEntry(playerId, entry) {
 
 // ─── SESSIONS + SHOTS ───
 
+// 6-char join code: no I, O, 0, 1 to avoid visual confusion
+function makeJoinCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export async function createSession(playerId, type, mode = "individual") {
+  const initialStats = mode === "team" ? { join_code: makeJoinCode() } : null;
   const { data, error } = await getSupabase()
     .from("sessions")
-    .insert({ player_id: playerId, type, mode })
+    .insert({ player_id: playerId, type, mode, ...(initialStats ? { game_stats: initialStats } : {}) })
     .select()
     .single();
   if (error) throw error;
   return data;
+}
+
+// Find a live session by its 6-char join code (created within the last 18 hours).
+// Uses PostgREST JSONB text extraction filter: game_stats->>join_code
+export async function findSessionByJoinCode(code) {
+  const cutoff = new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString();
+  const { data } = await getSupabase()
+    .from("sessions")
+    .select("*")
+    .gte("created_at", cutoff)
+    .filter("game_stats->>join_code", "eq", code.toUpperCase().trim())
+    .limit(1)
+    .maybeSingle();
+  return data || null;
 }
 
 export async function updateSessionStats(sessionId, gameStats) {
@@ -276,18 +297,50 @@ export async function fetchTeamData(playerId) {
 
   const { data: members } = await getSupabase()
     .from("team_members")
-    .select("role, player_id, players(id, name)")
+    .select("role, player_id, players(id, name, position, jersey_number)")
     .eq("team_id", membership.team_id);
 
-  return (members || []).map((m) => ({
-    name: m.players?.name || "Unknown",
-    pts: 0,
-    ast: 0,
-    reb: 0,
-    fgPct: 0,
-    role: m.role || "",
-    isUser: m.player_id === playerId,
-  }));
+  if (!members || members.length === 0) return [];
+
+  // Aggregate real game stats for each team member from their sessions
+  const enriched = await Promise.all(
+    members.map(async (m) => {
+      const pid = m.player_id;
+      const { data: sessions } = await getSupabase()
+        .from("sessions")
+        .select("game_stats, shot_logs(made)")
+        .eq("player_id", pid)
+        .eq("type", "game")
+        .limit(25);
+
+      const games = sessions || [];
+      const gamesPlayed = Math.max(games.length, 1);
+      const allStats = games.map((s) => s.game_stats || {});
+      const allShots = games.flatMap((s) => s.shot_logs || []);
+
+      const totalPts = allStats.reduce((s, g) => s + (g.pts || 0), 0);
+      const totalAst = allStats.reduce((s, g) => s + (g.ast || 0), 0);
+      const totalReb = allStats.reduce((s, g) => s + (g.reb || 0), 0);
+      const fgMade   = allShots.filter((sh) => sh.made).length;
+      const fgTotal  = allShots.length;
+
+      return {
+        id: pid,
+        name: m.players?.name || "Unknown",
+        position: m.players?.position || "",
+        jersey: m.players?.jersey_number || 0,
+        pts: gamesPlayed > 0 ? (totalPts / gamesPlayed).toFixed(1) : "0",
+        ast: gamesPlayed > 0 ? (totalAst / gamesPlayed).toFixed(1) : "0",
+        reb: gamesPlayed > 0 ? (totalReb / gamesPlayed).toFixed(1) : "0",
+        fgPct: fgTotal > 0 ? Math.round((fgMade / fgTotal) * 100) : 0,
+        gamesPlayed: games.length,
+        role: m.role || "",
+        isUser: pid === playerId,
+      };
+    })
+  );
+
+  return enriched;
 }
 
 export async function fetchTeamInfo(playerId) {
