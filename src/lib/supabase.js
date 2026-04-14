@@ -1,22 +1,23 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+/**
+ * Browser-side Supabase client.
+ * Uses @supabase/ssr so that auth cookies are managed automatically,
+ * keeping the session in sync between client and server on Vercel.
+ */
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: typeof window !== "undefined" ? window.localStorage : undefined,
-  },
-});
+// Singleton for components that import `supabase` directly.
+// Safe to call at module load because createBrowserClient is lazy.
+export const supabase = createClient();
 
-// Backwards-compat shim — code that calls getSupabase() continues to work.
-// JWT is automatically attached by the Supabase client, so no firebase-uid header needed.
+// Backwards-compat shims — no callers need to change.
 export function getSupabase() {
   return supabase;
 }
-
-// No-op — kept so callers don't break during migration.
 export function setFirebaseUID() {}
