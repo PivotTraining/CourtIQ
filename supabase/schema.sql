@@ -19,10 +19,12 @@ create table if not exists players (
 );
 
 create table if not exists sessions (
-  id        uuid primary key default gen_random_uuid(),
-  player_id uuid not null references players(id) on delete cascade,
-  type      text not null check (type in ('game', 'practice')),
-  date      date not null default current_date,
+  id         uuid primary key default gen_random_uuid(),
+  player_id  uuid not null references players(id) on delete cascade,
+  type       text not null check (type in ('game', 'practice')),
+  mode       text not null default 'individual' check (mode in ('individual', 'team')),
+  game_stats jsonb not null default '{}'::jsonb,
+  date       date not null default current_date,
   created_at timestamptz default now()
 );
 
@@ -114,6 +116,7 @@ create policy "players_update" on players
 
 drop policy if exists "sessions_select" on sessions;
 drop policy if exists "sessions_insert" on sessions;
+drop policy if exists "sessions_update" on sessions;
 drop policy if exists "sessions_delete" on sessions;
 
 create policy "sessions_select" on sessions
@@ -121,6 +124,10 @@ create policy "sessions_select" on sessions
 
 create policy "sessions_insert" on sessions
   for insert with check (player_id = requesting_player_id());
+
+create policy "sessions_update" on sessions
+  for update using (player_id = requesting_player_id())
+  with check (player_id = requesting_player_id());
 
 create policy "sessions_delete" on sessions
   for delete using (player_id = requesting_player_id());
