@@ -12,3 +12,9 @@ test("paid access is not granted by browser storage", async () => {
   assert.doesNotMatch(context, /localStorage\.getItem\("courtiq-(?:pro|teamiq)"\)/);
   assert.doesNotMatch(context, /localStorage\.setItem\("courtiq-(?:pro|teamiq)"/);
 });
+
+test("Next.js tracing is pinned to the CourtIQ repository", async () => {
+  const config = await readFile(new URL("../next.config.mjs", import.meta.url), "utf8");
+  assert.match(config, /outputFileTracingRoot:\s*projectRoot/);
+  assert.match(config, /fileURLToPath\(import\.meta\.url\)/);
+});

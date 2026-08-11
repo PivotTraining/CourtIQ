@@ -34,12 +34,8 @@ export function AppProvider({ children }) {
   }, [screen]);
   const [loading, setLoading] = useState(true);
 
-  // Paid access must come from a server-verified App Store / Play entitlement.
-  // Local-storage feature flags were a removable paywall bypass.
-  const isPro = false;
+  // Team access remains disabled until ownership and billing are server-verified.
   const isTeamIQ = false;
-  const upgradeToPro = () => false;
-  const upgradeToTeamIQ = () => false;
 
   const [player, setPlayer] = useState(null);
   const [shotData, setShotData] = useState({ game: EMPTY_SHOTS, practice: EMPTY_SHOTS });
@@ -118,10 +114,7 @@ export function AppProvider({ children }) {
         loading,
         refreshData,
         playerId,
-        isPro,
-        upgradeToPro,
         isTeamIQ,
-        upgradeToTeamIQ,
       }}
     >
       {children}
