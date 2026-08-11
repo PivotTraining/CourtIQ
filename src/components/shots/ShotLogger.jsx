@@ -538,7 +538,7 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
 export default function ShotLogger({ onClose }) {
-  const { playerId, refreshData, isPro, upgradeToPro } = useApp();
+  const { playerId, refreshData } = useApp();
   const [step, setStep] = useState("setup"); // setup | logging | summary
   const [sessionType, setSessionType] = useState("practice");
   const [mode, setMode] = useState("individual");
@@ -554,9 +554,6 @@ export default function ShotLogger({ onClose }) {
   const [courtTheme, setCourtTheme] = useState("tan");
   const [focus, setFocus] = useState(""); // pre-session focus
   const [ripple, setRipple] = useState(null); // { zoneId, type: "made"|"missed" }
-  const [showProBanner, setShowProBanner] = useState(false); // inline Pro upgrade during game
-  const [proUpgraded, setProUpgraded] = useState(false);
-
   const [ending, setEnding] = useState(false);
   const [joinMode, setJoinMode] = useState(false); // joining someone else's session
   const [joinCodeInput, setJoinCodeInput] = useState("");
@@ -892,56 +889,6 @@ export default function ShotLogger({ onClose }) {
   };
   const ct = COURT_THEMES[courtTheme];
 
-  /* ── INLINE PRO UPGRADE OVERLAY (keeps game stats alive) ── */
-  if (showProBanner) {
-    return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 250, background: "rgba(10,26,31,0.97)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingLeft: 24, paddingRight: 24, paddingBottom: 12, flexShrink: 0 }}>
-          <button onClick={() => setShowProBanner(false)} style={{ background: "none", border: "none", color: "#22C55E", fontWeight: 700, fontSize: 15, cursor: "pointer", padding: "8px 0", minHeight: 44 }}>
-            ← Back to Game
-          </button>
-          <span style={{ fontSize: 10, fontWeight: 800, color: "#22C55E", textTransform: "uppercase", letterSpacing: 1.2 }}>Your stats are safe</span>
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 40px" }}>
-          <div style={{ textAlign: "center", marginBottom: 24 }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 6 }}>Unlock Court IQ Pro</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Your in-progress game stats are saved — upgrade and continue right where you left off.</div>
-          </div>
-          {[
-            { icon: "brain", label: "Full IQ Radar & Analytics", desc: "Radar chart, percentile breakdowns, skill trends" },
-            { icon: "fire", label: "Advanced Heat Map", desc: "See exactly where you score and struggle on the court" },
-            { icon: "trophy", label: "Unlimited Game History", desc: "Every game archived — compare across seasons" },
-            { icon: "star", label: "Export Stats & Reports", desc: "Share polished stat reports with coaches or colleges" },
-          ].map((f) => (
-            <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(34,197,94,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon name={f.icon} size={18} color="#22C55E" />
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{f.label}</div>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", marginTop: 2 }}>{f.desc}</div>
-              </div>
-            </div>
-          ))}
-          <button
-            onClick={() => {
-              upgradeToPro();
-              setProUpgraded(true);
-              setShowProBanner(false);
-            }}
-            style={{ width: "100%", marginTop: 28, padding: "18px 24px", borderRadius: 18, background: "linear-gradient(135deg, #22C55E, #16A34A)", color: "white", fontSize: 16, fontWeight: 800, border: "none", cursor: "pointer", minHeight: 56, boxShadow: "0 8px 32px rgba(34,197,94,0.35)" }}
-          >
-            Upgrade to Pro — $4.99/mo
-          </button>
-          {proUpgraded && (
-            <div style={{ textAlign: "center", marginTop: 12, fontSize: 13, color: "#22C55E", fontWeight: 700 }}>✓ Pro unlocked! Tap "Back to Game" to continue.</div>
-          )}
-          <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: "rgba(255,255,255,0.3)" }}>Simulated purchase — your game stats are preserved</div>
-        </div>
-      </div>
-    );
-  }
-
   /* ── LOGGING SCREEN ── */
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#1A1D2E", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -1158,24 +1105,6 @@ export default function ShotLogger({ onClose }) {
               ))}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Pro upgrade prompt (only shown to non-Pro users) */}
-      {!isPro && (
-        <div style={{ padding: "0 20px 8px", flexShrink: 0 }}>
-          <button
-            onClick={() => setShowProBanner(true)}
-            style={{
-              width: "100%", padding: "10px 16px", borderRadius: 12,
-              background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
-              color: "#22C55E", fontSize: 12, fontWeight: 700, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            }}
-          >
-            <Icon name="star" size={14} color="#22C55E" />
-            Upgrade to Pro — unlock full IQ analytics after this game
-          </button>
         </div>
       )}
 

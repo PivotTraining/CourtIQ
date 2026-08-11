@@ -8,7 +8,7 @@ import TeamIQScreen from "./TeamIQScreen";
 import { useApp } from "@/context/AppContext";
 
 export default function IQScreen() {
-  const { loading, isTeamIQ, setScreen } = useApp();
+  const { loading, isTeamIQ } = useApp();
   const [tab, setTab] = useState("individual"); // individual | team
 
   if (loading) {
@@ -47,7 +47,7 @@ export default function IQScreen() {
           <Icon name="user" size={13} color={tab === "team" ? "#8B5CF6" : "var(--color-text-sec)"} />
           Team IQ
           {!isTeamIQ && (
-            <span style={{ fontSize: 8, fontWeight: 900, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", borderRadius: 5, padding: "1px 5px", marginLeft: 2 }}>PRO</span>
+            <span style={{ fontSize: 8, fontWeight: 900, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", borderRadius: 5, padding: "1px 5px", marginLeft: 2 }}>SOON</span>
           )}
         </button>
       </div>
@@ -81,7 +81,7 @@ export default function IQScreen() {
         isTeamIQ ? (
           <TeamIQScreen />
         ) : (
-          /* Upgrade prompt for non-TeamIQ users */
+          /* Team collaboration remains hidden until ownership and billing are server-verified. */
           <div style={{
             background: "linear-gradient(135deg, #1E0A3C, #2D1060)",
             borderRadius: 24, padding: "36px 24px",
@@ -93,14 +93,14 @@ export default function IQScreen() {
             </div>
             <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 8 }}>Team IQ</div>
             <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6, marginBottom: 24 }}>
-              Aggregate intelligence across your entire roster — team radar, coach insights, and every player's individual breakdown in one view.
+              Secure roster collaboration is still in development. Individual IQ analytics remain available in the My IQ tab.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
               {[
                 { icon: "brain", text: "Team Skill Radar — aggregate of all players" },
                 { icon: "fire",  text: "Coach Intelligence — team-level strengths & gaps" },
                 { icon: "user",  text: "Roster Breakdown — compare every player side by side" },
-                { icon: "link",  text: "Collaborative Live Sessions — parents track in real time" },
+                { icon: "link",  text: "Permission-controlled roster collaboration" },
                 { icon: "trophy", text: "Team Season Stats — wins, averages, trends" },
               ].map((f) => (
                 <div key={f.text} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
@@ -111,16 +111,16 @@ export default function IQScreen() {
                 </div>
               ))}
             </div>
-            <button onClick={() => setScreen("teamiq-upgrade")} style={{
+            <button disabled aria-disabled="true" style={{
               width: "100%", padding: "16px 24px", borderRadius: 16,
               background: "linear-gradient(135deg, #7C3AED, #6D28D9)",
-              color: "white", fontSize: 15, fontWeight: 800, border: "none", cursor: "pointer",
-              boxShadow: "0 8px 24px rgba(109,40,217,0.4)", minHeight: 52,
+              color: "white", fontSize: 15, fontWeight: 800, border: "none", cursor: "not-allowed",
+              boxShadow: "0 8px 24px rgba(109,40,217,0.4)", minHeight: 52, opacity: 0.55,
             }}>
-              Unlock Team IQ — $9.99/mo
+              Team collaboration coming soon
             </button>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 10 }}>
-              Includes all Pro features · cancel anytime
+              No purchase is available in this release.
             </div>
           </div>
         )

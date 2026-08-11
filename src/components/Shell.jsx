@@ -14,8 +14,6 @@ import ShotLogger from "./shots/ShotLogger";
 import ProfileEditor from "./auth/ProfileEditor";
 import PlayerSwitcher from "./PlayerSwitcher";
 import GameLogScreen from "./gamelog/GameLogScreen";
-import ProUpgradeScreen from "./pro/ProUpgradeScreen";
-import ParentChildLink from "./pro/ParentChildLink";
 import Icon from "./ui/Icons";
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
@@ -30,18 +28,15 @@ const TITLES = {
   heatmap: "Heat Map",
   journal: "Journal",
   gamelog: "Game Log",
-  "pro-upgrade": "Court IQ Pro",
-  "teamiq-upgrade": "Team IQ",
 };
 
 export default function Shell() {
-  const { screen, setScreen: navTo, player, refreshData, isPro, isTeamIQ } = useApp();
+  const { screen, setScreen: navTo, player, refreshData, isTeamIQ } = useApp();
   const scrollRef = useRef(null);
   const [showLogger, setShowLogger] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showLinkAccount, setShowLinkAccount] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -100,13 +95,11 @@ export default function Shell() {
       case "train":
       case "gametime": return <TrainScreen />;
       case "skills": return <SkillsScreen />;
-      case "iq": return isPro ? <IQScreen /> : <ProUpgradeScreen featureName="Advanced IQ & Radar Chart" />;
+      case "iq": return <IQScreen />;
       case "shots": return <ShotTracking />;
-      case "heatmap": return isPro ? <HeatMapScreen /> : <ProUpgradeScreen featureName="Heat Map" />;
+      case "heatmap": return <HeatMapScreen />;
       case "journal": return <JournalScreen />;
       case "gamelog": return <GameLogScreen />;
-      case "pro-upgrade": return <ProUpgradeScreen />;
-      case "teamiq-upgrade": return <ProUpgradeScreen teamMode />;
       default: return <HomeDashboard />;
     }
   };
@@ -121,10 +114,10 @@ export default function Shell() {
         {/* ═══ HEADER ═══ */}
         <header style={{
           position: "sticky", top: 0, zIndex: 50,
-          background: isTeamIQ ? "#0F0A2A" : isPro ? "#0A2A1F" : "var(--color-bg)",
+          background: isTeamIQ ? "#0F0A2A" : "var(--color-bg)",
           paddingTop: "max(12px, env(safe-area-inset-top, 12px))",
           paddingLeft: 20, paddingRight: 20, paddingBottom: 8,
-          borderBottom: isTeamIQ ? "1px solid rgba(139,92,246,0.25)" : isPro ? "1px solid rgba(34,197,94,0.2)" : "1px solid var(--color-border)",
+          borderBottom: isTeamIQ ? "1px solid rgba(139,92,246,0.25)" : "1px solid var(--color-border)",
           transition: "background 0.4s ease",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
@@ -145,33 +138,29 @@ export default function Shell() {
                 {isHome ? (
                   /* Greeting on home — logo moved to dashboard */
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : isPro ? "#22C55E" : "var(--color-text)", letterSpacing: -0.3 }}>Court IQ</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : "var(--color-text)", letterSpacing: -0.3 }}>Court IQ</span>
                     {isTeamIQ ? (
                       <span style={{ fontSize: 9, fontWeight: 800, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>TEAM</span>
-                    ) : isPro ? (
-                      <span style={{ fontSize: 9, fontWeight: 800, color: "#22C55E", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>PRO</span>
                     ) : null}
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <h1 style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : isPro ? "#22C55E" : "var(--color-text)", margin: 0, letterSpacing: -0.3 }}>
+                    <h1 style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : "var(--color-text)", margin: 0, letterSpacing: -0.3 }}>
                       {TITLES[screen] || "Court IQ"}
                     </h1>
                     {isTeamIQ ? (
                       <span style={{ fontSize: 9, fontWeight: 800, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>TEAM</span>
-                    ) : isPro ? (
-                      <span style={{ fontSize: 9, fontWeight: 800, color: "#22C55E", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 6, padding: "2px 6px", letterSpacing: 1, textTransform: "uppercase" }}>PRO</span>
                     ) : null}
                   </div>
                 )}
                 {isHome && player && (
                   <button onClick={() => setShowSwitcher(true)} style={{
-                    fontSize: 12, color: isTeamIQ ? "rgba(139,92,246,0.7)" : isPro ? "rgba(34,197,94,0.7)" : "var(--color-text-sec)", margin: 0, background: "none",
+                    fontSize: 12, color: isTeamIQ ? "rgba(139,92,246,0.7)" : "var(--color-text-sec)", margin: 0, background: "none",
                     border: "none", cursor: "pointer", textAlign: "left", padding: 0,
                     display: "flex", alignItems: "center", gap: 4, minHeight: 24, marginTop: 2,
                   }}>
                     {getGreeting()}, {player.name.split(" ")[0]}!
-                    <Icon name="chevDown" size={10} color={isTeamIQ ? "#8B5CF6" : isPro ? "#22C55E" : "var(--color-accent)"} />
+                    <Icon name="chevDown" size={10} color={isTeamIQ ? "#8B5CF6" : "var(--color-accent)"} />
                   </button>
                 )}
               </div>
@@ -227,36 +216,6 @@ export default function Shell() {
                     }}>
                       <Icon name="user" size={16} color="var(--color-text-sec)" /> Edit Profile
                     </button>
-                    {isPro && (
-                      <button onClick={() => { setShowProfileMenu(false); setShowLinkAccount(true); }} style={{
-                        display: "flex", alignItems: "center", gap: 10, width: "100%",
-                        padding: "12px 16px", background: "none", border: "none",
-                        cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#22C55E",
-                        textAlign: "left", borderTop: "1px solid var(--color-border)",
-                      }}>
-                        <Icon name="user" size={16} color="#22C55E" /> Link Account
-                      </button>
-                    )}
-                    {!isPro && (
-                      <button onClick={() => { setShowProfileMenu(false); navTo("pro-upgrade"); }} style={{
-                        display: "flex", alignItems: "center", gap: 10, width: "100%",
-                        padding: "12px 16px", background: "none", border: "none",
-                        cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#22C55E",
-                        textAlign: "left", borderTop: "1px solid var(--color-border)",
-                      }}>
-                        <Icon name="star" size={16} color="#22C55E" /> Upgrade to Pro
-                      </button>
-                    )}
-                    {!isTeamIQ && (
-                      <button onClick={() => { setShowProfileMenu(false); navTo("teamiq-upgrade"); }} style={{
-                        display: "flex", alignItems: "center", gap: 10, width: "100%",
-                        padding: "12px 16px", background: "none", border: "none",
-                        cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#8B5CF6",
-                        textAlign: "left", borderTop: "1px solid var(--color-border)",
-                      }}>
-                        <Icon name="user" size={16} color="#8B5CF6" /> Team IQ — $9.99/mo
-                      </button>
-                    )}
                     <button onClick={handleLogout} style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
                       padding: "12px 16px", background: "none", border: "none",
@@ -308,7 +267,6 @@ export default function Shell() {
       {showLogger && <ShotLogger onClose={() => setShowLogger(false)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
       {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} onSwitch={() => refreshData()} />}
-      {showLinkAccount && <ParentChildLink onClose={() => setShowLinkAccount(false)} />}
     </div>
   );
 }

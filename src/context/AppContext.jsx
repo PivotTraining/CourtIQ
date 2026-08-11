@@ -34,29 +34,8 @@ export function AppProvider({ children }) {
   }, [screen]);
   const [loading, setLoading] = useState(true);
 
-  const [isPro, setIsPro] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("courtiq-pro") === "true";
-    }
-    return false;
-  });
-  const upgradeToPro = () => {
-    setIsPro(true);
-    localStorage.setItem("courtiq-pro", "true");
-  };
-
-  const [isTeamIQ, setIsTeamIQ] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("courtiq-teamiq") === "true";
-    }
-    return false;
-  });
-  const upgradeToTeamIQ = () => {
-    setIsTeamIQ(true);
-    setIsPro(true); // TeamIQ includes all Pro features
-    localStorage.setItem("courtiq-teamiq", "true");
-    localStorage.setItem("courtiq-pro", "true");
-  };
+  // Team access remains disabled until ownership and billing are server-verified.
+  const isTeamIQ = false;
 
   const [player, setPlayer] = useState(null);
   const [shotData, setShotData] = useState({ game: EMPTY_SHOTS, practice: EMPTY_SHOTS });
@@ -135,10 +114,7 @@ export function AppProvider({ children }) {
         loading,
         refreshData,
         playerId,
-        isPro,
-        upgradeToPro,
         isTeamIQ,
-        upgradeToTeamIQ,
       }}
     >
       {children}

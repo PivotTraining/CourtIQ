@@ -9,6 +9,7 @@ create table if not exists players (
   -- firebase_uid stores the Supabase auth user UUID (legacy name kept for
   -- backwards-compatibility with existing rows and queries).
   firebase_uid text unique not null,
+  manager_uid  text not null,
   name         text not null,
   team_name    text,
   position     text,
@@ -72,6 +73,7 @@ create index if not exists idx_shot_logs_session      on shot_logs(session_id);
 create index if not exists idx_journal_entries_player on journal_entries(player_id);
 create index if not exists idx_team_members_team      on team_members(team_id);
 create index if not exists idx_players_firebase_uid   on players(firebase_uid);
+create index if not exists idx_players_manager_uid    on players(manager_uid);
 
 -- ─── Row Level Security ───────────────────────────────────────────────────────
 
