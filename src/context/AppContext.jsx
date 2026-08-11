@@ -34,29 +34,12 @@ export function AppProvider({ children }) {
   }, [screen]);
   const [loading, setLoading] = useState(true);
 
-  const [isPro, setIsPro] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("courtiq-pro") === "true";
-    }
-    return false;
-  });
-  const upgradeToPro = () => {
-    setIsPro(true);
-    localStorage.setItem("courtiq-pro", "true");
-  };
-
-  const [isTeamIQ, setIsTeamIQ] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("courtiq-teamiq") === "true";
-    }
-    return false;
-  });
-  const upgradeToTeamIQ = () => {
-    setIsTeamIQ(true);
-    setIsPro(true); // TeamIQ includes all Pro features
-    localStorage.setItem("courtiq-teamiq", "true");
-    localStorage.setItem("courtiq-pro", "true");
-  };
+  // Paid access must come from a server-verified App Store / Play entitlement.
+  // Local-storage feature flags were a removable paywall bypass.
+  const isPro = false;
+  const isTeamIQ = false;
+  const upgradeToPro = () => false;
+  const upgradeToTeamIQ = () => false;
 
   const [player, setPlayer] = useState(null);
   const [shotData, setShotData] = useState({ game: EMPTY_SHOTS, practice: EMPTY_SHOTS });

@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Removed output: "export" — static export breaks OAuth callbacks,
-  // middleware, and server-side Supabase auth on Vercel.
-  // Capacitor builds should use `next export` via a separate script if needed.
+  // Native packages must contain their web runtime. Capacitor reserves
+  // server.url for live reload, so native builds use Next's static export.
+  ...(process.env.CAPACITOR_BUILD === "true" ? { output: "export" } : {}),
+  trailingSlash: process.env.CAPACITOR_BUILD === "true",
   images: {
     unoptimized: true,
   },

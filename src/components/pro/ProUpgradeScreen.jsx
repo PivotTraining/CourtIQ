@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useApp } from "@/context/AppContext";
 import Icon from "@/components/ui/Icons";
 
 const PRO_FEATURES = [
@@ -21,59 +20,8 @@ const TEAM_FEATURES = [
   { icon: "fire",     label: "Everything in Pro",             desc: "All individual Pro features included" },
 ];
 
-export default function ProUpgradeScreen({ featureName, teamMode = false, onUpgraded }) {
-  const { upgradeToPro, upgradeToTeamIQ, setScreen, previousScreen } = useApp();
+export default function ProUpgradeScreen({ featureName, teamMode = false }) {
   const [selectedTier, setSelectedTier] = useState(teamMode ? "team" : "pro");
-  const [upgraded, setUpgraded] = useState(false);
-
-  const handleUpgrade = () => {
-    if (selectedTier === "team") upgradeToTeamIQ();
-    else upgradeToPro();
-    setUpgraded(true);
-    setTimeout(() => {
-      if (onUpgraded) {
-        onUpgraded();
-      } else {
-        const returnTo =
-          previousScreen && previousScreen !== "pro-upgrade" && previousScreen !== "teamiq-upgrade"
-            ? previousScreen
-            : "home";
-        setScreen(returnTo);
-      }
-    }, 1500);
-  };
-
-  if (upgraded) {
-    return (
-      <div style={{
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        minHeight: "60vh", gap: 16, textAlign: "center", padding: "0 24px",
-      }}>
-        <div style={{
-          width: 80, height: 80, borderRadius: 40,
-          background: selectedTier === "team"
-            ? "linear-gradient(135deg, #7C3AED, #6D28D9)"
-            : "linear-gradient(135deg, #22C55E, #16A34A)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: selectedTier === "team"
-            ? "0 8px 32px rgba(109,40,217,0.4)"
-            : "0 8px 32px rgba(34,197,94,0.4)",
-        }}>
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "var(--color-text)" }}>
-          {selectedTier === "team" ? "Team IQ Unlocked!" : "Welcome to Pro!"}
-        </div>
-        <div style={{ fontSize: 14, color: "var(--color-text-sec)", lineHeight: 1.6 }}>
-          {selectedTier === "team"
-            ? "Team IQ is now active. Head to My IQ → Team IQ to see your roster's collective intelligence."
-            : "All Pro features are now unlocked. Your header has changed to reflect your Pro status."}
-        </div>
-      </div>
-    );
-  }
 
   const isTeam = selectedTier === "team";
   const accentColor = isTeam ? "#8B5CF6" : "#22C55E";
@@ -180,21 +128,21 @@ export default function ProUpgradeScreen({ featureName, teamMode = false, onUpgr
       </div>
 
       {/* CTA */}
-      <button onClick={handleUpgrade} style={{
+      <button disabled aria-disabled="true" style={{
         width: "100%", padding: "18px 24px", borderRadius: 18,
         background: isTeam
           ? "linear-gradient(135deg, #7C3AED, #6D28D9)"
           : "linear-gradient(135deg, #22C55E, #16A34A)",
-        color: "white", fontSize: 16, fontWeight: 800, border: "none", cursor: "pointer",
+        color: "white", fontSize: 16, fontWeight: 800, border: "none",
         minHeight: 56,
         boxShadow: isTeam ? "0 8px 32px rgba(109,40,217,0.35)" : "0 8px 32px rgba(34,197,94,0.35)",
-        letterSpacing: -0.3,
+        letterSpacing: -0.3, opacity: 0.55, cursor: "not-allowed",
       }}>
-        {isTeam ? "Unlock Team IQ — $9.99/mo" : "Upgrade to Pro — $4.99/mo"}
+        Secure subscriptions coming soon
       </button>
 
       <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: "var(--color-text-sec)" }}>
-        Simulated purchase — no real payment processed
+        Purchases are unavailable until App Store and Play billing verification is connected.
       </div>
 
       <div style={{ height: 20 }} />

@@ -292,11 +292,9 @@ export default function ProfileEditor({ onClose }) {
                 onClick={async () => {
                   setSaving(true);
                   try {
-                    await getSupabase().from("shot_logs").delete().eq("player_id", playerProfile.id);
-                    await getSupabase().from("journal_entries").delete().eq("player_id", playerProfile.id);
-                    await getSupabase().from("sessions").delete().eq("player_id", playerProfile.id);
-                    await getSupabase().from("players").delete().eq("id", playerProfile.id);
-                    await signOutUser();
+                    const { error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: {} });
+                    if (deleteError) throw deleteError;
+                    await signOutUser().catch(() => {});
                   } catch (err) {
                     setError("Failed to delete. Contact support@pivottrainingdev.com");
                     setSaving(false);
@@ -319,7 +317,7 @@ export default function ProfileEditor({ onClose }) {
                   marginBottom: 8,
                 }}
               >
-                {saving ? "Deleting..." : "Delete Everything"}
+                {saving ? "Deleting..." : "Delete Account Permanently"}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}

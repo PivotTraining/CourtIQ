@@ -1,6 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
+  // Android package ID. The existing App Store record has the legacy iOS-only
+  // ID com.ChrisDavis-courtiq, which is intentionally set in Xcode.
   appId: "com.pivottraining.courtiq",
   appName: "Court IQ",
   webDir: "out",
@@ -9,11 +11,11 @@ const config: CapacitorConfig = {
   //   cleartext: true,
   // },
   ios: {
-    scheme: "Court IQ",
+    scheme: "App",
     contentInset: "automatic",
   },
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
   },
   plugins: {
     SplashScreen: {
