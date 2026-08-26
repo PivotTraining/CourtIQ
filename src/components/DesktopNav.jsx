@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { id: "train", icon: "dumbbell", label: "Training", description: "Drills & workouts" },
   { id: "skills", icon: "skills", label: "Skills", description: "Skill development" },
   { id: "shots", icon: "target", label: "Sessions", description: "Shot sessions" },
-  { id: "heatmap", icon: "heatmap", label: "Heat Map", description: "Shooting zones" },
+  { id: "heatmap", icon: "map", label: "Heat Map", description: "Shooting zones" },
   { id: "gamelog", icon: "trophy", label: "Game Log", description: "Games & performance" },
   { id: "journal", icon: "journal", label: "Journal", description: "Reflection & notes" },
   { id: "iq", icon: "brain", label: "My IQ", description: "Insights & analytics" },
