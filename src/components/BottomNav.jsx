@@ -20,6 +20,7 @@ export default function BottomNav() {
 
   return (
     <nav
+      className="courtiq-bottom-nav"
       role="tablist"
       aria-label="Main navigation"
       style={{
