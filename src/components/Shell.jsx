@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import BottomNav from "./BottomNav";
+import DesktopNav from "./DesktopNav";
 import HomeDashboard from "./dashboard/HomeDashboard";
 import ShotTracking from "./shots/ShotTracking";
 import HeatMapScreen from "./heatmap/HeatMapScreen";
@@ -19,7 +20,7 @@ import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
 
 const TITLES = {
-  home: null, // show logo instead
+  home: null,
   train: "Drills",
   gametime: "Drills",
   skills: "Skills",
@@ -42,7 +43,7 @@ export default function Shell() {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("courtiq-theme");
       if (saved) return saved === "dark";
-      return true; // default to dark mode
+      return true;
     }
     return true;
   });
@@ -62,7 +63,6 @@ export default function Shell() {
     try { await signOutUser(); } catch (e) { console.error(e); }
   };
 
-  // Screen transition
   useEffect(() => {
     if (screen !== displayScreen) {
       setTransitioning(true);
@@ -73,7 +73,6 @@ export default function Shell() {
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [displayScreen]);
 
-  // Dark mode
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("courtiq-theme", darkMode ? "dark" : "light");
@@ -81,7 +80,6 @@ export default function Shell() {
     if (meta) meta.content = darkMode ? "#0F1117" : "#FF6B35";
   }, [darkMode]);
 
-  // Close profile menu on outside click
   useEffect(() => {
     if (!showProfileMenu) return;
     const close = () => setShowProfileMenu(false);
@@ -104,15 +102,14 @@ export default function Shell() {
     }
   };
 
-  // Hide FAB on My IQ screen — it's analytics-only, not a place to start a game
   const showFab = displayScreen !== "iq";
 
   return (
-    <div style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ width: "100%", maxWidth: 520, margin: "0 auto", position: "relative", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <DesktopNav onStartSession={() => setShowLogger(true)} />
 
-        {/* ═══ HEADER ═══ */}
-        <header style={{
+      <div className="courtiq-shell-main" style={{ width: "100%", maxWidth: 520, margin: "0 auto", position: "relative", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <header className="courtiq-shell-header" style={{
           position: "sticky", top: 0, zIndex: 50,
           background: isTeamIQ ? "#0F0A2A" : "var(--color-bg)",
           paddingTop: "max(12px, env(safe-area-inset-top, 12px))",
@@ -121,7 +118,6 @@ export default function Shell() {
           transition: "background 0.4s ease",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            {/* Left: back + title or logo */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
               {!isHome && (
                 <button onClick={() => navTo("home")} style={{
@@ -136,7 +132,6 @@ export default function Shell() {
               )}
               <div style={{ minWidth: 0 }}>
                 {isHome ? (
-                  /* Greeting on home — logo moved to dashboard */
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: isTeamIQ ? "#8B5CF6" : "var(--color-text)", letterSpacing: -0.3 }}>Court IQ</span>
                     {isTeamIQ ? (
@@ -166,7 +161,6 @@ export default function Shell() {
               </div>
             </div>
 
-            {/* Right: actions */}
             <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 }}>
               <button onClick={() => setDarkMode(!darkMode)} style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -184,7 +178,6 @@ export default function Shell() {
                 <Icon name="refresh" size={15} />
               </button>
 
-              {/* Profile button with dropdown */}
               <div style={{ position: "relative" }}>
                 <button onClick={(e) => { e.stopPropagation(); setShowProfileMenu(!showProfileMenu); }} style={{
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -195,7 +188,6 @@ export default function Shell() {
                   {player?.name?.split(" ").map((n) => n[0]).join("") || "?"}
                 </button>
 
-                {/* Dropdown menu */}
                 {showProfileMenu && (
                   <div style={{
                     position: "absolute", top: 42, right: 0, zIndex: 100,
@@ -231,8 +223,7 @@ export default function Shell() {
           </div>
         </header>
 
-        {/* ═══ CONTENT ═══ */}
-        <main ref={scrollRef} style={{
+        <main ref={scrollRef} className="courtiq-shell-content" style={{
           flex: 1, padding: "16px 20px 120px", overflowX: "hidden", overflowY: "auto", WebkitOverflowScrolling: "touch",
           opacity: transitioning ? 0 : 1,
           transform: transitioning ? "translateY(6px)" : "translateY(0)",
@@ -242,9 +233,9 @@ export default function Shell() {
         </main>
       </div>
 
-      {/* ═══ FAB — New Session (hidden on My IQ which is analytics-only) ═══ */}
       {showFab && (
         <button
+          className="courtiq-mobile-fab"
           onClick={() => setShowLogger(true)}
           style={{
             position: "fixed", zIndex: 200, bottom: 96, right: 20,
@@ -263,7 +254,6 @@ export default function Shell() {
 
       <BottomNav />
 
-      {/* ═══ MODALS ═══ */}
       {showLogger && <ShotLogger onClose={() => setShowLogger(false)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
       {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} onSwitch={() => refreshData()} />}
