@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { pathForScreen, screenFromPath } from "@/lib/routes";
 import {
   fetchShotData,
   fetchWeeklyTrend,
@@ -15,28 +17,6 @@ import {
 
 const AppContext = createContext(null);
 
-const SCREEN_TO_PATH = {
-  home: "/dashboard",
-  train: "/training",
-  gametime: "/training",
-  skills: "/skills",
-  shots: "/sessions",
-  heatmap: "/heatmap",
-  journal: "/journal",
-  gamelog: "/game-log",
-  iq: "/iq",
-};
-
-const PATH_TO_SCREEN = Object.entries(SCREEN_TO_PATH).reduce((acc, [screen, path]) => {
-  if (!acc[path]) acc[path] = screen;
-  return acc;
-}, { "/": "home" });
-
-function screenFromLocation() {
-  if (typeof window === "undefined") return "home";
-  return PATH_TO_SCREEN[window.location.pathname] || "home";
-}
-
 const EMPTY_SHOTS = {
   total: 0, made: 0,
   threes: { total: 0, made: 0 },
@@ -47,42 +27,27 @@ const EMPTY_SHOTS = {
 
 export function AppProvider({ children }) {
   const { playerProfile } = useAuth();
-  const [screen, setScreen] = useState(screenFromLocation);
+  const router = useRouter();
+  const pathname = usePathname();
+  const screen = screenFromPath(pathname);
   const [previousScreen, setPreviousScreen] = useState("home");
-
-  const navigateTo = useCallback((nextScreen, options = {}) => {
-    setPreviousScreen((prev) => (prev !== nextScreen ? screen : prev));
-    setScreen(nextScreen);
-
-    if (typeof window !== "undefined") {
-      const nextPath = SCREEN_TO_PATH[nextScreen] || "/dashboard";
-      if (window.location.pathname !== nextPath) {
-        const method = options.replace ? "replaceState" : "pushState";
-        window.history[method]({ courtiqScreen: nextScreen }, "", nextPath);
-      }
-    }
-  }, [screen]);
+  const lastScreenRef = useRef(screen);
 
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    if (window.location.pathname === "/") {
-      window.history.replaceState({ courtiqScreen: "home" }, "", "/dashboard");
+    if (lastScreenRef.current !== screen) {
+      setPreviousScreen(lastScreenRef.current);
+      lastScreenRef.current = screen;
     }
-
-    const onPopState = () => {
-      const nextScreen = screenFromLocation();
-      setPreviousScreen(screen);
-      setScreen(nextScreen);
-    };
-
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
   }, [screen]);
 
-  const [loading, setLoading] = useState(true);
+  const navigateTo = useCallback((nextScreen, options = {}) => {
+    const nextPath = pathForScreen(nextScreen);
+    if (nextPath === pathname) return;
+    if (options.replace) router.replace(nextPath);
+    else router.push(nextPath);
+  }, [pathname, router]);
 
-  // Team access remains disabled until ownership and billing are server-verified.
+  const [loading, setLoading] = useState(true);
   const isTeamIQ = false;
 
   const [player, setPlayer] = useState(null);
