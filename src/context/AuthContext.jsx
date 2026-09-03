@@ -22,13 +22,22 @@ export function AuthProvider({ children }) {
   const [playerProfile, setPlayerProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needsProfile, setNeedsProfile] = useState(false);
+  const [profileError, setProfileError] = useState(null);
 
   async function loadProfile(supabaseUser) {
-    const { data: profile } = await supabase
+    setProfileError(null);
+    const { data: profile, error } = await supabase
       .from("players")
       .select("*")
       .eq("firebase_uid", supabaseUser.id)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      setProfileError("We couldn't load your player profile. Check your connection and try again.");
+      setPlayerProfile(null);
+      setNeedsProfile(false);
+      return;
+    }
 
     if (profile) {
       setPlayerProfile(profile);
@@ -39,6 +48,7 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    let appUrlListener;
     // Resolve any existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -72,17 +82,15 @@ export function AuthProvider({ children }) {
     // com.pivottraining.courtiq://login-callback URL after OAuth.
     if (isNativePlatform()) {
       import("@capacitor/app")
-        .then(({ App }) => {
-          App.addListener("appUrlOpen", async ({ url }) => {
+        .then(async ({ App }) => {
+          appUrlListener = await App.addListener("appUrlOpen", async ({ url }) => {
             if (url.includes("login-callback") || url.includes("access_token") || url.includes("code=")) {
-              if (url.includes("code=")) {
+              const code = new URL(url).searchParams.get("code");
+              if (code) {
                 // PKCE flow — exchange the auth code for a session.
-                // This is the default for Supabase v2 OAuth.
-                const { error } = await supabase.auth.exchangeCodeForSession(url);
+                const { error } = await supabase.auth.exchangeCodeForSession(code);
                 if (error) console.error("[Auth] exchangeCodeForSession error:", error.message);
               }
-              // For implicit flow (access_token in URL hash), the onAuthStateChange
-              // listener above picks it up automatically — no manual exchange needed.
               closeBrowser();
             }
           });
@@ -90,7 +98,10 @@ export function AuthProvider({ children }) {
         .catch(() => {});
     }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      appUrlListener?.remove();
+    };
   }, []);
 
   return (
@@ -102,6 +113,13 @@ export function AuthProvider({ children }) {
         loading,
         needsProfile,
         setNeedsProfile,
+        profileError,
+        retryProfile: async () => {
+          if (!user) return;
+          setLoading(true);
+          await loadProfile(user);
+          setLoading(false);
+        },
       }}
     >
       {children}

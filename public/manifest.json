@@ -1,8 +1,8 @@
 {
-  "name": "Court IQ",
-  "short_name": "Court IQ",
-  "description": "Basketball performance tracker for youth and AAU players",
-  "start_url": "/",
+  "name": "CourtIQ",
+  "short_name": "CourtIQ",
+  "description": "Basketball development intelligence for players, parents, and trainers",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0F1117",
   "theme_color": "#0F1117",

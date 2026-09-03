@@ -51,6 +51,7 @@ export default function ProfileSetup() {
         position: form.position,
         jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
         age: form.age ? parseInt(form.age) : null,
+        skill_level: form.level,
       });
       setPlayerProfile(profile);
       setNeedsProfile(false);

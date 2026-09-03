@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { pathForScreen, screenFromPath } from "@/lib/routes";
 import {
   fetchShotData,
   fetchWeeklyTrend,
@@ -25,38 +27,28 @@ const EMPTY_SHOTS = {
 
 export function AppProvider({ children }) {
   const { playerProfile } = useAuth();
-  const [screen, setScreen] = useState("home");
+  const router = useRouter();
+  const pathname = usePathname();
+  const screen = screenFromPath(pathname);
   const [previousScreen, setPreviousScreen] = useState("home");
+  const lastScreenRef = useRef(screen);
 
-  const navigateTo = useCallback((nextScreen) => {
-    setPreviousScreen((prev) => (prev !== nextScreen ? screen : prev));
-    setScreen(nextScreen);
+  useEffect(() => {
+    if (lastScreenRef.current !== screen) {
+      setPreviousScreen(lastScreenRef.current);
+      lastScreenRef.current = screen;
+    }
   }, [screen]);
+
+  const navigateTo = useCallback((nextScreen, options = {}) => {
+    const nextPath = pathForScreen(nextScreen);
+    if (nextPath === pathname) return;
+    if (options.replace) router.replace(nextPath);
+    else router.push(nextPath);
+  }, [pathname, router]);
+
   const [loading, setLoading] = useState(true);
-
-  const [isPro, setIsPro] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("courtiq-pro") === "true";
-    }
-    return false;
-  });
-  const upgradeToPro = () => {
-    setIsPro(true);
-    localStorage.setItem("courtiq-pro", "true");
-  };
-
-  const [isTeamIQ, setIsTeamIQ] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("courtiq-teamiq") === "true";
-    }
-    return false;
-  });
-  const upgradeToTeamIQ = () => {
-    setIsTeamIQ(true);
-    setIsPro(true); // TeamIQ includes all Pro features
-    localStorage.setItem("courtiq-teamiq", "true");
-    localStorage.setItem("courtiq-pro", "true");
-  };
+  const isTeamIQ = false;
 
   const [player, setPlayer] = useState(null);
   const [shotData, setShotData] = useState({ game: EMPTY_SHOTS, practice: EMPTY_SHOTS });
@@ -135,10 +127,7 @@ export function AppProvider({ children }) {
         loading,
         refreshData,
         playerId,
-        isPro,
-        upgradeToPro,
         isTeamIQ,
-        upgradeToTeamIQ,
       }}
     >
       {children}

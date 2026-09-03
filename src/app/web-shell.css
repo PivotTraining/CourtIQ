@@ -1,0 +1,162 @@
+/* Court IQ desktop web application shell */
+.courtiq-desktop-nav { display: none; }
+
+@media (min-width: 900px) {
+  body { justify-content: stretch; }
+
+  .courtiq-desktop-nav {
+    display: flex;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 272px;
+    z-index: 120;
+    flex-direction: column;
+    padding: 24px 18px;
+    background: color-mix(in srgb, var(--color-card) 94%, transparent);
+    border-right: 1px solid var(--color-border);
+    box-shadow: 12px 0 40px rgba(0,0,0,0.04);
+    backdrop-filter: blur(18px);
+  }
+
+  .courtiq-desktop-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px 22px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .courtiq-desktop-brand img { border-radius: 12px; }
+  .courtiq-desktop-brand-name { font-size: 18px; font-weight: 900; color: var(--color-text); letter-spacing: -0.35px; }
+  .courtiq-desktop-brand-sub { margin-top: 2px; font-size: 10px; font-weight: 700; color: var(--color-text-sec); text-transform: uppercase; letter-spacing: 0.9px; }
+
+  .courtiq-desktop-player {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 18px 4px 14px;
+    padding: 12px;
+    border-radius: 14px;
+    background: var(--color-muted);
+  }
+
+  .courtiq-desktop-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: linear-gradient(135deg, #FF6B35, #E85A2A);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .courtiq-desktop-player-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .courtiq-desktop-player-copy strong { color: var(--color-text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .courtiq-desktop-player-copy span { color: var(--color-text-sec); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .courtiq-desktop-nav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .courtiq-desktop-nav-item {
+    width: 100%;
+    min-height: 58px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    text-align: left;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .courtiq-desktop-nav-item:hover { background: var(--color-muted); }
+  .courtiq-desktop-nav-item.is-active {
+    background: var(--color-accent-light);
+    border-color: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+
+  .courtiq-desktop-nav-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: var(--color-muted);
+  }
+
+  .courtiq-desktop-nav-item.is-active .courtiq-desktop-nav-icon { background: color-mix(in srgb, var(--color-accent) 12%, var(--color-card)); }
+  .courtiq-desktop-nav-copy { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+  .courtiq-desktop-nav-copy strong { color: var(--color-text); font-size: 13px; font-weight: 800; }
+  .courtiq-desktop-nav-copy small { color: var(--color-text-sec); font-size: 9px; font-weight: 600; }
+
+  .courtiq-desktop-session {
+    margin-top: auto;
+    min-height: 48px;
+    border: 0;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    color: white;
+    font-size: 13px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #FF6B35, #E85A2A);
+    box-shadow: 0 8px 24px rgba(255,107,53,0.24);
+  }
+
+  .courtiq-desktop-footer { margin-top: 12px; padding: 0 8px; color: var(--color-text-sec); font-size: 9px; line-height: 1.5; text-align: center; }
+
+  .courtiq-bottom-nav { display: none !important; }
+  .courtiq-mobile-fab { display: none !important; }
+
+  .courtiq-shell-root {
+    padding-left: 272px;
+    align-items: stretch !important;
+  }
+
+  .courtiq-shell-main {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .courtiq-shell-header {
+    padding-left: clamp(28px, 4vw, 56px) !important;
+    padding-right: clamp(28px, 4vw, 56px) !important;
+    padding-top: 18px !important;
+    padding-bottom: 12px !important;
+  }
+
+  .courtiq-shell-content {
+    padding: 28px clamp(28px, 4vw, 56px) 64px !important;
+    overflow-x: visible !important;
+  }
+
+  .courtiq-shell-content > * {
+    width: 100%;
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .courtiq-shell-content .card,
+  .courtiq-shell-content .card-elevated { border-radius: 18px; }
+}
+
+@media (min-width: 1280px) {
+  .courtiq-desktop-nav { width: 292px; padding-left: 22px; padding-right: 22px; }
+  .courtiq-shell-root { padding-left: 292px; }
+}

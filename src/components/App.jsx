@@ -30,7 +30,7 @@ function LoadingScreen() {
 }
 
 function AuthGate() {
-  const { user, loading, needsProfile } = useAuth();
+  const { user, loading, needsProfile, profileError, retryProfile } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -47,6 +47,19 @@ function AuthGate() {
   if (showOnboarding) return <Onboarding onComplete={completeOnboarding} />;
   if (loading) return <LoadingScreen />;
   if (!user) return <LoginScreen />;
+  if (profileError) {
+    return (
+      <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+        <div style={{ maxWidth: 360 }}>
+          <h1 style={{ fontSize: 22, marginBottom: 8 }}>Profile unavailable</h1>
+          <p style={{ color: "var(--color-text-sec)", lineHeight: 1.5 }}>{profileError}</p>
+          <button onClick={retryProfile} style={{ marginTop: 16, minHeight: 44, padding: "0 24px", border: 0, borderRadius: 12, background: "var(--color-accent)", color: "white", fontWeight: 700 }}>
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
   if (needsProfile) return <ProfileSetup />;
 
   return (
