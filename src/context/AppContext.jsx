@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { pathForScreen, screenFromPath } from "@/lib/routes";
 import {
   fetchShotData,
   fetchWeeklyTrend,
@@ -25,13 +27,25 @@ const EMPTY_SHOTS = {
 
 export function AppProvider({ children }) {
   const { playerProfile } = useAuth();
-  const [screen, setScreen] = useState("home");
+  const router = useRouter();
+  const pathname = usePathname();
+  const screen = screenFromPath(pathname);
   const [previousScreen, setPreviousScreen] = useState("home");
+  const lastScreenRef = useRef(screen);
+
+  useEffect(() => {
+    if (lastScreenRef.current !== screen) {
+      setPreviousScreen(lastScreenRef.current);
+      lastScreenRef.current = screen;
+    }
+  }, [screen]);
 
   const navigateTo = useCallback((nextScreen) => {
-    setPreviousScreen((prev) => (prev !== nextScreen ? screen : prev));
-    setScreen(nextScreen);
-  }, [screen]);
+    const nextPath = pathForScreen(nextScreen);
+    if (nextPath === pathname) return;
+    router.push(nextPath);
+  }, [pathname, router]);
+
   const [loading, setLoading] = useState(true);
 
   const [isPro, setIsPro] = useState(() => {
@@ -53,7 +67,7 @@ export function AppProvider({ children }) {
   });
   const upgradeToTeamIQ = () => {
     setIsTeamIQ(true);
-    setIsPro(true); // TeamIQ includes all Pro features
+    setIsPro(true);
     localStorage.setItem("courtiq-teamiq", "true");
     localStorage.setItem("courtiq-pro", "true");
   };
