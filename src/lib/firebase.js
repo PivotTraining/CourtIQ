@@ -1,27 +1,12 @@
 /**
  * auth.js — formerly firebase.js
- * All authentication now goes through Supabase.
- * Firebase has been removed entirely. The same export names are kept so no
- * other file needs to change its imports.
+ * CourtIQ is web-first and authentication is handled by Supabase.
  */
 import { supabase } from "./supabase";
 
-function isNativePlatform() {
-  if (typeof window === "undefined") return false;
-  return !!window.Capacitor?.isNativePlatform?.();
-}
-
-async function openBrowser(url) {
-  try {
-    const { Browser } = await import("@capacitor/browser");
-    // Do NOT pass windowName: "_self" — that forces OAuth into the WKWebView which
-    // cannot handle custom-scheme redirects.  Without it, Capacitor uses
-    // SFSafariViewController (iOS) / Chrome Custom Tab (Android), both of which
-    // intercept com.pivottraining.courtiq:// and fire appUrlOpen correctly.
-    await Browser.open({ url, presentationStyle: "popover" });
-  } catch {
-    window.location.href = url;
-  }
+function browserOrigin() {
+  if (typeof window === "undefined") return "";
+  return window.location.origin;
 }
 
 // ─── Email / Password ─────────────────────────────────────────────────────────
@@ -39,37 +24,34 @@ export async function signUpWithEmail(email, password) {
 }
 
 export async function resetPassword(email) {
-  const redirectTo = isNativePlatform()
-    ? "com.pivottraining.courtiq://reset-password"
-    : typeof window !== "undefined"
-    ? `${window.location.origin}/auth/callback`
-    : "";
-  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  const origin = browserOrigin();
+  if (!origin) throw new Error("Password reset is only available in the browser.");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?mode=reset`,
+  });
   if (error) throw new Error(error.message);
 }
 
 // ─── OAuth helpers ────────────────────────────────────────────────────────────
 
 async function signInWithOAuth(provider) {
-  const redirectTo = isNativePlatform()
-    ? "com.pivottraining.courtiq://login-callback"
-    : typeof window !== "undefined"
-    ? `${window.location.origin}/auth/callback`
-    : "";
+  const origin = browserOrigin();
+  if (!origin) throw new Error("Social sign in is only available in the browser.");
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo,
-      skipBrowserRedirect: isNativePlatform(),
+      redirectTo: `${origin}/auth/callback?next=%2Fdashboard`,
+      skipBrowserRedirect: true,
     },
   });
 
   if (error) throw new Error(error.message);
+  if (!data?.url) throw new Error(`Could not start ${provider} sign in.`);
 
-  if (isNativePlatform() && data?.url) {
-    await openBrowser(data.url);
-  }
+  window.location.assign(data.url);
+  return data;
 }
 
 export async function signInWithGoogle() {
@@ -83,7 +65,8 @@ export async function signInWithApple() {
 // ─── Misc ─────────────────────────────────────────────────────────────────────
 
 export async function checkRedirectResult() {
-  const { data } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw new Error(error.message);
   return data?.session ?? null;
 }
 
