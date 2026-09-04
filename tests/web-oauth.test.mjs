@@ -27,7 +27,7 @@ test("auth checks Supabase health before starting sign in", () => {
 test("auth health check has a bounded timeout", () => {
   assert.match(authSource, /timeoutMs = 5000/);
   assert.match(authSource, /AbortController/);
-  assert.match(authSource, /reason: "timeout"/);
+  assert.match(authSource, /AbortError[\s\S]*?"timeout"/);
 });
 
 test("OAuth callback exchanges the code and lands in dashboard", () => {
