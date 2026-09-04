@@ -17,6 +17,19 @@ test("web auth no longer depends on Capacitor", () => {
   assert.doesNotMatch(authSource, /com\.pivottraining\.courtiq/);
 });
 
+test("auth checks Supabase health before starting sign in", () => {
+  assert.match(authSource, /\/auth\/v1\/health/);
+  assert.match(authSource, /headers:\s*\{ apikey: key \}/);
+  assert.match(authSource, /await requireAuthBackend\(\)/);
+  assert.match(authSource, /authentication service cannot be reached/);
+});
+
+test("auth health check has a bounded timeout", () => {
+  assert.match(authSource, /timeoutMs = 5000/);
+  assert.match(authSource, /AbortController/);
+  assert.match(authSource, /AbortError[\s\S]*?"timeout"/);
+});
+
 test("OAuth callback exchanges the code and lands in dashboard", () => {
   assert.match(callbackSource, /exchangeCodeForSession\(code\)/);
   assert.match(callbackSource, /return "\/dashboard"/);
