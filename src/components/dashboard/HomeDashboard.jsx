@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/context/AppContext";
-import { calcPct } from "@/lib/utils";
 import { fetchSessionHistory } from "@/lib/queries";
 import { computeSkillRatings } from "@/lib/intelligence";
 import { computeBadges } from "@/lib/badges";
+import { computeNextMove } from "@/lib/nextMove.mjs";
 import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
 
@@ -18,240 +18,259 @@ function formatDate(dateStr) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function pointsForSession(session) {
+  const shots = session.shot_logs || [];
+  const stats = session.game_stats || {};
+  return shots.filter((shot) => shot.made).reduce((sum, shot) => {
+    const zone = COURT_ZONES.find((item) => item.id === shot.zone_id);
+    return sum + (zone?.pts || 2);
+  }, 0) + Number(stats.ft_made || 0);
+}
+
+function ratingTier(overall = 0) {
+  if (overall >= 90) return { label: "Elite", color: "#FF6B35" };
+  if (overall >= 75) return { label: "Advanced", color: "#22C55E" };
+  if (overall >= 55) return { label: "Solid", color: "#3B82F6" };
+  if (overall >= 35) return { label: "Developing", color: "#F59E0B" };
+  return { label: "Rookie", color: "#8B5CF6" };
+}
+
 export default function HomeDashboard() {
-  const { setScreen, player, playerId, shotData, journalEntries, loading } = useApp();
+  const { setScreen, player, playerId, journalEntries, loading } = useApp();
   const [sessions, setSessions] = useState([]);
   const [ratings, setRatings] = useState(null);
   const [badges, setBadges] = useState(null);
+  const [nextMove, setNextMove] = useState(null);
   const [showRatingInfo, setShowRatingInfo] = useState(false);
 
   useEffect(() => {
     if (!playerId) return;
-    fetchSessionHistory(playerId).then((s) => {
-      setSessions(s);
-      if (s.length > 0) {
-        setRatings(computeSkillRatings(s));
-        setBadges(computeBadges(s, player?.streak || 0, journalEntries.length));
-      }
-    }).catch(() => {});
+
+    let active = true;
+    fetchSessionHistory(playerId)
+      .then((history) => {
+        if (!active) return;
+        const computedRatings = history.length ? computeSkillRatings(history) : null;
+        setSessions(history);
+        setRatings(computedRatings);
+        setBadges(history.length ? computeBadges(history, player?.streak || 0, journalEntries.length) : null);
+        setNextMove(computeNextMove(history, computedRatings));
+      })
+      .catch(() => {
+        if (active) setNextMove(computeNextMove([], null));
+      });
+
+    return () => {
+      active = false;
+    };
   }, [playerId, player?.streak, journalEntries.length]);
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
-        <div style={{ height: 180, background: "var(--color-muted)", borderRadius: 24, animation: "pulse 1.5s ease infinite" }} />
-        <div style={{ height: 60, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease infinite" }} />
+      <div style={{ display: "grid", gap: 16, padding: "0 4px" }}>
+        <div style={{ height: 210, background: "var(--color-muted)", borderRadius: 24, animation: "pulse 1.5s ease infinite" }} />
+        <div style={{ height: 180, background: "var(--color-muted)", borderRadius: 20, animation: "pulse 1.5s ease infinite" }} />
       </div>
     );
   }
 
   const hasSessions = sessions.length > 0;
-  const recentSessions = sessions.slice(0, 2);
-  const data = shotData.game;
-  const fgPct = calcPct(data.made, data.total);
+  const recentSessions = sessions.slice(0, 3);
+  const tier = ratingTier(ratings?.overall || 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "0 4px" }}>
-
-      {/* ═══ LOGO — centered, transparent ═══ */}
-      <div style={{ textAlign: "center", padding: "8px 0 0" }}>
+      <div style={{ textAlign: "center", padding: "4px 0" }}>
         <img
           src={typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "/courtiq-dark.png" : "/courtiq-light.png"}
           alt="Court IQ"
-          style={{ height: 80, objectFit: "contain" }}
+          style={{ height: 68, maxWidth: "100%", objectFit: "contain" }}
         />
       </div>
 
-      {/* ═══ HERO CARD ═══ */}
       {player && (
-        <div style={{
+        <section style={{
           background: "var(--color-card)",
           borderRadius: 24,
-          padding: "32px 24px",
-          textAlign: "center",
+          padding: "28px 24px",
           boxShadow: "var(--shadow-elevated)",
+          border: "1px solid var(--color-border)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
+            <div style={{ minWidth: 0, flex: "1 1 260px" }}>
+              <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.3, color: "var(--color-text-sec)", textTransform: "uppercase" }}>
+                Player development profile
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "var(--color-text)", marginTop: 7, letterSpacing: -0.8 }}>
+                {player.name}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 4 }}>
+                {player.position || "Basketball athlete"}{player.team ? ` · ${player.team}` : ""}
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+                {player.streak > 0 && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FEF3C7", color: "#D97706", borderRadius: 20, padding: "6px 11px", fontSize: 11, fontWeight: 800 }}>
+                    <Icon name="fire" size={14} color="#D97706" /> {player.streak}-day streak
+                  </span>
+                )}
+                {badges?.earned?.length > 0 && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FFF0E8", color: "#FF6B35", borderRadius: 20, padding: "6px 11px", fontSize: 11, fontWeight: 800 }}>
+                    <Icon name="trophy" size={14} color="#FF6B35" /> {badges.earned.length} badges
+                  </span>
+                )}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--color-muted)", color: "var(--color-text-sec)", borderRadius: 20, padding: "6px 11px", fontSize: 11, fontWeight: 800 }}>
+                  {sessions.length} session{sessions.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => ratings && setShowRatingInfo((value) => !value)}
+              style={{
+                flex: "0 0 auto",
+                minWidth: 150,
+                border: "none",
+                borderRadius: 20,
+                padding: "20px 24px",
+                cursor: ratings ? "pointer" : "default",
+                background: `${tier.color}14`,
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: ratings ? 54 : 36, lineHeight: 1, fontWeight: 950, color: ratings ? tier.color : "#FF6B35" }}>
+                {ratings ? ratings.overall : `#${player.number || 0}`}
+              </div>
+              <div style={{ fontSize: 10, marginTop: 7, fontWeight: 900, letterSpacing: 1, textTransform: "uppercase", color: ratings ? tier.color : "#FF6B35" }}>
+                {ratings ? `${tier.label} rating` : "Jersey"}
+              </div>
+            </button>
+          </div>
+
+          {showRatingInfo && ratings && (
+            <div style={{ marginTop: 18, background: "var(--color-muted)", borderRadius: 16, padding: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text)" }}>How CourtIQ reads your game</div>
+              <div style={{ fontSize: 12, lineHeight: 1.65, color: "var(--color-text-sec)", marginTop: 6 }}>
+                Your overall score blends Shooting, Playmaking, Rebounding, Defense and Efficiency. The score is experience-gated so a small sample cannot create an inflated rating.
+              </div>
+              <button type="button" onClick={() => setScreen("iq")} style={{ marginTop: 12, border: "none", background: "transparent", padding: 0, color: "#FF6B35", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>
+                Open full IQ breakdown →
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
+      {nextMove && (
+        <section style={{
           position: "relative",
           overflow: "hidden",
+          borderRadius: 24,
+          padding: "24px",
+          background: "linear-gradient(135deg, #21163F 0%, #3B2470 52%, #6D3AE8 100%)",
+          boxShadow: "0 18px 42px rgba(61,36,112,0.24)",
+          color: "white",
         }}>
-          {(() => {
-            const r = ratings?.overall || 0;
-            const tierColor = r >= 90 ? "#FF6B35" : r >= 75 ? "#22C55E" : r >= 55 ? "#3B82F6" : r >= 35 ? "#F59E0B" : "#8B5CF6";
-            const tierLabel = r >= 90 ? "Elite" : r >= 75 ? "Advanced" : r >= 55 ? "Solid" : r >= 35 ? "Developing" : "Rookie";
-            return (
-              <button onClick={() => ratings && setShowRatingInfo(!showRatingInfo)} style={{ background: "none", border: "none", cursor: ratings ? "pointer" : "default", padding: 0, width: "100%" }}>
-                <div style={{ fontSize: ratings ? 64 : 44, fontWeight: 900, color: ratings ? tierColor : "#FF6B35", lineHeight: 1 }}>
-                  {ratings ? ratings.overall : `#${player.number || 0}`}
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.5, color: ratings ? tierColor : "#FF6B35", opacity: 0.7, marginTop: 6, textTransform: "uppercase" }}>
-                  {ratings ? "Overall Rating" : "Jersey Number"}
-                </div>
-                {ratings && (
-                  <div style={{ fontSize: 13, color: tierColor, marginTop: 8, fontWeight: 600 }}>
-                    {tierLabel}
-                    <span style={{ color: "var(--color-text-sec)", fontSize: 12 }}>{" · Tap for details"}</span>
-                  </div>
-                )}
+          <div style={{ position: "absolute", width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.07)", right: -80, top: -110 }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, fontWeight: 950, letterSpacing: 1.5, color: "#D9C7FF", textTransform: "uppercase" }}>
+              <Icon name="brain" size={15} color="#D9C7FF" /> CourtIQ next move
+            </div>
+            <h2 style={{ margin: "10px 0 0", fontSize: 24, lineHeight: 1.1, fontWeight: 950, letterSpacing: -0.6 }}>
+              {nextMove.title}
+            </h2>
+            <p style={{ margin: "10px 0 0", maxWidth: 760, fontSize: 13, lineHeight: 1.65, color: "rgba(255,255,255,0.78)" }}>
+              {nextMove.reason}
+            </p>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 18, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setScreen(nextMove.screen)}
+                style={{ border: "none", borderRadius: 12, padding: "11px 15px", background: "white", color: "#3B2470", fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+              >
+                {nextMove.actionLabel} →
               </button>
-            );
-          })()}
-
-          {/* Rating explanation */}
-          {showRatingInfo && ratings && (
-            <div style={{ marginTop: 16, textAlign: "left", background: "var(--color-muted)", borderRadius: 16, padding: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "var(--color-text)", marginBottom: 10 }}>How Your Rating Works</div>
-              <div style={{ fontSize: 13, color: "var(--color-text-sec)", lineHeight: 1.7, marginBottom: 14 }}>
-                Your overall rating (0-99) is calculated from 5 skills: Shooting, Playmaking, Rebounding, Defense, and Efficiency. Each session updates your rating based on real performance.
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[
-                  { range: "90-99", label: "Elite", color: "#FF6B35", desc: "Top-tier performance across all categories" },
-                  { range: "75-89", label: "Advanced", color: "#22C55E", desc: "Strong all-around game with standout areas" },
-                  { range: "55-74", label: "Solid", color: "#3B82F6", desc: "Consistent player with room to grow" },
-                  { range: "35-54", label: "Developing", color: "#F59E0B", desc: "Building fundamentals and gaining experience" },
-                  { range: "0-34", label: "Rookie", color: "#8B5CF6", desc: "Just getting started — every session counts" },
-                ].map((tier) => (
-                  <div key={tier.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
-                    <span style={{ fontSize: 12, fontWeight: 900, color: tier.color, minWidth: 44 }}>{tier.range}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: tier.color, minWidth: 80 }}>{tier.label}</span>
-                    <span style={{ fontSize: 12, color: "var(--color-text-sec)", lineHeight: 1.4 }}>{tier.desc}</span>
-                  </div>
-                ))}
-              </div>
+              <span style={{ padding: "8px 10px", borderRadius: 10, background: "rgba(255,255,255,0.1)", fontSize: 11, fontWeight: 800, color: "#F0E8FF" }}>
+                {nextMove.metric}
+              </span>
             </div>
-          )}
-          <div style={{ fontSize: 20, fontWeight: 900, color: "var(--color-text)", marginTop: 16 }}>
-            {player.name}
           </div>
-          <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 4 }}>
-            {player.position} {player.team ? `· ${player.team}` : ""}
-          </div>
-
-          {/* Streak + Badges — inline pills */}
-          {(player.streak > 0 || (badges && badges.earned.length > 0)) && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-              {player.streak > 0 && (
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  background: "#FEF3C7", color: "#D97706",
-                  borderRadius: 20, padding: "6px 12px", fontSize: 11, fontWeight: 700,
-                }}>
-                  <Icon name="fire" size={14} color="#D97706" /> {player.streak}-day streak
-                </span>
-              )}
-              {badges && badges.earned.length > 0 && (
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  background: "#FFF0E8", color: "#FF6B35",
-                  borderRadius: 20, padding: "6px 12px", fontSize: 11, fontWeight: 700,
-                }}>
-                  <Icon name="trophy" size={14} color="#FF6B35" /> {badges.earned.length} badges
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        </section>
       )}
 
-      {/* ═══ EMPTY STATE — First time user ═══ */}
       {!hasSessions && (
-        <div style={{
-          background: "var(--color-card)",
-          borderRadius: 20,
-          padding: 24,
-          textAlign: "center",
-          boxShadow: "var(--shadow-card)",
-        }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: 32,
-            background: "#FFF0E8",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px",
-          }}>
+        <section style={{ background: "var(--color-card)", borderRadius: 20, padding: 24, textAlign: "center", boxShadow: "var(--shadow-card)", border: "1px solid var(--color-border)" }}>
+          <div style={{ width: 64, height: 64, borderRadius: 32, background: "#FFF0E8", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
             <Icon name="basketball" size={28} color="#FF6B35" />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--color-text)", marginBottom: 8 }}>
-            Ready to start?
+          <div style={{ fontSize: 16, fontWeight: 900, color: "var(--color-text)" }}>Give CourtIQ something to read</div>
+          <div style={{ fontSize: 13, color: "var(--color-text-sec)", lineHeight: 1.55, margin: "8px auto 0", maxWidth: 500 }}>
+            Log a game or workout. Once there is real performance data, CourtIQ will start identifying patterns, weaknesses and the next best development move.
           </div>
-          <div style={{ fontSize: 13, color: "var(--color-text-sec)", lineHeight: 1.5, marginBottom: 16 }}>
-            Tap the + button to log your first session. Track shots, assists, rebounds, and more.
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* ═══ RECENT SESSIONS — Clean list ═══ */}
       {recentSessions.length > 0 && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, padding: "0 4px" }}>
-            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)" }}>Recent</span>
-            <button onClick={() => setScreen("shots")} style={{
-              fontSize: 12, fontWeight: 700, color: "#FF6B35",
-              background: "none", border: "none", cursor: "pointer", padding: "8px 0",
-            }}>
+        <section>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "0 4px", marginBottom: 11 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text)" }}>Recent work</div>
+              <div style={{ fontSize: 10, color: "var(--color-text-sec)", marginTop: 2 }}>The data behind your recommendations</div>
+            </div>
+            <button type="button" onClick={() => setScreen("shots")} style={{ border: "none", background: "transparent", color: "#FF6B35", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>
               See all
             </button>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {recentSessions.map((s) => {
-              const shots = s.shot_logs || [];
-              const made = shots.filter((sh) => sh.made).length;
-              const stats = s.game_stats || {};
-              const pts = shots.filter((sh) => sh.made).reduce((sum, sh) => {
-                const zone = COURT_ZONES.find((z) => z.id === sh.zone_id);
-                return sum + (zone?.pts || 2);
-              }, 0) + (stats.ft_made || 0);
+
+          <div style={{ display: "grid", gap: 8 }}>
+            {recentSessions.map((session) => {
+              const shots = session.shot_logs || [];
+              const made = shots.filter((shot) => shot.made).length;
+              const stats = session.game_stats || {};
+              const points = pointsForSession(session);
+
               return (
-                <div key={s.id} style={{
-                  background: "var(--color-card)",
-                  borderRadius: 16, padding: "14px 16px",
-                  display: "flex", alignItems: "center", gap: 12,
-                  boxShadow: "var(--shadow-card)",
-                }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 12,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: s.type === "game" ? "#FFF0E8" : "#F3F0FF",
-                    flexShrink: 0,
-                  }}>
-                    <Icon name={s.type === "game" ? "trophy" : "zap"} size={20} color={s.type === "game" ? "#FF6B35" : "#8B5CF6"} />
+                <article key={session.id} style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 16, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-card)" }}>
+                  <div style={{ width: 42, height: 42, flexShrink: 0, borderRadius: 12, background: session.type === "game" ? "#FFF0E8" : "#F3F0FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name={session.type === "game" ? "trophy" : "zap"} size={20} color={session.type === "game" ? "#FF6B35" : "#8B5CF6"} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text)", textTransform: "capitalize" }}>
-                      {s.type} <span style={{ fontWeight: 400, color: "var(--color-text-sec)" }}>· {formatDate(s.created_at)}</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 850, color: "var(--color-text)", textTransform: "capitalize" }}>
+                      {session.type} <span style={{ fontWeight: 500, color: "var(--color-text-sec)" }}>· {formatDate(session.created_at)}</span>
                     </div>
-                    <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-                      {pts > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#FF6B35" }}>{pts} PTS</span>}
-                      {shots.length > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)" }}>{made}/{shots.length} FG</span>}
-                      {stats.ast > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: "#22C55E" }}>{stats.ast} AST</span>}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 5 }}>
+                      {points > 0 && <span style={{ fontSize: 11, fontWeight: 850, color: "#FF6B35" }}>{points} PTS</span>}
+                      {shots.length > 0 && <span style={{ fontSize: 11, fontWeight: 850, color: "var(--color-text-sec)" }}>{made}/{shots.length} FG</span>}
+                      {Number(stats.ast || 0) > 0 && <span style={{ fontSize: 11, fontWeight: 850, color: "#22C55E" }}>{stats.ast} AST</span>}
+                      {Number(stats.to || 0) > 0 && <span style={{ fontSize: 11, fontWeight: 850, color: "#EF4444" }}>{stats.to} TO</span>}
                     </div>
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ═══ QUICK ACTIONS — 2x2 grid with big icons ═══ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {[
-          { id: "skills", icon: "skills", label: "Skills", bg: "#FFF0E8", color: "#FF6B35" },
-          { id: "iq", icon: "brain", label: "My IQ", bg: "#F3F0FF", color: "#8B5CF6" },
-          { id: "gamelog", icon: "trophy", label: "Game Log", bg: "#FEF3C7", color: "#D97706" },
-          { id: "heatmap", icon: "fire", label: "Heat Map", bg: "#ECFDF5", color: "#10B981" },
-        ].map((a) => (
-          <button key={a.id} onClick={() => setScreen(a.id)} style={{
-            background: a.bg, border: "none", borderRadius: 16,
-            padding: "20px 16px", cursor: "pointer",
-            display: "flex", flexDirection: "column",
-            alignItems: "center", gap: 8,
-          }}>
-            <Icon name={a.icon} size={28} color={a.color} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: a.color }}>{a.label}</span>
-          </button>
-        ))}
-      </div>
+      <section>
+        <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text)", padding: "0 4px", marginBottom: 10 }}>Explore your game</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+          {[
+            { id: "train", icon: "dumbbell", label: "Training", caption: "Workouts & drills", bg: "#FFF0E8", color: "#FF6B35" },
+            { id: "iq", icon: "brain", label: "My IQ", caption: "Ratings & trends", bg: "#F3F0FF", color: "#8B5CF6" },
+            { id: "gamelog", icon: "trophy", label: "Game Log", caption: "Performance history", bg: "#FEF3C7", color: "#D97706" },
+            { id: "heatmap", icon: "fire", label: "Heat Map", caption: "Where shots fall", bg: "#ECFDF5", color: "#10B981" },
+          ].map((action) => (
+            <button key={action.id} type="button" onClick={() => setScreen(action.id)} style={{ minHeight: 118, background: action.bg, border: "none", borderRadius: 17, padding: "18px 16px", cursor: "pointer", textAlign: "left" }}>
+              <Icon name={action.icon} size={25} color={action.color} />
+              <div style={{ fontSize: 13, fontWeight: 900, color: action.color, marginTop: 10 }}>{action.label}</div>
+              <div style={{ fontSize: 10, fontWeight: 650, color: action.color, opacity: 0.72, marginTop: 3 }}>{action.caption}</div>
+            </button>
+          ))}
+        </div>
+      </section>
 
-      {/* Bottom spacer for nav */}
       <div style={{ height: 20 }} />
     </div>
   );
