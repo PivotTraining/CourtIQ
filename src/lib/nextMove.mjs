@@ -8,6 +8,10 @@ function zoneLabel(zoneId = "") {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function confidenceFromVolume(volume, strongAt) {
+  return volume >= strongAt ? "strong" : volume > 0 ? "solid" : "building";
+}
+
 function ratingRecommendation(ratings) {
   if (!ratings) return null;
 
@@ -26,24 +30,31 @@ function ratingRecommendation(ratings) {
   if (ratings[lowest.key] >= 55) return null;
 
   return {
+    kind: "low_rating",
+    skill: lowest.key,
+    confidence: "solid",
     priority: 60,
     title: `Raise your ${lowest.label}`,
     reason: lowest.reason,
     actionLabel: lowest.action,
     screen: lowest.screen,
     metric: `${ratings[lowest.key]}/99 ${lowest.label}`,
+    evidence: { rating: ratings[lowest.key] },
   };
 }
 
 export function computeNextMove(sessions = [], ratings = null) {
   if (!sessions.length) {
     return {
+      kind: "onboarding",
+      confidence: "building",
       priority: 100,
       title: "Log your first session",
       reason: "CourtIQ needs real game or workout data before it can identify patterns and prescribe your next move.",
       actionLabel: "Start a session",
       screen: "shots",
       metric: "0 sessions analyzed",
+      evidence: { sessions: 0 },
     };
   }
 
@@ -67,12 +78,17 @@ export function computeNextMove(sessions = [], ratings = null) {
   if (weakZones.length) {
     const weak = weakZones[0];
     return {
+      kind: "weak_zone",
+      skill: "shooting",
+      zoneId: weak.zoneId,
+      confidence: confidenceFromVolume(weak.total, 12),
       priority: 95,
       title: `Own the ${zoneLabel(weak.zoneId)}`,
       reason: `You are ${weak.made}-for-${weak.total} from this area across your recent sessions. That is enough volume for CourtIQ to flag it as a real weakness, not a one-game swing.`,
       actionLabel: "Open heat map",
       screen: "heatmap",
       metric: `${weak.percentage}% from ${zoneLabel(weak.zoneId)}`,
+      evidence: { made: weak.made, attempts: weak.total, percentage: weak.percentage },
     };
   }
 
@@ -86,12 +102,16 @@ export function computeNextMove(sessions = [], ratings = null) {
 
     if (turnoversPerGame >= 3 && assistTurnover < 1.5) {
       return {
+        kind: "ball_security",
+        skill: "playmaking",
+        confidence: confidenceFromVolume(games.length, 4),
         priority: 90,
         title: "Win the possession battle",
         reason: `You are averaging ${turnoversPerGame.toFixed(1)} turnovers with a ${assistTurnover.toFixed(1)} assist-to-turnover ratio in recent games. Cleaner decisions can improve your impact without requiring more shots.`,
         actionLabel: "Train ball security",
         screen: "skills",
         metric: `${turnoversPerGame.toFixed(1)} TO/G · ${assistTurnover.toFixed(1)} A/TO`,
+        evidence: { games: games.length, turnoversPerGame, assistTurnover },
       };
     }
   }
@@ -102,32 +122,42 @@ export function computeNextMove(sessions = [], ratings = null) {
   const practiceCount = recent.filter((session) => session.type === "practice").length;
   if (games.length >= 3 && practiceCount < games.length) {
     return {
+      kind: "practice_gap",
+      confidence: "solid",
       priority: 55,
       title: "Turn game data into practice reps",
       reason: `Your recent history contains ${games.length} games but only ${practiceCount} practice sessions. Use what the games exposed and deliberately train it before the next tip-off.`,
       actionLabel: "Choose a workout",
       screen: "train",
       metric: `${practiceCount} practices · ${games.length} games`,
+      evidence: { practices: practiceCount, games: games.length },
     };
   }
 
   if (allShots.length < 50) {
     return {
+      kind: "low_sample",
+      skill: "shooting",
+      confidence: "building",
       priority: 45,
       title: "Build a stronger sample",
       reason: `CourtIQ has only ${allShots.length} tracked shot attempts in your recent history. More intentional reps will make your heat map and shooting recommendations substantially more reliable.`,
       actionLabel: "Log a shooting session",
       screen: "shots",
       metric: `${allShots.length}/50 recent shots`,
+      evidence: { shots: allShots.length, target: 50 },
     };
   }
 
   return {
+    kind: "maintenance",
+    confidence: "solid",
     priority: 30,
     title: "Keep your strongest habit alive",
     reason: "No urgent weakness is dominating your recent data. Stay consistent, log the next session, and let CourtIQ watch for the next meaningful change in your game.",
     actionLabel: "Review My IQ",
     screen: "iq",
     metric: `${sessions.length} sessions analyzed`,
+    evidence: { sessions: sessions.length },
   };
 }
