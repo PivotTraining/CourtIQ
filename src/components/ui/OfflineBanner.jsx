@@ -25,7 +25,7 @@ export default function OfflineBanner() {
     <div className="fixed top-0 left-0 right-0 z-[998] bg-[#FEF3C7] border-b border-[#FDE68A] px-4 py-2.5 flex items-center justify-center gap-2 animate-fade-in">
       <span className="text-base">📡</span>
       <span className="text-xs font-bold text-[#92400E]">
-        You're offline — stats will save when you reconnect
+        You're offline — reconnect before saving your stats
       </span>
     </div>
   );

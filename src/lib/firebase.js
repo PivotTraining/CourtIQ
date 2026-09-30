@@ -10,8 +10,8 @@ function browserOrigin() {
 }
 
 function authConfig() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   return { url, key };
 }
 
@@ -80,7 +80,10 @@ export async function signInWithEmail(email, password) {
 
 export async function signUpWithEmail(email, password) {
   await requireAuthBackend();
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    email, password,
+    options: { emailRedirectTo: `${browserOrigin()}/auth/callback?next=%2Fdashboard` },
+  });
   if (error) throw new Error(error.message);
   return data;
 }

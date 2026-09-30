@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, resetPassword } from "@/lib/firebase";
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
 import Icon from "@/components/ui/Icons";
-
-function isCapacitor() {
-  if (typeof window === "undefined") return false;
-  return !!window.Capacitor?.isNativePlatform?.();
-}
 
 const inputStyle = {
   width: "100%", padding: "14px 16px", borderRadius: 14,
@@ -28,7 +23,7 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const isNative = typeof window !== "undefined" && isCapacitor();
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const handleForgotPassword = async () => {
     if (!email) { setError("Enter your email first, then tap Forgot Password."); return; }
@@ -47,7 +42,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await signUpWithEmail(email, password);
+        const data = await signUpWithEmail(email, password);
+        if (!data?.session) setConfirmationSent(true);
       } else {
         await signInWithEmail(email, password);
       }
@@ -63,18 +59,6 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleApple = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      await signInWithApple();
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -124,8 +108,9 @@ export default function LoginScreen() {
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
-              <label style={labelStyle}>Email</label>
+              <label htmlFor="login-email" style={labelStyle}>Email</label>
               <input
+                id="login-email"
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@email.com" required autoComplete="email"
                 style={inputStyle}
@@ -133,8 +118,9 @@ export default function LoginScreen() {
             </div>
 
             <div>
-              <label style={labelStyle}>Password</label>
+              <label htmlFor="login-password" style={labelStyle}>Password</label>
               <input
+                id="login-password"
                 type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder={isSignUp ? "6+ characters" : "Your password"}
                 required minLength={6}
@@ -172,6 +158,12 @@ export default function LoginScreen() {
               </div>
             )}
 
+            {confirmationSent && (
+              <p role="status" style={{ fontSize: 13, lineHeight: 1.5, color: "var(--color-text-sec)" }}>
+                Check your inbox to confirm your email, then return to CourtIQ to sign in.
+              </p>
+            )}
+
             <button type="submit" disabled={loading} style={{
               width: "100%", padding: "16px 0", borderRadius: 16,
               background: "#FF6B35", color: "white", fontSize: 16, fontWeight: 700,
@@ -198,23 +190,6 @@ export default function LoginScreen() {
             <div style={{ flex: 1, height: 1, background: "var(--color-border)" }} />
           </div>
 
-          {/* Apple Sign In — shown on native iOS */}
-          {isNative && (
-            <button onClick={handleApple} disabled={loading} style={{
-              width: "100%", padding: "14px 0", borderRadius: 14, marginBottom: 10,
-              background: "#000", color: "#fff",
-              fontSize: 14, fontWeight: 600, border: "none",
-              cursor: loading ? "default" : "pointer", minHeight: 48,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-            }}>
-              {/* Apple logo SVG */}
-              <svg width="17" height="17" viewBox="0 0 814 1000" fill="white">
-                <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 405.8 30.7 295 30.7 211.1c0-185.8 121.5-284.3 241-284.3 63.5 0 116.6 41.9 155.5 41.9 37.3 0 96.5-44.4 168.3-44.4 26.5 0 108.2 2.6 167.4 98.3zm-88-52.3c-30.4-35.8-73.6-62.2-121-62.2-81.4 0-137.2 53.5-162 53.5-27.2 0-90.4-54.2-162.5-54.2-112.5 0-230.3 87.4-230.3 257.1 0 60.5 11.7 123.1 35.1 185.4 31.7 85.2 131.4 262 235.1 262 26.5 0 64.2-17.7 137.8-17.7 71.3 0 107.3 18.3 142 18.3 103 0 206.7-170.3 234.4-255.5-52.5-22.5-131.2-88-131.2-197.3 0-97.7 62.3-153.8 97.7-183.8l-37.4-5.6z"/>
-              </svg>
-              Continue with Apple
-            </button>
-          )}
-
           {/* Google */}
           <button onClick={handleGoogle} disabled={loading} style={{
             width: "100%", padding: "14px 0", borderRadius: 14,
@@ -235,7 +210,7 @@ export default function LoginScreen() {
           {/* Toggle sign-in / sign-up */}
           <p style={{ textAlign: "center", fontSize: 13, color: "var(--color-text-sec)", marginTop: 20, marginBottom: 0 }}>
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button onClick={() => { setIsSignUp(!isSignUp); setError(""); }} style={{
+            <button onClick={() => { setIsSignUp(!isSignUp); setError(""); setConfirmationSent(false); }} style={{
               color: "#FF6B35", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontSize: 13,
             }}>
               {isSignUp ? "Sign In" : "Sign Up"}

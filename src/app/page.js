@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const features = [
   ["Game intelligence", "Log real game performance and turn the box score into clear development priorities."],
@@ -8,10 +9,10 @@ const features = [
 
 export default function Home() {
   return (
-    <main style={{ minHeight: "100vh", background: "#0F1117", color: "#F8FAFC" }}>
+    <main style={{ width: "100%", minHeight: "100dvh", background: "#0F1117", color: "#F8FAFC" }}>
       <nav style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
         <Link href="/" style={{ color: "inherit", textDecoration: "none", display: "flex", alignItems: "center", gap: 10, fontWeight: 900, fontSize: 20 }}>
-          <img src="/logo.svg" alt="CourtIQ" width="38" height="38" style={{ borderRadius: 10 }} />
+          <Image src="/logo.svg" alt="CourtIQ" width={38} height={38} style={{ borderRadius: 10 }} />
           CourtIQ
         </Link>
         <Link href="/dashboard" style={{ color: "#fff", textDecoration: "none", background: "#FF6B35", borderRadius: 12, padding: "11px 16px", fontWeight: 800, fontSize: 14 }}>
@@ -19,7 +20,7 @@ export default function Home() {
         </Link>
       </nav>
 
-      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "72px 24px 48px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", alignItems: "center", gap: 56 }}>
+      <section style={{ maxWidth: 1180, margin: "0 auto", padding: "72px 24px 48px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", alignItems: "center", gap: 56 }}>
         <div>
           <div style={{ color: "#FF8B61", fontWeight: 900, letterSpacing: 1.8, fontSize: 12, textTransform: "uppercase", marginBottom: 18 }}>Basketball development intelligence</div>
           <h1 style={{ fontSize: "clamp(44px, 7vw, 82px)", lineHeight: 0.96, letterSpacing: -3.4, margin: 0, maxWidth: 760 }}>
@@ -28,6 +29,7 @@ export default function Home() {
           <p style={{ maxWidth: 650, color: "#A9B1C1", fontSize: "clamp(17px, 2vw, 21px)", lineHeight: 1.6, margin: "28px 0 0" }}>
             CourtIQ turns games, workouts, shooting sessions, and player habits into a clear development plan. Less guessing. Better reps. Smarter players.
           </p>
+          <p style={{ color: "#A9B1C1", fontSize: 14, lineHeight: 1.6, marginTop: 16 }}>Open CourtIQ in your browser on your phone, tablet, or computer. Add it to your home screen for quick access.</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 32 }}>
             <Link href="/dashboard" style={{ color: "#fff", textDecoration: "none", background: "#FF6B35", borderRadius: 14, padding: "14px 20px", fontWeight: 900 }}>Start training smarter</Link>
             <a href="#how-it-works" style={{ color: "#E5E7EB", textDecoration: "none", border: "1px solid #303644", borderRadius: 14, padding: "14px 20px", fontWeight: 800 }}>See how it works</a>
@@ -35,6 +37,7 @@ export default function Home() {
         </div>
 
         <div style={{ background: "linear-gradient(145deg, #181C25, #11141B)", border: "1px solid #2A303C", borderRadius: 28, padding: 24, boxShadow: "0 28px 80px rgba(0,0,0,.35)" }}>
+          <div style={{ color: "#8C94A3", fontSize: 11, marginBottom: 14 }}>Example player dashboard</div>
           <div style={{ color: "#8C94A3", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.4 }}>Your next move</div>
           <div style={{ fontSize: 30, fontWeight: 900, marginTop: 8 }}>Attack the rim under pressure</div>
           <p style={{ color: "#A9B1C1", lineHeight: 1.55, marginBottom: 24 }}>Your recent game profile shows your biggest opportunity is finishing efficiency when contact increases.</p>

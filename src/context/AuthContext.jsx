@@ -5,18 +5,6 @@ import { supabase } from "@/lib/supabase";
 
 const AuthContext = createContext(null);
 
-function isNativePlatform() {
-  if (typeof window === "undefined") return false;
-  return !!window.Capacitor?.isNativePlatform?.();
-}
-
-async function closeBrowser() {
-  try {
-    const { Browser } = await import("@capacitor/browser");
-    await Browser.close();
-  } catch {}
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [playerProfile, setPlayerProfile] = useState(null);
@@ -48,28 +36,35 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    let appUrlListener;
+    let active = true;
+    const pendingProfiles = new Set();
     // Resolve any existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return;
       if (session?.user) {
         setUser(session.user);
         loadProfile(session.user).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
+    }).catch(() => {
+      if (active) setLoading(false);
     });
 
     // Listen for auth state changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
       if (session?.user) {
         setUser(session.user);
-        await loadProfile(session.user);
-        // After OAuth completes on native, close the in-app browser
-        if (event === "SIGNED_IN" && isNativePlatform()) {
-          closeBrowser();
-        }
+        // Supabase holds an auth lock during this callback. Start database work
+        // after it returns so session/token access cannot deadlock sign-in.
+        const timer = setTimeout(() => {
+          pendingProfiles.delete(timer);
+          if (active) loadProfile(session.user).finally(() => { if (active) setLoading(false); });
+        }, 0);
+        pendingProfiles.add(timer);
       } else {
         setUser(null);
         setPlayerProfile(null);
@@ -78,29 +73,10 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    // Native deep-link handler — fired when the app is opened via the
-    // com.pivottraining.courtiq://login-callback URL after OAuth.
-    if (isNativePlatform()) {
-      import("@capacitor/app")
-        .then(async ({ App }) => {
-          appUrlListener = await App.addListener("appUrlOpen", async ({ url }) => {
-            if (url.includes("login-callback") || url.includes("access_token") || url.includes("code=")) {
-              const code = new URL(url).searchParams.get("code");
-              if (code) {
-                // PKCE flow — exchange the auth code for a session.
-                const { error } = await supabase.auth.exchangeCodeForSession(code);
-                if (error) console.error("[Auth] exchangeCodeForSession error:", error.message);
-              }
-              closeBrowser();
-            }
-          });
-        })
-        .catch(() => {});
-    }
-
     return () => {
+      active = false;
+      pendingProfiles.forEach(clearTimeout);
       subscription.unsubscribe();
-      appUrlListener?.remove();
     };
   }, []);
 

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const authSource = await readFile(new URL("../src/lib/firebase.js", import.meta.url), "utf8");
 const callbackSource = await readFile(new URL("../src/components/auth/AuthCallback.jsx", import.meta.url), "utf8");
+const routingSource = await readFile(new URL("../src/lib/webAuth.mjs", import.meta.url), "utf8");
 
 test("Google OAuth uses an explicit browser redirect", () => {
   assert.match(authSource, /skipBrowserRedirect:\s*true/);
@@ -32,7 +33,7 @@ test("auth health check has a bounded timeout", () => {
 
 test("OAuth callback exchanges the code and lands in dashboard", () => {
   assert.match(callbackSource, /exchangeCodeForSession\(code\)/);
-  assert.match(callbackSource, /return "\/dashboard"/);
+  assert.match(routingSource, /return "\/dashboard"/);
   assert.match(callbackSource, /window\.location\.replace\(next\)/);
 });
 
