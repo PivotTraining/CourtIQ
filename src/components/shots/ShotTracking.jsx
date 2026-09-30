@@ -27,7 +27,9 @@ export default function ShotTracking() {
   }
 
   const data = mode === "game" ? shotData.game : shotData.practice;
-  const fgPct = calcPct(data.made, data.total);
+  const fgMade = data.threes.made + data.midRange.made + data.paint.made;
+  const fgTotal = data.threes.total + data.midRange.total + data.paint.total;
+  const fgPct = calcPct(fgMade, fgTotal);
   const hasShots = data.total > 0;
 
   const zones = [
@@ -37,7 +39,8 @@ export default function ShotTracking() {
     { label: "Free Throws", ...data.freeThrows, color: "#F59E0B", iconName: "target" },
   ];
 
-  const practicePct = calcPct(shotData.practice.made, shotData.practice.total);
+  const practice = shotData.practice;
+  const practicePct = calcPct(practice.threes.made + practice.midRange.made + practice.paint.made, practice.threes.total + practice.midRange.total + practice.paint.total);
 
   return (
     <div>
@@ -120,11 +123,11 @@ export default function ShotTracking() {
             </div>
             <div style={{ fontSize: 14, color: "var(--color-text-sec)" }}>
               <span style={{ fontWeight: 800, color: "var(--color-text)" }}>
-                {data.made}
+                {fgMade}
               </span>{" "}
               made out of{" "}
               <span style={{ fontWeight: 800, color: "var(--color-text)" }}>
-                {data.total}
+                {fgTotal}
               </span>{" "}
               attempts
             </div>

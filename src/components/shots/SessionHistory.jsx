@@ -7,6 +7,8 @@ import { fetchSessionHistory } from "@/lib/queries";
 import { calcPct } from "@/lib/utils";
 import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
+import AdvancedSessionReport from './AdvancedSessionReport';
+import { buildSessionReport } from '@/lib/sessionReport.mjs';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -48,18 +50,14 @@ function StatCell({ value, label, color }) {
 }
 
 function SessionCard({ session }) {
-  const shots = session.shot_logs || [];
+  const [showReport, setShowReport] = useState(false);
   const stats = session.game_stats || {};
+  const report = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES);
+  const shots = report.fieldGoals;
   const madeShots = shots.filter((s) => s.made).length;
   const fgPct = calcPct(madeShots, shots.length);
 
-  const totalPts =
-    shots
-      .filter((s) => s.made)
-      .reduce((sum, s) => {
-        const zone = COURT_ZONES.find((z) => z.id === s.zone_id);
-        return sum + (zone?.pts || 2);
-      }, 0) + (stats.ft_made || 0);
+  const totalPts = report.pts;
 
   return (
     <div
@@ -185,6 +183,11 @@ function SessionCard({ session }) {
           </div>
         )}
       </div>
+      <button onClick={() => setShowReport(value => !value)} aria-expanded={showReport}
+        style={{ marginTop: 12, width: '100%', minHeight: 44, border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-muted)', color: 'var(--color-text)', fontWeight: 700, fontSize: 12 }}>
+        {showReport ? 'Hide performance report' : 'View performance report'}
+      </button>
+      {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.created_at} />}
     </div>
   );
 }

@@ -41,7 +41,8 @@ export default function Shell() {
   const [refreshing, setRefreshing] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("courtiq-theme");
+      let saved;
+      try { saved = localStorage.getItem("courtiq-theme"); } catch { /* Storage may be blocked. */ }
       if (saved) return saved === "dark";
       return true;
     }
@@ -75,7 +76,7 @@ export default function Shell() {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
-    localStorage.setItem("courtiq-theme", darkMode ? "dark" : "light");
+    try { localStorage.setItem("courtiq-theme", darkMode ? "dark" : "light"); } catch { /* Keep the in-memory theme usable. */ }
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = darkMode ? "#0F1117" : "#FF6B35";
   }, [darkMode]);
@@ -254,7 +255,7 @@ export default function Shell() {
 
       <BottomNav />
 
-      {showLogger && <ShotLogger onClose={() => setShowLogger(false)} />}
+      {showLogger && <ShotLogger onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
       {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} onSwitch={() => refreshData()} />}
     </div>
