@@ -1,5 +1,13 @@
 # CourtIQ web launch
 
+> Current repair status and mandatory backend/release sequence: [core-repair-release-gate.md](core-repair-release-gate.md). The original audit below is historical where contradicted by that record.
+
+## Updated backend evidence
+
+The user identified the existing CourtIQ project as `tkjvkvrzlvbukxbsilvw` (`courtiq-dev`, CourtIQ organization). Its Auth endpoint and existing tables were reachable. With explicit approval, the malformed Site URL was changed to `https://app.getcourtiq.com` and three exact branch-preview callback URLs were added. Real Google sign-in then reached profile setup and survived a reload. That proves sign-in on the prior preview, not the latest repair's live CRUD or deletion behavior. Branch-specific Preview public backend variables were corrected; production hosting variables were not changed.
+
+The later audit found the older primary-player SELECT policy still live and no deployed `delete-account` function. The September 30 repair prepares the updated migration and function, but dashboard access was declined before live application. Do not interpret local tests or passing builds as a repaired production database.
+
 Product direction confirmed September 30, 2026: a browser application that works on desktop, tablet, and mobile. Optional home-screen installation is a shortcut to the same web product.
 
 ## Changes

@@ -26,13 +26,18 @@ export default function LoginScreen() {
   const [confirmationSent, setConfirmationSent] = useState(false);
 
   const handleForgotPassword = async () => {
+    if (loading) return;
     if (!email) { setError("Enter your email first, then tap Forgot Password."); return; }
     setError("");
+    setLoading(true);
+    setResetSent(false);
     try {
       await resetPassword(email);
       setResetSent(true);
     } catch (err) {
       setError(err.message || "Could not send reset email");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -122,8 +127,8 @@ export default function LoginScreen() {
               <input
                 id="login-password"
                 type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder={isSignUp ? "6+ characters" : "Your password"}
-                required minLength={6}
+                placeholder={isSignUp ? "8+ characters" : "Your password"}
+                required minLength={isSignUp ? 8 : 1}
                 autoComplete={isSignUp ? "new-password" : "current-password"}
                 style={inputStyle}
               />
@@ -131,7 +136,7 @@ export default function LoginScreen() {
 
             {!isSignUp && (
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -4 }}>
-                <button type="button" onClick={handleForgotPassword} style={{
+                <button type="button" onClick={handleForgotPassword} disabled={loading} style={{
                   fontSize: 12, color: "#FF6B35", fontWeight: 600,
                   background: "none", border: "none", cursor: "pointer", padding: "4px 0",
                 }}>
@@ -145,7 +150,7 @@ export default function LoginScreen() {
                 fontSize: 12, color: "#22C55E", background: "#F0FDF4",
                 padding: "10px 14px", borderRadius: 12, border: "1px solid #BBF7D0", lineHeight: 1.5,
               }}>
-                Password reset email sent to {email}. Check your inbox.
+                If an account exists for {email}, a reset link has been requested. Check your inbox and spam folder.
               </div>
             )}
 

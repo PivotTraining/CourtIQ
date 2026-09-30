@@ -30,7 +30,7 @@ function LoadingScreen() {
 }
 
 function AuthGate() {
-  const { user, loading, needsProfile, profileError, retryProfile } = useAuth();
+  const { user, playerProfile, loading, needsProfile, profileError, retryProfile } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ function AuthGate() {
   if (needsProfile) return <ProfileSetup />;
 
   return (
-    <AppProvider>
+    <AppProvider key={playerProfile?.id}>
       <Shell />
     </AppProvider>
   );

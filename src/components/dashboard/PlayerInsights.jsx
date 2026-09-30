@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import ShareStoryCard from "@/components/ShareStoryCard";
 import { fetchSessionHistory } from "@/lib/queries";
@@ -112,6 +113,7 @@ export default function PlayerInsights() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("overview"); // overview | season | trends
   const [showStoryCard, setShowStoryCard] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!playerId) return;
@@ -126,10 +128,11 @@ export default function PlayerInsights() {
         coachReport: computeCoachReport(sessions, ratings),
       });
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setHistoryError(true); setLoading(false); });
   }, [playerId]);
 
   if (loading) return <div style={{ height: 192, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />;
+  if (historyError) return <RecordsUnavailable />;
   if (!data) return null;
 
   const { memory, trends, ratings, season, coachReport } = data;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useAuth } from "@/context/AuthContext";
 import { fetchManagedPlayers, fetchSessionHistory } from "@/lib/queries";
 import { computeSkillRatings, computeSeasonStats } from "@/lib/intelligence";
@@ -36,6 +37,7 @@ export default function CoachDashboard() {
   const { user } = useAuth();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -50,10 +52,11 @@ export default function CoachDashboard() {
       }));
       setPlayers(enriched);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setHistoryError(true); setLoading(false); });
   }, [user]);
 
   if (loading) return <div style={{ height: 192, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />;
+  if (historyError) return <RecordsUnavailable />;
   if (players.length <= 1) return null;
 
   return (

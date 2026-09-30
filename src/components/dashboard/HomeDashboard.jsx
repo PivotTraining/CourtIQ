@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { fetchSessionHistory } from "@/lib/queries";
 import { computeSkillRatings } from "@/lib/intelligence";
@@ -42,6 +43,7 @@ export default function HomeDashboard() {
   const [badges, setBadges] = useState(null);
   const [nextMove, setNextMove] = useState(null);
   const [showRatingInfo, setShowRatingInfo] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!playerId) return;
@@ -57,7 +59,7 @@ export default function HomeDashboard() {
         setNextMove(computeNextMove(history, computedRatings));
       })
       .catch(() => {
-        if (active) setNextMove(computeNextMove([], null));
+        if (active) setHistoryError(true);
       });
 
     return () => {
@@ -65,6 +67,7 @@ export default function HomeDashboard() {
     };
   }, [playerId, player?.streak, journalEntries.length]);
 
+  if (historyError) return <RecordsUnavailable />;
   if (loading) {
     return (
       <div style={{ display: "grid", gap: 16, padding: "0 4px" }}>

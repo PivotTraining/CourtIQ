@@ -547,6 +547,7 @@ export default function ShotLogger({ onClose }) {
   const [freeThrows, setFreeThrows] = useState([]); // FTs (no zone)
   const [selectedZone, setSelectedZone] = useState(null);
   const [saving, setSaving] = useState(false);
+  const pendingWrite = useRef(false);
   const [saveError, setSaveError] = useState(null); // user-visible save error
   const [tab, setTab] = useState("court"); // court | stats
   const [gameStats, setGameStats] = useState({ ast: 0, reb: 0, stl: 0, blk: 0, to: 0, pf: 0, min: 0 });
@@ -594,6 +595,7 @@ export default function ShotLogger({ onClose }) {
   }, [session, mode, playerId]);
 
   const updateStat = (key, delta) => {
+    if (pendingWrite.current || ending) return;
     haptic();
     playTap();
     setGameStats((prev) => ({ ...prev, [key]: Math.max(0, prev[key] + delta) }));
@@ -601,11 +603,13 @@ export default function ShotLogger({ onClose }) {
   };
 
   const startSession = async () => {
+    if (pendingWrite.current) return;
     if (!playerId) {
       setSaveError("No player profile found. Please restart the app.");
       return;
     }
     setSaving(true);
+    pendingWrite.current = true;
     setSaveError(null);
     try {
       const s = await createSession(playerId, sessionType, mode);
@@ -615,6 +619,7 @@ export default function ShotLogger({ onClose }) {
       console.error("Failed to create session:", err);
       setSaveError("Couldn't start session — check your connection and try again.");
     } finally {
+      pendingWrite.current = false;
       setSaving(false);
     }
   };
@@ -642,7 +647,8 @@ export default function ShotLogger({ onClose }) {
   };
 
   const logShot = useCallback(async (made) => {
-    if (!session || !selectedZone) return;
+    if (pendingWrite.current || !session || !selectedZone) return;
+    pendingWrite.current = true;
     haptic();
     // Sound + ripple
     if (made) playSwish(); else playClank();
@@ -659,14 +665,15 @@ export default function ShotLogger({ onClose }) {
     } catch (err) {
       console.error("Failed to log shot:", err);
       setSaveError("Shot didn't save — check connection.");
-      setTimeout(() => setSaveError(null), 3000);
     } finally {
+      pendingWrite.current = false;
       setSaving(false);
     }
   }, [session, selectedZone, playerId]);
 
   const logFreeThrow = async (made) => {
-    if (!session) return;
+    if (pendingWrite.current || !session) return;
+    pendingWrite.current = true;
     haptic();
     if (made) playSwish(); else playClank();
     setSaving(true);
@@ -678,28 +685,35 @@ export default function ShotLogger({ onClose }) {
     } catch (err) {
       console.error("Failed to log FT:", err);
       setSaveError("FT didn't save — check connection.");
-      setTimeout(() => setSaveError(null), 3000);
     } finally {
+      pendingWrite.current = false;
       setSaving(false);
     }
   };
 
   const undoLast = async () => {
-    if (undoStack.length === 0) return;
+    if (pendingWrite.current || saving || ending || undoStack.length === 0) return;
+    pendingWrite.current = true;
     const last = undoStack[undoStack.length - 1];
-    if (last.type === "shot") {
-      try { await deleteShot(last.id); } catch (e) {}
-      setShots((prev) => prev.filter((s) => s.id !== last.id));
-    } else if (last.type === "ft") {
-      try { await deleteShot(last.id); } catch (e) {}
-      setFreeThrows((prev) => prev.filter((f) => f.id !== last.id));
-    } else if (last.type === "stat") {
-      setGameStats((prev) => ({ ...prev, [last.key]: Math.max(0, prev[last.key] - 1) }));
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (last.type === "shot" || last.type === "ft") await deleteShot(last.id);
+      if (last.type === "shot") setShots((prev) => prev.filter((s) => s.id !== last.id));
+      else if (last.type === "ft") setFreeThrows((prev) => prev.filter((f) => f.id !== last.id));
+      else if (last.type === "stat") setGameStats((prev) => ({ ...prev, [last.key]: Math.max(0, prev[last.key] - 1) }));
+      setUndoStack((prev) => prev.slice(0, -1));
+    } catch {
+      setSaveError("Undo didn't save. The shot is still in your record—please try again.");
+    } finally {
+      pendingWrite.current = false;
+      setSaving(false);
     }
-    setUndoStack((prev) => prev.slice(0, -1));
   };
 
   const endSession = async () => {
+    if (pendingWrite.current || saving || ending) return;
+    pendingWrite.current = true;
     playWhistle();
     setEnding(true);
     if (session) {
@@ -712,10 +726,15 @@ export default function ShotLogger({ onClose }) {
         await updateSessionStats(session.id, { ...gameStats, pts: totalPts, ft_made: ftMade, ft_total: freeThrows.length, focus: focus || null });
       } catch (err) {
         console.error("Failed to save stats:", err);
+        setSaveError("Session stats didn't save. Keep this screen open and try ending the session again.");
+        setEnding(false);
+        pendingWrite.current = false;
+        return;
       }
     }
     await refreshData();
     setEnding(false);
+    pendingWrite.current = false;
     if (shots.length > 0 || freeThrows.length > 0 || Object.values(gameStats).some((v) => v > 0)) {
       setStep("summary");
     } else {

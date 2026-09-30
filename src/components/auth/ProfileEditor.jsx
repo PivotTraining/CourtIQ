@@ -286,15 +286,17 @@ export default function ProfileEditor({ onClose }) {
               <div style={{ textAlign: "center", marginBottom: 16 }}>
                 <div style={{ marginBottom: 8 }}><Icon name="alert" size={32} color="#F59E0B" /></div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Delete Your Account?</h3>
-                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove all your sessions, shots, journal entries, and stats. This cannot be undone.</p>
+                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove this account, every player profile it manages, and their sessions, shots, journals, and stats. This cannot be undone.</p>
               </div>
               <button
                 onClick={async () => {
                   setSaving(true);
                   try {
-                    const { error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: {} });
+                    const { data, error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: { confirmation: "DELETE" } });
                     if (deleteError) throw deleteError;
+                    if (data?.deleted !== true) throw new Error("Account deletion was not confirmed.");
                     await signOutUser().catch(() => {});
+                    window.location.assign("/");
                   } catch (err) {
                     setError("Failed to delete. Contact support@pivottrainingdev.com");
                     setSaving(false);

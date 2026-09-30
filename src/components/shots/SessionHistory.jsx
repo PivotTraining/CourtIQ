@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { fetchSessionHistory } from "@/lib/queries";
 import { calcPct } from "@/lib/utils";
@@ -193,18 +194,20 @@ export default function SessionHistory() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, game, practice
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!playerId) return;
     fetchSessionHistory(playerId)
       .then(setSessions)
-      .catch(console.error)
+      .catch(() => setHistoryError(true))
       .finally(() => setLoading(false));
   }, [playerId]);
 
   const filtered =
     filter === "all" ? sessions : sessions.filter((s) => s.type === filter);
 
+  if (historyError) return <RecordsUnavailable />;
   if (loading) {
     return (
       <div

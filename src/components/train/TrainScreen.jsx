@@ -2,6 +2,7 @@
 
 import Icon from "@/components/ui/Icons";
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { DRILL_CATEGORIES, DRILLS, generatePracticePlan } from "@/lib/drills";
@@ -212,6 +213,7 @@ export default function TrainScreen() {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeWorkout, setActiveWorkout] = useState(null);
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
@@ -222,7 +224,7 @@ export default function TrainScreen() {
         setPlan(generated);
       }
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setHistoryError(true); setLoading(false); });
   }, [playerId]);
 
   const playerAge = playerProfile?.age || player?.age;
@@ -230,6 +232,7 @@ export default function TrainScreen() {
   const ageDrills = DRILLS.filter((d) => allowedDifficulties.includes(d.difficulty));
   const filteredDrills = category === "all" ? ageDrills : ageDrills.filter((d) => d.category === category);
 
+  if (historyError) return <RecordsUnavailable />;
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

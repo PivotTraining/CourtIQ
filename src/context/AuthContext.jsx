@@ -1,52 +1,89 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchManagedPlayers } from "@/lib/queries";
+import { selectPlayer, preferredPlayer, rememberPlayer } from "@/lib/playerSelection.mjs";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [playerProfile, setPlayerProfile] = useState(null);
+  const [playerProfile, updatePlayerProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needsProfile, setNeedsProfile] = useState(false);
   const [profileError, setProfileError] = useState(null);
+  const identity = useRef(null);
+  const profileRef = useRef(null);
+  const requestVersion = useRef(0);
+  const inFlight = useRef(null);
+
+  const setPlayerProfile = (profile) => {
+    profileRef.current = profile;
+    updatePlayerProfile(profile);
+    if (profile && identity.current) rememberPlayer(identity.current, profile.id);
+  };
 
   async function loadProfile(supabaseUser) {
+    const version = ++requestVersion.current;
     setProfileError(null);
-    const { data: profile, error } = await supabase
-      .from("players")
-      .select("*")
-      .eq("firebase_uid", supabaseUser.id)
-      .maybeSingle();
-
-    if (error) {
-      setProfileError("We couldn't load your player profile. Check your connection and try again.");
+    try {
+      const players = await fetchManagedPlayers(supabaseUser.id);
+      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return;
+      const profile = selectPlayer(players, supabaseUser.id, profileRef.current?.id || preferredPlayer(supabaseUser.id));
+      setPlayerProfile(profile);
+      setNeedsProfile(!profile);
+    } catch {
+      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return;
+      setProfileError("We couldn't load your player profiles. Your records have not been cleared. Check your connection and try again.");
       setPlayerProfile(null);
       setNeedsProfile(false);
-      return;
-    }
-
-    if (profile) {
-      setPlayerProfile(profile);
-      setNeedsProfile(false);
-    } else {
-      setNeedsProfile(true);
     }
   }
 
   useEffect(() => {
     let active = true;
     const pendingProfiles = new Set();
+    const acceptSession = (session) => {
+      if (!active) return;
+      if (!session?.user) {
+        identity.current = null;
+        requestVersion.current += 1;
+        inFlight.current = null;
+        setUser(null);
+        setPlayerProfile(null);
+        setNeedsProfile(false);
+        setProfileError(null);
+        setLoading(false);
+        return;
+      }
+      const nextUser = session.user;
+      if (identity.current === nextUser.id && (profileRef.current || inFlight.current === nextUser.id)) return;
+      if (identity.current !== nextUser.id) {
+        requestVersion.current += 1;
+        profileRef.current = null;
+        updatePlayerProfile(null);
+      }
+      identity.current = nextUser.id;
+      inFlight.current = nextUser.id;
+      setUser(nextUser);
+      setLoading(true);
+      // Start database work after the auth callback releases its SDK lock.
+      const timer = setTimeout(() => {
+        pendingProfiles.delete(timer);
+        if (!active || identity.current !== nextUser.id) return;
+        loadProfile(nextUser).finally(() => {
+          if (active && identity.current === nextUser.id) {
+            inFlight.current = null;
+            setLoading(false);
+          }
+        });
+      }, 0);
+      pendingProfiles.add(timer);
+    };
     // Resolve any existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!active) return;
-      if (session?.user) {
-        setUser(session.user);
-        loadProfile(session.user).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
+      acceptSession(session);
     }).catch(() => {
       if (active) setLoading(false);
     });
@@ -55,26 +92,13 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
-      if (session?.user) {
-        setUser(session.user);
-        // Supabase holds an auth lock during this callback. Start database work
-        // after it returns so session/token access cannot deadlock sign-in.
-        const timer = setTimeout(() => {
-          pendingProfiles.delete(timer);
-          if (active) loadProfile(session.user).finally(() => { if (active) setLoading(false); });
-        }, 0);
-        pendingProfiles.add(timer);
-      } else {
-        setUser(null);
-        setPlayerProfile(null);
-        setNeedsProfile(false);
-      }
-      setLoading(false);
+      acceptSession(session);
     });
 
     return () => {
       active = false;
+      requestVersion.current += 1;
+      inFlight.current = null;
       pendingProfiles.forEach(clearTimeout);
       subscription.unsubscribe();
     };

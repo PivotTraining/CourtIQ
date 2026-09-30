@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { fetchSessionHistory } from "@/lib/queries";
 import { COURT_ZONES } from "@/lib/constants";
@@ -198,6 +199,7 @@ export default function GameLogScreen() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("individual"); // individual | team
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
@@ -206,10 +208,11 @@ export default function GameLogScreen() {
         const games = all.filter((s) => s.type === "game");
         setSessions(games);
       })
-      .catch(() => {})
+      .catch(() => setHistoryError(true))
       .finally(() => setLoading(false));
   }, [playerId]);
 
+  if (historyError) return <RecordsUnavailable />;
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
