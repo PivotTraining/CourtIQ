@@ -22,6 +22,10 @@ export function buildSessionReport(shotLogs = [], stats = {}, zones = [], freeTh
   const fieldGoalPoints = 2 * twoMade + 3 * threeMade;
   const pts = fieldGoalPoints + ftm;
   const box = Object.fromEntries(['ast', 'reb', 'stl', 'blk', 'to', 'pf', 'min'].map(key => [key, count(stats[key])]));
+  // Missing historical splits are unknown, not evidence of zero split rebounds.
+  if (stats.oreb !== undefined && stats.dreb !== undefined) {
+    box.oreb = count(stats.oreb); box.dreb = count(stats.dreb);
+  }
   const eff = pts + box.reb + box.ast + box.stl + box.blk - (fga - fgm) - (fta - ftm) - box.to;
   return {
     fieldGoals, unknownShots, fga, fgm, ftm, fta, pts, box, eff,

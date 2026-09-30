@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { fetchSessionHistory } from "@/lib/queries";
+import { filterSessionRecords } from '@/lib/sessionRecovery.mjs';
+import HistoryFilters from '@/components/shots/HistoryFilters';
 import { COURT_ZONES } from "@/lib/constants";
 import { calcPct } from "@/lib/utils";
 import Icon from "@/components/ui/Icons";
@@ -196,16 +198,20 @@ export default function GameLogScreen() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("individual"); // individual | team
   const [historyError, setHistoryError] = useState(false);
+  const [dateFilter, setDateFilter] = useState({ season: '', from: '', to: '' });
 
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
+    let active = true;
+    setLoading(true); setHistoryError(false);
     fetchSessionHistory(playerId)
       .then((all) => {
         const games = all.filter((s) => s.type === "game");
-        setSessions(games);
+        if (active) setSessions(games);
       })
-      .catch(() => setHistoryError(true))
-      .finally(() => setLoading(false));
+      .catch(() => { if (active) setHistoryError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [playerId]);
 
   if (historyError) return <RecordsUnavailable />;
@@ -219,7 +225,7 @@ export default function GameLogScreen() {
     );
   }
 
-  const filteredSessions = sessions.filter((s) =>
+  const filteredSessions = filterSessionRecords(sessions, dateFilter).filter((s) =>
     tab === "team" ? s.mode === "team" : s.mode !== "team"
   );
 
@@ -235,6 +241,7 @@ export default function GameLogScreen() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
+      <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
 
       {/* Individual / Team Tabs */}
       <div style={{ display: "flex", background: "var(--color-muted)", borderRadius: 12, padding: 3 }}>

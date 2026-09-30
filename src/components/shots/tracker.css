@@ -20,6 +20,9 @@ html.dark .stat-tracker {
 .tracker-tabs button { display: flex; gap: 6px; align-items: center; justify-content: center; flex: 1; min-height: 44px; border: 0; border-radius: 9px; color: var(--color-text-sec); background: transparent; font-size: 12px; font-weight: 800; }
 .tracker-tabs button[aria-pressed="true"] { background: var(--color-card); color: var(--color-text); box-shadow: 0 2px 8px #0000000c; }
 .tracker-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 14px 12px; }
+.tracker-recovery-tools { max-width: 980px; margin: 10px auto 16px; font-size: 12px; }
+.tracker-tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.tracker-game-details select { display: block; width: 100%; min-height: 44px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); color: var(--color-text); padding: 8px; }
 .tracker-court-layout { display: grid; gap: 10px; max-width: 500px; margin: auto; }
 .tracker-court-panel { min-width: 0; }
 .tracker-court { position: relative; aspect-ratio: 5 / 4; width: min(100%, 460px, max(260px, calc((100dvh - 360px) * 1.25))); margin: auto; background: #f2e5cf; border: 1px solid #c9b797; border-radius: 16px; }

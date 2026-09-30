@@ -1,5 +1,9 @@
 # CourtIQ stat tracker — September 30, 2026
 
+Later checkpoint: [recovery-and-billing-release-gate.md](recovery-and-billing-release-gate.md)
+records subsequent reliability work and approved sample-browser testing. The
+46-test/no-browser-approval statements below describe the earlier checkpoint.
+
 ## Implementation
 
 - Tracker uses the Shell's actual persisted light/dark preference, with an in-tracker toggle. Storage restrictions do not crash the theme control.

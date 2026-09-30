@@ -5,6 +5,24 @@ import vm from 'node:vm';
 import { checked, readAll, requireSavedRow } from '../src/lib/dataSafety.mjs';
 import { selectPlayer } from '../src/lib/playerSelection.mjs';
 
+test('auth expiry preserves queued entries but clears synced recovery for the departing account', async () => {
+  const source = await readFile(new URL('../src/context/AuthContext.jsx', import.meta.url), 'utf8');
+  const body = source.match(/onAuthStateChange\(\(_event, session\) => \{([\s\S]*?)\n    \}\);/)[1];
+  const cleared = [];
+  let pending = true;
+  const accepted = [];
+  const callback = vm.runInNewContext(`((_event, session) => {${body}})`, {
+    window: { localStorage: {} }, identity: { current: 'alice' },
+    hasPendingRecovery: () => pending, clearAccountRecovery: (_storage, id) => cleared.push(id),
+    acceptSession: session => accepted.push(session),
+  });
+  callback('SIGNED_OUT', null);
+  assert.deepEqual(cleared, []);
+  pending = false; callback('SIGNED_OUT', null);
+  assert.deepEqual(cleared, ['alice']);
+  assert.equal(accepted.length, 2);
+});
+
 test('pagination continues after capped pages and fails rather than returning partial statistics', async () => {
   const ranges = [];
   const records = Array.from({ length: 1005 }, (_, id) => ({ id }));
@@ -25,6 +43,20 @@ test('active player preference only resolves among the signed-in managers return
   assert.equal(selectPlayer(players, 'owner', 'foreign').id, 'primary');
   assert.equal(selectPlayer(players.slice(1), 'owner', null).id, 'child');
   assert.equal(selectPlayer([], 'owner', 'child'), null);
+});
+
+test('history independently paginates more than fifty sessions and capped shot ledgers, excluding active games', async () => {
+  const source = await readFile(new URL('../src/lib/queries.js', import.meta.url), 'utf8');
+  const handler = source.match(/export async function fetchSessionHistory\(playerId\) \{([\s\S]*?)\n\}/)[1];
+  const sessions = Array.from({ length: 75 }, (_, id) => ({ id: `session-${id}`, tracker_status: id === 74 ? 'active' : 'completed' }));
+  const shots = Array.from({ length: 1105 }, (_, id) => ({ id, session_id: `session-${id % 75}`, zone_id: 'paint', made: false }));
+  const fn = vm.runInNewContext(`(async (playerId) => {${handler}})`, {
+    readAll, getSupabase: () => ({ from(table) { const rows = table === 'sessions' ? sessions : shots;
+      return { select() { return this; }, eq() { return this; }, order() { return this; }, range: async (start, end) => ({ data: rows.slice(start, Math.min(end + 1, start + 200)), error: null }) }; } }),
+  });
+  const rows = await fn('player');
+  assert.equal(rows.length, 74);
+  assert.equal(rows.flatMap(row => row.shot_logs).length, shots.filter(shot => shot.session_id !== 'session-74').length);
 });
 
 test('failed journal save leaves draft, statistics, and form untouched', async () => {

@@ -46,7 +46,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
     dialog.focus();
     const trapFocus = event => {
       if (event.key !== 'Tab') return;
-      const targets = [...dialog.querySelectorAll('button:not(:disabled), select:not(:disabled), a[href]')];
+      const targets = [...dialog.querySelectorAll('button:not(:disabled), select:not(:disabled), input:not(:disabled), a[href]')];
       const first = targets[0];
       const last = targets.at(-1);
       if (!first) { event.preventDefault(); return; }
@@ -70,13 +70,13 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </button>
       </header>
       {saveError && <div className="tracker-error" role="alert">{saveError}</div>}
-      {ticker}
       <div className="tracker-tabs" aria-label="Tracking view">
         {['court', 'stats'].map(value => <button key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>
           <Icon name={value === 'court' ? 'basketball' : 'barChart'} size={16} />{value === 'court' ? 'Shot chart' : 'Box score'}
         </button>)}
       </div>
       <div className="tracker-content">
+        {ticker}
         {tab === 'court' ? <div className="tracker-court-layout">
           <section className="tracker-court-panel" aria-label="Shot location">
             <div className={`tracker-court ${courtTheme === 'gray' ? 'gray' : ''}`}>
@@ -123,6 +123,11 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </div> : <section className="tracker-boxscore" aria-label="Player box score inputs">
           <h2>Player box score</h2><p className="tracker-hint">Track a player yourself or keep their stats as a coach. Shooting totals come from the shot chart.</p>
           <StatInputs stats={gameStats} updateStat={updateStat} busy={busy} />
+          {gameStats.oreb !== undefined && <div className="tracker-tool-row" aria-label="Rebound split">
+            <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => updateStat('oreb', 1)}>Offensive rebound · {gameStats.oreb}</button>
+            <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => updateStat('dreb', 1)}>Defensive rebound · {gameStats.dreb}</button>
+            <p className="tracker-hint">Split entries also increase total rebounds. Use the entry timeline to correct mistakes.</p>
+          </div>}
           <div className="tracker-minutes">
             <h3>Minutes played</h3>
             <div><button aria-label="Subtract one minute" disabled={busy || gameStats.min <= 0} onClick={() => updateStat('min', -1)}>−</button><output aria-label="Minutes played">{gameStats.min}</output><button aria-label="Add one minute" disabled={busy} onClick={() => updateStat('min', 1)}>+</button></div>

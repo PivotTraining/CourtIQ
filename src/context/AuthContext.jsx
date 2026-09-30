@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchManagedPlayers } from "@/lib/queries";
 import { selectPlayer, preferredPlayer, rememberPlayer } from "@/lib/playerSelection.mjs";
+import { clearAccountRecovery, hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
 
 const AuthContext = createContext(null);
 
@@ -92,6 +93,13 @@ export function AuthProvider({ children }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'SIGNED_OUT') {
+        // Auth expiry is not permission to discard unsynced work. Its account-scoped
+        // key can only be resumed by this same identity after signing in again.
+        try {
+          if (!hasPendingRecovery(window.localStorage, identity.current)) clearAccountRecovery(window.localStorage, identity.current);
+        } catch { /* storage unavailable: retain recovery data */ }
+      }
       acceptSession(session);
     });
 

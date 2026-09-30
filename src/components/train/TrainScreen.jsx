@@ -6,7 +6,7 @@ import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { DRILL_CATEGORIES, DRILLS, generatePracticePlan } from "@/lib/drills";
-import { fetchSessionHistory } from "@/lib/queries";
+import { fetchSessionHistory, fetchWorkoutResults, saveWorkoutResult } from "@/lib/queries";
 import { computePlayerMemory } from "@/lib/intelligence";
 import Card from "@/components/ui/Card";
 import SectionDivider from "@/components/ui/SectionDivider";
@@ -214,6 +214,17 @@ export default function TrainScreen() {
   const [loading, setLoading] = useState(true);
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [historyError, setHistoryError] = useState(false);
+  const [workoutResults, setWorkoutResults] = useState([]);
+  const [workoutError, setWorkoutError] = useState('');
+  const developmentEnabled = process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true';
+
+  useEffect(() => {
+    if (!developmentEnabled || !playerId) return;
+    let active = true;
+    fetchWorkoutResults(playerId).then(rows => { if (active) setWorkoutResults(rows); })
+      .catch(() => { if (active) setWorkoutError('Workout records could not be loaded. They have not been cleared.'); });
+    return () => { active = false; };
+  }, [playerId, developmentEnabled]);
 
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
@@ -245,6 +256,12 @@ export default function TrainScreen() {
 
   return (
     <div>
+      {developmentEnabled && <section className="bg-card rounded-2xl p-4 mb-4 border border-border">
+        <h3 className="font-bold text-sm">Saved development work</h3>
+        {workoutError && <p role="alert">{workoutError}</p>}
+        <p className="text-xs text-text-sec mt-2">{workoutResults.length} saved workouts. Reps are self-recorded; completion does not prove skill improvement.</p>
+        {workoutResults.slice(0, 5).map(result => <p key={result.id} className="text-xs mt-2">{new Date(result.completed_at).toLocaleDateString()} · {result.drills.filter(drill => !drill.skipped).length} finished / {result.drills.length} drills · {Math.round(result.elapsed_seconds / 60)} min</p>)}
+      </section>}
       {/* Tabs */}
       <div
         style={{
@@ -494,7 +511,13 @@ export default function TrainScreen() {
 
       {/* Active Workout Timer */}
       {activeWorkout && (
-        <WorkoutTimer drills={activeWorkout} onComplete={() => setActiveWorkout(null)} />
+        <WorkoutTimer drills={activeWorkout} persistResult={developmentEnabled} onClose={() => setActiveWorkout(null)} onComplete={async result => {
+          if (developmentEnabled && result) {
+            const saved = await saveWorkoutResult(playerId, result);
+            setWorkoutResults(rows => [saved, ...rows.filter(row => row.id !== saved.id)]);
+          }
+          setActiveWorkout(null);
+        }} />
       )}
 
       {/* ALL DRILLS TAB */}

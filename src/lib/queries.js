@@ -250,13 +250,70 @@ export async function updateSessionStats(sessionId, gameStats) {
 }
 
 export async function fetchSessionHistory(playerId) {
-  const result = await getSupabase()
-    .from("sessions")
-    .select("*, shot_logs(id, zone_id, made)")
-    .eq("player_id", playerId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  return checked(result) || [];
+  // Page both resources independently: nested PostgREST rows have their own cap.
+  const [sessions, shots] = await Promise.all([
+    readAll(() => getSupabase().from("sessions").select("*").eq("player_id", playerId)
+      .order("created_at", { ascending: false }).order("id", { ascending: false })),
+    readAll(() => getSupabase().from("shot_logs").select("id, session_id, zone_id, made, created_at")
+      .eq("player_id", playerId).order("id")),
+  ]);
+  const bySession = new Map();
+  for (const shot of shots) {
+    if (!bySession.has(shot.session_id)) bySession.set(shot.session_id, []);
+    bySession.get(shot.session_id).push(shot);
+  }
+  return sessions.filter(session => session.tracker_status !== 'active')
+    .map(session => ({ ...session, shot_logs: bySession.get(session.id) || [] }));
+}
+
+export async function fetchTrackerSession(sessionId, playerId) {
+  const session = requireSavedRow(await getSupabase().from("sessions").select("*")
+    .eq("id", sessionId).eq("player_id", playerId).single(), "Session recovery");
+  const [shots, events] = await Promise.all([
+    readAll(() => getSupabase().from("shot_logs").select("*").eq("session_id", sessionId).eq("player_id", playerId).order("id")),
+    readAll(() => getSupabase().from("session_commands").select("*").eq("session_id", sessionId).order("version")),
+  ]);
+  return { session, shots, events };
+}
+
+export async function fetchActiveSessions(playerId) {
+  return readAll(() => getSupabase().from("sessions").select("*").eq("player_id", playerId)
+    .eq("tracker_status", "active").order("created_at", { ascending: false }).order("id"));
+}
+
+export async function createTrackerSession(playerId, type, context) {
+  return requireSavedRow(await getSupabase().from("sessions").insert({ player_id: playerId, type,
+    mode: "individual", tracker_status: "active", tracker_context: context, date: context.date })
+    .select().single(), "Session creation");
+}
+
+export async function applySessionCommand(command) {
+  return checked(await getSupabase().rpc("apply_session_command", {
+    p_session: command.sessionId, p_id: command.id, p_version: command.version,
+    p_payload: command.payload,
+  }));
+}
+
+export async function saveWorkoutResult(playerId, result) {
+  const row = { id: result.id, player_id: playerId, elapsed_seconds: result.elapsed_seconds, drills: result.drills };
+  const saved = await getSupabase().from("workout_results").insert(row).select().single();
+  if (saved.error?.code !== '23505') return requireSavedRow(saved, "Workout result");
+  // A lost response is retried with the same ID, never counted as a new workout.
+  const existing = requireSavedRow(await getSupabase().from("workout_results").select("*")
+    .eq("id", result.id).eq("player_id", playerId).single(), "Workout recovery");
+  if (existing.elapsed_seconds !== row.elapsed_seconds || JSON.stringify(existing.drills) !== JSON.stringify(row.drills)) {
+    // JSONB may reorder object keys. Compare each recorded field explicitly.
+    if (existing.elapsed_seconds !== row.elapsed_seconds || existing.drills.length !== row.drills.length
+      || existing.drills.some((drill, index) => Object.keys(row.drills[index]).some(key => drill[key] !== row.drills[index][key]))) {
+      throw new Error('Workout ID belongs to a different result.');
+    }
+  }
+  return existing;
+}
+
+export async function fetchWorkoutResults(playerId) {
+  return readAll(() => getSupabase().from("workout_results").select("*").eq("player_id", playerId)
+    .order("completed_at", { ascending: false }).order("id"));
 }
 
 export async function insertShot(sessionId, playerId, zoneId, made) {

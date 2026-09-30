@@ -61,7 +61,7 @@ export default function Shell() {
 
   const handleLogout = async () => {
     setShowProfileMenu(false);
-    try { await signOutUser(); } catch (e) { console.error(e); }
+    try { await signOutUser(); } catch (e) { window.alert(e.message || 'Could not sign out. Please try again.'); }
   };
 
   useEffect(() => {

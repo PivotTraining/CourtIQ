@@ -25,7 +25,9 @@ export default function OfflineBanner() {
     <div className="fixed top-0 left-0 right-0 z-[998] bg-[#FEF3C7] border-b border-[#FDE68A] px-4 py-2.5 flex items-center justify-center gap-2 animate-fade-in">
       <span className="text-base">📡</span>
       <span className="text-xs font-bold text-[#92400E]">
-        You're offline — reconnect before saving your stats
+        {process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true'
+          ? "You're offline — tracker entries stay on this device until synced"
+          : "You're offline — reconnect before saving your stats"}
       </span>
     </div>
   );

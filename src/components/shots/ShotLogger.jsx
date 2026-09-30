@@ -10,6 +10,13 @@ import { playSwish, playClank, playTap, playWhistle } from "@/lib/sounds";
 import { supabase } from "@/lib/supabase";
 import CourtTrackerView from './CourtTrackerView';
 import AdvancedSessionReport from './AdvancedSessionReport';
+import ReliableTracker from './ReliableTracker';
+
+export default function ShotLogger(props) {
+  // Release gate: do not use schema-dependent functionality before migration QA.
+  if (process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true') return <ReliableTracker {...props} />;
+  return <LegacyShotLogger {...props} />;
+}
 
 function haptic() {
   if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
@@ -515,7 +522,7 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
 /* ══════════════════════════════════════════════════════
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
-export default function ShotLogger({ onClose, darkMode, onToggleTheme }) {
+function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
   const { playerId, refreshData } = useApp();
   const [step, setStep] = useState("setup"); // setup | logging | summary
   const [sessionType, setSessionType] = useState("practice");

@@ -155,7 +155,7 @@ export default function HomeDashboard() {
             <div style={{ marginTop: 18, background: "var(--color-muted)", borderRadius: 16, padding: 18 }}>
               <div style={{ fontSize: 14, fontWeight: 900, color: "var(--color-text)" }}>How CourtIQ reads your game</div>
               <div style={{ fontSize: 12, lineHeight: 1.65, color: "var(--color-text-sec)", marginTop: 6 }}>
-                Your overall score blends Shooting, Playmaking, Rebounding, Defense and Efficiency. The score is experience-gated so a small sample cannot create an inflated rating.
+                This is a CourtIQ heuristic from recorded stats, not a validated scouting grade or NBA comparison. It blends Shooting, Playmaking, Rebounding, Defense and Efficiency, with limits for smaller samples. Missing or unevenly logged stats can change it.
               </div>
               <button type="button" onClick={() => setScreen("iq")} style={{ marginTop: 12, border: "none", background: "transparent", padding: 0, color: "#FF6B35", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>
                 Open full IQ breakdown →

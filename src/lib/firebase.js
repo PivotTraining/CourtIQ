@@ -3,6 +3,7 @@
  * CourtIQ is web-first and authentication is handled by Supabase.
  */
 import { supabase } from "./supabase";
+import { hasPendingRecovery, clearAccountRecovery } from './sessionRecovery.mjs';
 
 function browserOrigin() {
   if (typeof window === "undefined") return "";
@@ -139,8 +140,15 @@ export async function checkRedirectResult() {
 }
 
 export async function signOutUser() {
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const accountId = data.session?.user?.id;
+  if (typeof window !== 'undefined') {
+    if (hasPendingRecovery(window.localStorage, accountId)) throw new Error('Sync your unsaved game entries before signing out. Open the tracker and choose Retry sync.');
+  }
   const { error } = await supabase.auth.signOut();
   if (error) throw new Error(error.message);
+  if (typeof window !== 'undefined') clearAccountRecovery(window.localStorage, accountId);
 }
 
 export { supabase as auth };

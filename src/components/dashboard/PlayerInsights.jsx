@@ -176,6 +176,7 @@ export default function PlayerInsights() {
           {/* Skill Radar */}
           <div style={cardStyle}>
             <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, textAlign: "center" }}>Player Rating</h3>
+            <p className="text-xs text-text-sec text-center mb-3">CourtIQ heuristic from recorded stats—not a validated scouting grade. Review sample size and unlogged stats before comparing players.</p>
             <RadarChart ratings={ratings} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginTop: 12 }}>
               {[
