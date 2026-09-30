@@ -1,5 +1,6 @@
 import { COURT_ZONES, ZONE_CATEGORIES } from "./constants";
 import { calcPct } from "./utils";
+import { buildSessionReport } from './sessionReport.mjs';
 
 /* ══════════════════════════════════════════════════════
    COURT IQ INTELLIGENCE ENGINE
@@ -20,18 +21,22 @@ function getMonthSessions(sessions, monthsAgo = 0) {
 }
 
 function sessionPts(session) {
-  const shots = session.shot_logs || [];
-  const stats = session.game_stats || {};
-  return shots.filter((s) => s.made).reduce((sum, s) => {
-    const zone = COURT_ZONES.find((z) => z.id === s.zone_id);
-    return sum + (zone?.pts || 2);
-  }, 0) + (stats.ft_made || 0);
+  return buildSessionReport(session.shot_logs || [], session.game_stats || {}, COURT_ZONES).pts;
 }
 
 function sessionFgPct(session) {
-  const shots = session.shot_logs || [];
+  const shots = fieldGoals(session);
   if (shots.length === 0) return null;
   return calcPct(shots.filter((s) => s.made).length, shots.length);
+}
+
+function fieldGoals(session) {
+  return buildSessionReport(session.shot_logs || [], session.game_stats || {}, COURT_ZONES).fieldGoals;
+}
+
+function combinedFgPct(sessions) {
+  const shots = sessions.flatMap(fieldGoals);
+  return shots.length ? calcPct(shots.filter(shot => shot.made).length, shots.length) : null;
 }
 
 // ─── 1. PLAYER MEMORY (patterns, tendencies, improvements) ───
@@ -62,11 +67,9 @@ export function computePlayerMemory(sessions) {
   // Recent vs older improvement detection
   const insights = [];
   if (recentSessions.length >= 3 && olderSessions.length >= 3) {
-    const recentAvgPct = recentSessions.map(sessionFgPct).filter(Boolean);
-    const olderAvgPct = olderSessions.map(sessionFgPct).filter(Boolean);
-    if (recentAvgPct.length > 0 && olderAvgPct.length > 0) {
-      const recentAvg = Math.round(recentAvgPct.reduce((a, b) => a + b, 0) / recentAvgPct.length);
-      const olderAvg = Math.round(olderAvgPct.reduce((a, b) => a + b, 0) / olderAvgPct.length);
+    const recentAvg = combinedFgPct(recentSessions);
+    const olderAvg = combinedFgPct(olderSessions);
+    if (recentAvg !== null && olderAvg !== null) {
       const diff = recentAvg - olderAvg;
       if (diff > 5) insights.push({ icon: "trending", text: `Your shooting is up ${diff}% compared to your earlier sessions. The work is paying off.`, type: "positive" });
       else if (diff < -5) insights.push({ icon: "trending", text: `Shooting has dipped ${Math.abs(diff)}% recently. Time to get back to fundamentals.`, type: "warning" });
@@ -125,15 +128,15 @@ export function computeTrends(sessions) {
 
   function monthStats(monthSessions) {
     const games = monthSessions.filter((s) => s.type === "game");
-    const allShots = monthSessions.flatMap((s) => s.shot_logs || []);
-    const allStats = monthSessions.map((s) => s.game_stats || {});
+    const allShots = games.flatMap(fieldGoals);
+    const allStats = games.map((s) => s.game_stats || {});
 
     const fgMade = allShots.filter((s) => s.made).length;
     const fgTotal = allShots.length;
     const threes = allShots.filter((s) => ZONE_CATEGORIES.threes.includes(s.zone_id));
     const threesMade = threes.filter((s) => s.made).length;
 
-    const totalPts = monthSessions.reduce((sum, s) => sum + sessionPts(s), 0);
+    const totalPts = games.reduce((sum, s) => sum + sessionPts(s), 0);
     const totalAst = allStats.reduce((sum, s) => sum + (s.ast || 0), 0);
     const totalReb = allStats.reduce((sum, s) => sum + (s.reb || 0), 0);
     const totalStl = allStats.reduce((sum, s) => sum + (s.stl || 0), 0);
@@ -188,8 +191,8 @@ export function computeSkillRatings(sessions) {
   }
 
   const gameSessions = sessions.filter((s) => s.type === "game");
-  const allShots = sessions.flatMap((s) => s.shot_logs || []);
-  const allStats = sessions.map((s) => s.game_stats || {});
+  const allShots = sessions.flatMap(fieldGoals);
+  const allStats = gameSessions.map((s) => s.game_stats || {});
   const gamesPlayed = Math.max(gameSessions.length, 1);
 
   const totalSessions = sessions.length;
@@ -241,10 +244,11 @@ export function computeSkillRatings(sessions) {
   const defense = Math.min(expCap, Math.max(0, Math.round(baseDef + foulBonus)));
 
   // ═══ EFFICIENCY (0-99) ═══
-  const totalPts = sessions.reduce((sum, s) => sum + sessionPts(s), 0);
-  const fgMade = allShots.filter((s) => s.made).length;
-  const fgAttempted = allShots.length;
-  const ftMiss = allStats.reduce((sum, s) => sum + ((s.ft_total || 0) - (s.ft_made || 0)), 0);
+  const gameReports = gameSessions.map(session => buildSessionReport(session.shot_logs || [], session.game_stats || {}, COURT_ZONES));
+  const totalPts = gameReports.reduce((sum, report) => sum + report.pts, 0);
+  const fgMade = gameReports.reduce((sum, report) => sum + report.fgm, 0);
+  const fgAttempted = gameReports.reduce((sum, report) => sum + report.fga, 0);
+  const ftMiss = gameReports.reduce((sum, report) => sum + report.fta - report.ftm, 0);
   const gameScore = (totalPts + 0.4 * fgMade - 0.7 * fgAttempted - 0.4 * ftMiss + 0.7 * totalReb + 0.7 * totalAst + totalStl + 0.7 * totalBlk - 0.4 * totalPf - totalTo) / gamesPlayed;
   const efficiency = Math.min(expCap, Math.max(0, Math.round(gameScore * 2.8 + 10)));
 
@@ -267,9 +271,10 @@ export function computeSkillRatings(sessions) {
 export function computeCoachReport(sessions, ratings) {
   if (!sessions || sessions.length < 3) return [];
 
-  const allShots      = sessions.flatMap((s) => s.shot_logs || []);
-  const allStats      = sessions.map((s) => s.game_stats || {});
   const gameSessions  = sessions.filter((s) => s.type === "game");
+  if (gameSessions.length < 3) return [];
+  const allShots      = gameSessions.flatMap(fieldGoals);
+  const allStats      = gameSessions.map((s) => s.game_stats || {});
   const gamesPlayed   = Math.max(gameSessions.length, 1);
 
   const report = [];
@@ -538,8 +543,8 @@ export function computeCoachReport(sessions, ratings) {
 export function computeSeasonStats(sessions) {
   const gameSessions = sessions.filter((s) => s.type === "game");
   const practiceSessions = sessions.filter((s) => s.type === "practice");
-  const allShots = sessions.flatMap((s) => s.shot_logs || []);
-  const allStats = sessions.map((s) => s.game_stats || {});
+  const allShots = gameSessions.flatMap(fieldGoals);
+  const allStats = gameSessions.map((s) => s.game_stats || {});
   const gamesPlayed = gameSessions.length;
 
   const fgMade = allShots.filter((s) => s.made).length;
@@ -548,7 +553,7 @@ export function computeSeasonStats(sessions) {
   const twos = allShots.filter((s) => !ZONE_CATEGORIES.threes.includes(s.zone_id) && s.zone_id !== "free-throw");
   const twosMade = twos.filter((s) => s.made).length;
 
-  const totalPts = sessions.reduce((sum, s) => sum + sessionPts(s), 0);
+  const totalPts = gameSessions.reduce((sum, s) => sum + sessionPts(s), 0);
   const totalAst = allStats.reduce((sum, s) => sum + (s.ast || 0), 0);
   const totalReb = allStats.reduce((sum, s) => sum + (s.reb || 0), 0);
   const totalStl = allStats.reduce((sum, s) => sum + (s.stl || 0), 0);

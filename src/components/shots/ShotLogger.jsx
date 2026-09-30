@@ -263,7 +263,7 @@ function ShareCard({ analysis, sessionType, gameStats, mode, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-6 animate-fade-in" onClick={onClose}>
-      <div className="bg-gradient-to-br from-[#1A1D2E] to-[#2D1B0E] rounded-3xl p-5 w-full max-w-[340px] shadow-2xl" ref={cardRef} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#1A1D2E] rounded-3xl p-5 w-full max-w-[340px] shadow-2xl" ref={cardRef} onClick={(e) => e.stopPropagation()}>
         {/* Card Header */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"><Icon name="basketball" size={20} color="#FF6B35" /></div>
@@ -440,12 +440,12 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
         {/* Focus Check */}
         {focus && (
           <div className="mb-5 animate-fade-in-up" style={{ animationDelay: "210ms" }}>
-            <div className="bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] rounded-2xl p-4 border border-[#93C5FD]/20">
+            <div className="bg-card rounded-2xl p-4 border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <Icon name="target" size={16} color="#1E40AF" />
-                <h3 className="text-sm font-bold text-[#1E40AF]">Focus Check: {focus}</h3>
+                <Icon name="target" size={16} color="var(--color-text)" />
+                <h3 className="text-sm font-bold text-text">Focus Check: {focus}</h3>
               </div>
-              <p className="text-[12px] text-[#1E3A8A] leading-relaxed m-0">
+              <p className="text-[12px] text-text leading-relaxed m-0">
                 {focus === "3-Point Range" && (analysis.threePct >= 35 ? `${analysis.threePct}% from three — you delivered on your focus. Keep this range in your game.` : `${analysis.threePct}% from deep — below target. Add 50 spot-up threes to your next practice.`)}
                 {focus === "Mid-Range" && (analysis.fgPct >= 45 ? "Solid mid-range performance. Your pull-up game is developing." : "Mid-range needs more reps. Work on pull-ups off the dribble.")}
                 {focus === "Finishing" && "Review your paint touches. Were you finishing strong or settling for floaters?"}
@@ -462,13 +462,13 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
         {analysis.lines.length > 0 && (
           <div className="mb-5 animate-fade-in-up" style={{ animationDelay: "220ms" }}>
             <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-1.5"><Icon name="brain" size={16} /> Court IQ Analysis</h3>
-            <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFF0E8] rounded-2xl p-4 border border-accent/10">
+            <div className="bg-card rounded-2xl p-4 border border-accent/10">
               <div className="flex flex-col gap-3">
                 {analysis.lines.map((line, i) => (
                   <div key={i} className="flex gap-2.5 items-start">
-                    <span className="flex-shrink-0 mt-0.5"><Emoji e={line.icon} size={16} color="#9A3412" /></span>
+                    <span className="flex-shrink-0 mt-0.5"><Emoji e={line.icon} size={16} color="var(--color-text)" /></span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] text-[#9A3412] leading-relaxed m-0">{line.text}</p>
+                      <p className="text-[12px] text-text leading-relaxed m-0">{line.text}</p>
                     </div>
                     <span className="text-[8px] font-black text-accent/60 uppercase bg-accent/10 px-1.5 py-0.5 rounded-md flex-shrink-0 mt-0.5">
                       {line.tag}

@@ -21,6 +21,8 @@ async function loadComponent(path, dependencies = {}) {
   return compiledModule.exports;
 }
 const constants = await loadComponent('../src/lib/constants.js');
+const utils = await loadComponent('../src/lib/utils.js');
+const intelligence = await loadComponent('../src/lib/intelligence.js', { './constants': constants, './utils': utils, './sessionReport.mjs': reports });
 const Icon = ({ name }) => React.createElement('span', { 'aria-hidden': true }, name);
 const Tracker = (await loadComponent('../src/components/shots/CourtTrackerView.jsx', {
   '@/components/ui/Icons': { __esModule: true, default: Icon }, '@/lib/constants': constants,
@@ -79,4 +81,25 @@ test('viewport containment and scoped dark neon styles are explicit layout contr
   assert.match(css, /calc\(\(100dvh - 360px\) \* 1.25\)/);
   assert.match(css, /html.dark \.tracker-result, html.dark \.tracker-stat-input/);
   assert.match(css, /width: 44px; height: 44px; min-height: 44px/);
+});
+
+test('season and monthly per-game averages exclude practice and do not double-count FT', () => {
+  const created_at = new Date().toISOString();
+  const sessions = [
+    { type: 'game', created_at, shot_logs: [{ zone_id: 'paint', made: true }, { zone_id: 'free-throw', made: true }], game_stats: { ft_made: 1, ft_total: 1, ast: 2, min: 10 } },
+    { type: 'game', created_at, shot_logs: Array.from({ length: 9 }, () => ({ zone_id: 'paint', made: false })), game_stats: {} },
+    { type: 'practice', created_at, shot_logs: Array.from({ length: 100 }, () => ({ zone_id: 'top-key-3', made: true })), game_stats: { ast: 40, min: 60 } },
+  ];
+  const season = intelligence.computeSeasonStats(sessions);
+  assert.equal(season.totalPts, 3);
+  assert.equal(season.ppg, '1.5');
+  assert.equal(season.apg, '1.0');
+  assert.equal(season.fgPct, 10);
+  assert.equal(season.totalShots, 10);
+  assert.equal(season.practiceSessions, 1);
+  const month = intelligence.computeTrends(sessions).current;
+  assert.equal(month.ppg, '1.5');
+  assert.equal(month.fgPct, 10);
+  assert.equal(month.totalPts, 3);
+  assert.equal(intelligence.computeCoachReport(sessions, {}).length, 0);
 });
