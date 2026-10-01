@@ -48,7 +48,7 @@ export default function SkillsScreen() {
         <input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search 162 drills..."
+          placeholder={`Search ${DRILL_BANK.length} drills...`}
           style={{
             width: "100%", padding: "12px 16px 12px 38px", borderRadius: 14,
             border: "1px solid var(--color-border)", background: "var(--color-card)",
