@@ -63,7 +63,8 @@ Stripe product, subscription, tax setting, charge or public release was changed.
   viewport checks and the normal browser view were inspected. Temporary viewport
   overrides were reset.
 - Visual evidence: `coach-report-phone-dark.jpg`, `coach-report-phone-light.jpg`,
-  `coach-social-story-phone.jpg`, `coach-tracker-desktop-dark.jpg`.
+  `coach-social-story-phone.jpg`, `coach-social-square-desktop.jpg`,
+  `coach-tracker-desktop-dark.jpg`.
 - **Download delivery is unverified:** the in-app browser timed out waiting for
   CSV/PNG download events, including a native PNG anchor. PNG generation and
   CSV contents are verified; do not call the browser delivery check passed.
