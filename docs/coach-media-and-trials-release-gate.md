@@ -65,11 +65,18 @@ Stripe product, subscription, tax setting, charge or public release was changed.
 - Visual evidence: `coach-report-phone-dark.jpg`, `coach-report-phone-light.jpg`,
   `coach-social-story-phone.jpg`, `coach-social-square-desktop.jpg`,
   `coach-tracker-desktop-dark.jpg`.
-- **Download delivery is unverified:** the in-app browser timed out waiting for
-  CSV/PNG download events, including a native PNG anchor. PNG generation and
-  CSV contents are verified; do not call the browser delivery check passed.
-  Video download and native app sharing are also unexercised. Test in actual
-  Safari/Chrome on phones/desktops, including canceled sharing.
+- **Download delivery passed on retry:** the in-app browser's download-event
+  notification timed out, but the actual controls saved files to the local
+  Downloads folder. Opened both exported PNGs and checked true dimensions:
+  Square 1080×1080 and Story 1080×1920. The freshly exported roster CSV matches
+  the earlier export byte-for-byte, includes all three sample players, and keeps
+  six recorded points separate from the entered 60–55 final score. The downloaded
+  session MP4 matches the original public test clip's SHA-256 exactly. This
+  corrects the earlier event-timeout-based delivery uncertainty; no source fix
+  was required for this retry. Native app sharing remains unexercised. Test
+  Safari/Chrome on real phones/desktops, including canceled sharing.
+- PR #14's application CI and both Vercel preview checks passed before this
+  evidence-only update. These are preview checks, not live feature verification.
 - This sample fixture does not verify live Supabase/Auth persistence, production
   entitlements, cloud storage, assistant roles, 200% zoom or landscape behavior.
 
