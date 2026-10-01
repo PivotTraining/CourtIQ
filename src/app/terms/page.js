@@ -21,7 +21,7 @@ export default function TermsPage() {
         <h2 className="text-base font-bold text-text">6. Limitation of Liability</h2>
         <p>CourtIQ is provided &quot;as is&quot; to the extent permitted by law. Maintain your own records for information that is important to you and do not rely on CourtIQ as the sole record of official game statistics.</p>
         <h2 className="text-base font-bold text-text">7. Contact</h2>
-        <p>Questions about these terms? <a href="mailto:support@pivottrainingdev.com" className="text-accent font-bold">Contact CourtIQ Support</a>.</p>
+        <p>Questions about these terms? <a href="https://getcourtiq.com" className="text-accent font-bold">Visit CourtIQ Support</a>.</p>
       </div>
     </div>
   );
