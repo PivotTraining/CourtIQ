@@ -45,8 +45,9 @@ export function buildSessionReport(shotLogs = [], stats = {}, zones = [], freeTh
   };
 }
 
-export function sessionReportCsv(report, { type = 'game', date = '' } = {}) {
+export function sessionReportCsv(report, { type = 'game', date = '', playerName = '' } = {}) {
   const rows = [
+    ...(playerName ? [['Player', playerName]] : []),
     ['Session type', type], ['Date', date], ['PTS', report.pts], ['MIN', report.box.min || 'Not recorded'],
     ['FGM', report.fgm], ['FGA', report.fga], ['FG%', percent(report.fgPct)],
     ['2PM', report.twoMade], ['2PA', report.twoAttempts], ['2PT%', percent(report.twoPct)],
@@ -64,6 +65,6 @@ export function sessionReportCsv(report, { type = 'game', date = '' } = {}) {
     ['Zone', 'Made', 'Attempts', 'FG%'],
     ...report.zones.map(zone => [zone.label, zone.made, zone.attempts, percent(zone.pct)]),
   ];
-  const cell = value => `"${String(value).replace(/"/g, '""')}"`;
+  const cell = value => { const text = String(value); const safe = typeof value === 'string' && /^[\s]*[=+@-]/.test(text) ? `'${text}` : text; return `"${safe.replace(/"/g, '""')}"`; };
   return rows.map(row => row.map(cell).join(',')).join('\r\n');
 }

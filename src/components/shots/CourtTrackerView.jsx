@@ -36,7 +36,7 @@ function StatInputs({ stats, updateStat, busy, compact = false }) {
 
 export default function CourtTrackerView({ sessionType, shots, selectedZone, selectZone, gameStats, updateStat,
   saving, ending, saveError, tab, setTab, darkMode, onToggleTheme, courtTheme, setCourtTheme,
-  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker }) {
+  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, endLabel = 'End session', headerTitle }) {
   const busy = saving || ending;
   const selected = COURT_ZONES.find(zone => zone.id === selectedZone);
   const dialogRef = useRef(null);
@@ -62,8 +62,8 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
   return <div ref={dialogRef} tabIndex={-1} className="stat-tracker" role="dialog" aria-modal="true" aria-label="Basketball stat tracker">
     <div className="tracker-frame">
       <header className="tracker-header">
-        <button className="tracker-end" onClick={endSession} disabled={busy}>{ending ? 'Saving…' : 'End session'}</button>
-        <strong>{sessionType === 'game' ? 'Gametime' : 'Practice'}</strong>
+        <button className="tracker-end" onClick={endSession} disabled={busy}>{ending ? 'Saving…' : endLabel}</button>
+        <strong>{headerTitle || (sessionType === 'game' ? 'Gametime' : 'Practice')}</strong>
         <button onClick={undoLast} disabled={busy || undoCount === 0}><Icon name="undo" size={16} /> Undo</button>
         <button className="tracker-theme" onClick={onToggleTheme} aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`} title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}>
           <Icon name={darkMode ? 'sun' : 'moon'} size={20} />

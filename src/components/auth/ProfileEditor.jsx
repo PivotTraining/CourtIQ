@@ -6,6 +6,7 @@ import { useApp } from "@/context/AppContext";
 import { getSupabase } from "@/lib/supabase";
 import { signOutUser } from "@/lib/firebase";
 import { clearAccountRecovery, hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
+import { createDeviceVideoStore } from '@/lib/deviceVideo.mjs';
 import Icon from "@/components/ui/Icons";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
@@ -295,7 +296,7 @@ export default function ProfileEditor({ onClose }) {
               <div style={{ textAlign: "center", marginBottom: 16 }}>
                 <div style={{ marginBottom: 8 }}><Icon name="alert" size={32} color="#F59E0B" /></div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Delete Your Account?</h3>
-                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove this account, every player profile it manages, and their sessions, shots, journals, and stats. This cannot be undone.</p>
+                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove this account, every player profile it manages, their sessions, shots, journals and stats, and device clips on this browser. Downloads, original files and copies on other devices are not removed automatically. This cannot be undone.</p>
               </div>
               <button
                 onClick={async () => {
@@ -304,7 +305,12 @@ export default function ProfileEditor({ onClose }) {
                     const { data, error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: { confirmation: "DELETE" } });
                     if (deleteError) throw deleteError;
                     if (data?.deleted !== true) throw new Error("Account deletion was not confirmed.");
-                    clearAccountRecovery(window.localStorage, user?.id);
+                    try {
+                      clearAccountRecovery(window.localStorage, user?.id);
+                      await createDeviceVideoStore().clearAccount(user?.id);
+                    } catch {
+                      window.alert('Your account was deleted, but this browser could not confirm local-data cleanup. Clear CourtIQ site data in your browser settings to remove any remaining device clips and tracker recovery.');
+                    }
                     await signOutUser().catch(() => {});
                     window.location.assign("/");
                   } catch (err) {

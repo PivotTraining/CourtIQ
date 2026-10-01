@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from '@/context/AuthContext';
 import { fetchSessionHistory } from "@/lib/queries";
 import { filterSessionRecords } from '@/lib/sessionRecovery.mjs';
 import HistoryFilters from '@/components/shots/HistoryFilters';
@@ -33,7 +34,7 @@ function StatPill({ label, value, color }) {
   );
 }
 
-function GameCard({ session }) {
+function GameCard({ session,playerName,accountId }) {
   const [expanded, setExpanded] = useState(false);
   const stats = session.game_stats || {};
   const shots = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES).fieldGoals;
@@ -125,7 +126,7 @@ function GameCard({ session }) {
       {/* Expanded Details */}
       {expanded && (
         <div style={{ borderTop: "1px solid var(--color-border)", padding: 16 }}>
-          <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType="game" date={session.created_at} />
+          <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType="game" date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session.id} />
 
           {/* Full Stat Grid */}
           {(stats.ast > 0 || stats.reb > 0 || stats.stl > 0 || stats.blk > 0 || stats.to > 0 || stats.pf > 0 || stats.min > 0) && (
@@ -193,7 +194,8 @@ function GameCard({ session }) {
 }
 
 export default function GameLogScreen() {
-  const { playerId } = useApp();
+  const { playerId,player } = useApp();
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("individual"); // individual | team
@@ -308,7 +310,7 @@ export default function GameLogScreen() {
       {filteredSessions.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filteredSessions.map((s) => (
-            <GameCard key={s.id} session={s} />
+            <GameCard key={s.id} session={s} playerName={player?.name} accountId={user?.id} />
           ))}
         </div>
       ) : (

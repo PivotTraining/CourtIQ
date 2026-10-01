@@ -38,7 +38,7 @@ export default function DesktopNav({ onStartSession }) {
       </div>
 
       <nav className="courtiq-desktop-nav-list">
-        {NAV_ITEMS.map((item) => {
+        {[...NAV_ITEMS, ...(process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true' ? [{ id: 'coach', icon: 'trophy', label: 'Coach workspace', description: 'Roster games & reports' }] : [])].map((item) => {
           const active = screen === item.id || (screen === "gametime" && item.id === "train");
           return (
             <button

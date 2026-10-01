@@ -53,7 +53,10 @@ html.dark {
 }
 
 /* ── Reset ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Keep the reset below utilities, so p-6 and mx-auto actually apply. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 
 html, body { overflow-x: hidden; width: 100%; max-width: 100vw; position: relative; }
 html { height: 100%; -webkit-text-size-adjust: 100%; }

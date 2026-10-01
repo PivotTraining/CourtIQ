@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import Icon, { Emoji } from "@/components/ui/Icons";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from '@/context/AuthContext';
 import { COURT_ZONES, ZONE_CATEGORIES } from "@/lib/constants";
 import { createSession, insertShot, deleteShot, updateSessionStats, findSessionByJoinCode } from "@/lib/queries";
 import { getHeatColor, calcPct } from "@/lib/utils";
@@ -342,7 +343,7 @@ function ShareCard({ analysis, sessionType, gameStats, mode, onClose }) {
 /* ──────────────────────────────────────────────────────
    SESSION SUMMARY (Post-Game / Post-Practice)
    ────────────────────────────────────────────────────── */
-function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus, onDone }) {
+function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus, onDone,session,accountId,playerName }) {
   const [showShare, setShowShare] = useState(false);
   const isGame = sessionType === "game";
   const analysis = isGame
@@ -413,7 +414,7 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
           </div>
         )}
 
-        <AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} />
+        <AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} date={session?.date || session?.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session?.id}/>
 
         {/* Zone Heatmap */}
         {shots.length > 0 && (
@@ -523,7 +524,8 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
 function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
-  const { playerId, refreshData } = useApp();
+  const { playerId, player, refreshData } = useApp();
+  const { user } = useAuth();
   const [step, setStep] = useState("setup"); // setup | logging | summary
   const [sessionType, setSessionType] = useState("practice");
   const [mode, setMode] = useState("individual");
@@ -884,7 +886,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
 
   /* ── SUMMARY SCREEN ── */
   if (step === "summary") {
-    return <SessionSummary shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} mode={mode} focus={focus} onDone={onClose} />;
+    return <SessionSummary shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} mode={mode} focus={focus} onDone={onClose} session={session} accountId={user?.id} playerName={player?.name}/>;
   }
 
   return <CourtTrackerView

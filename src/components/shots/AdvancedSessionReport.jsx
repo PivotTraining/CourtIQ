@@ -4,23 +4,20 @@ import { useState } from 'react';
 import { COURT_ZONES } from '@/lib/constants';
 import { buildSessionReport, percent, sessionReportCsv } from '@/lib/sessionReport.mjs';
 import './tracker.css';
+import SocialReportCard from './SocialReportCard';
+import SessionVideo from './SessionVideo';
+import { downloadBlob } from '@/lib/browserDownload.mjs';
 
-export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrows, sessionType = 'game', date = '' }) {
+export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrows, sessionType = 'game', date = '', playerName = '', accountId, sessionId }) {
   const report = buildSessionReport(shots, gameStats, COURT_ZONES, freeThrows);
   const [exportError, setExportError] = useState('');
+  const [showCard, setShowCard] = useState(false);
   const exportCsv = () => {
-    let url;
     try {
-      url = URL.createObjectURL(new Blob([sessionReportCsv(report, { type: sessionType, date })], { type: 'text/csv;charset=utf-8' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `courtiq-${sessionType}-report.csv`;
-      link.click();
+      downloadBlob(new Blob([sessionReportCsv(report, { type: sessionType, date, playerName })], { type: 'text/csv;charset=utf-8' }), `courtiq-${sessionType}-report.csv`);
       setExportError('');
     } catch {
       setExportError('The report could not download. Your stats are still here. Please try again.');
-    } finally {
-      if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   };
   const metrics = [
@@ -33,7 +30,7 @@ export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrow
   ];
   return (
     <section className="advanced-report" aria-label="Advanced player session report" onClick={event => event.stopPropagation()}>
-      <div className="report-heading"><h3>Player performance report</h3><button onClick={exportCsv}>Export CSV</button></div>
+      <div className="report-heading"><h3>Player performance report</h3><button onClick={exportCsv}>Export CSV</button><button onClick={()=>setShowCard(true)}>Social card</button></div>
       <p className="report-note">{sessionType === 'game' ? 'Game' : 'Practice'} · {report.fga} FG attempts · {report.fta} FT attempts. Based only on what you recorded.</p>
       <div className="report-metrics">{metrics.map(([label, value, description]) => (
         <div key={label}><span>{label}</span><strong>{value}</strong><small>{description}</small></div>
@@ -52,6 +49,8 @@ export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrow
       </details>
       {report.unknownShots > 0 && <p role="status" className="report-note">{report.unknownShots} unknown-zone shot(s) excluded. Review the source records.</p>}
       {exportError && <p role="alert">{exportError}</p>}
+      {accountId&&sessionId&&<SessionVideo key={`${accountId}:${sessionId}`} accountId={accountId} sessionId={sessionId}/>}
+      {showCard&&<SocialReportCard report={report} playerName={playerName} date={date} sessionType={sessionType} onClose={()=>setShowCard(false)}/>}
     </section>
   );
 }
