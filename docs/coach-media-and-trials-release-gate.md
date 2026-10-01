@@ -19,6 +19,12 @@ Stripe product, subscription, tax setting, charge or public release was changed.
   preview, file-share capability detection and a native download link. Names are
   opt-in. Cards include the recorded date, zero-attempt percentages are unknown,
   and no clip, location, private note or automatic social post is included.
+- Player-card energy captions: all nine owner-requested phrases, auto-selection
+  from this session's recorded stats, visible selection rationale, manual override
+  and off switch. Shooting-based captions require at least eight attempts; practice
+  does not claim a game double-double. Team totals do not get player labels.
+  A generated PNG/share file must match the current SVG, preventing stale exports
+  while switching captions, format or name privacy.
 - Report video controls in the recap, session history, game log and recovered
   saved report. One device-stored MP4/WebM/MOV clip per account/session, 100 MB
   per clip, 250 MB per account on that device. IndexedDB stores the actual blob,
@@ -41,7 +47,7 @@ Stripe product, subscription, tax setting, charge or public release was changed.
 
 ## Local verification
 
-- 71 automated tests pass; includes SQL ownership/atomic completion/idempotence,
+- 75 automated tests pass; includes SQL ownership/atomic completion/idempotence,
   foreign-account and anonymous rejection, stale version/NULL version rejection,
   trial eligibility/privacy/expiry/retry, stored blob isolation and account cleanup,
   stats/CSV/formula escaping, safe SVG and true card dimensions, and spacing.
@@ -77,6 +83,12 @@ Stripe product, subscription, tax setting, charge or public release was changed.
   Safari/Chrome on real phones/desktops, including canceled sharing.
 - PR #14's application CI and both Vercel preview checks passed before this
   evidence-only update. These are preview checks, not live feature verification.
+- Energy-caption follow-up: local 75-test suite, lint and production build pass.
+  Browser checked auto pick, manual longest phrase and off switch; square/story
+  exports contain the automatic headline at the correct dimensions. Observed
+  390×844 phone document width and scroll width both equal 390 px. No framework
+  error overlay. Names remain hidden and roster cards remain neutral. These
+  follow-up changes still require fresh remote CI/preview review and release.
 - This sample fixture does not verify live Supabase/Auth persistence, production
   entitlements, cloud storage, assistant roles, 200% zoom or landscape behavior.
 
