@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** March 23, 2026
-**Author:** Christopher Davis, Pivot Training and Development
+**Author:** Christopher Davis
 **Status:** Pre-Development
 
 ---
@@ -13,7 +13,7 @@
 
 Court IQ is a mobile-first basketball performance tracking app designed for youth and AAU players (ages 13–18). It combines shot tracking, visual heat maps, performance trends, team analytics, and a personal player journal into one clean, intuitive platform.
 
-Court IQ isn't just another stat tracker — it's a development tool that connects what happens on the court to what's happening between the ears. By integrating self-reflection (journaling) alongside hard data (shooting percentages, zone breakdowns), Court IQ bridges the gap between physical performance and mental performance — a space where Pivot Training and Development has deep expertise.
+Court IQ isn't just another stat tracker — it's a development tool that connects what happens on the court to what's happening between the ears. By integrating self-reflection (journaling) alongside hard data (shooting percentages, zone breakdowns), Court IQ bridges the gap between physical performance and mental performance — a space CourtIQ is intentionally designed to address.
 
 ### The Problem
 
@@ -25,7 +25,7 @@ Existing solutions (Swish Hoop, HomeCourt, ShotTracker) focus heavily on shot me
 
 The youth basketball market in the U.S. includes roughly 5.8 million organized players. AAU alone has over 300,000 registered players across 7,000+ programs. Parents in this space spend an average of $2,500–$10,000 annually on their child's basketball development. A tool that helps players (and their parents) see measurable progress — both physical and mental — has a clear value proposition in a market that's already spending.
 
-Court IQ is positioned at the intersection of sports analytics and mental wellness — a lane that is wide open and aligns directly with Pivot Training and Development's core mission.
+Court IQ is positioned at the intersection of sports analytics and mental wellness — a lane that is wide open and aligns directly with CourtIQ's player-development mission.
 
 ### Target User
 
@@ -130,7 +130,7 @@ A personal reflection tool where players document their experiences after games 
 **Future Enhancement Opportunity:**
 
 - Mood-to-performance correlation analytics (e.g., "You shoot 12% better when you log a 🎯 Focused mood vs. a 💪 Tough mood")
-- This is where Pivot's mental health expertise becomes a product feature, not just a philosophy
+- This is where CourtIQ's mental-performance layer becomes a product feature, not just a philosophy
 
 ### 2.5 Team Stats
 
@@ -219,7 +219,7 @@ Roster-level view that gives players context on how they fit within their team.
 | Free tier available | ✅ | ✅ | Freemium | ❌ |
 | Youth/AAU focused UX | ✅ | Partial | ❌ | ❌ |
 
-**Court IQ's Differentiator:** The only app that connects shooting data to mental performance through journaling, mood tracking, and (eventually) AI-driven insights about the relationship between mindset and on-court results. This is Pivot's unfair advantage.
+**Court IQ's Differentiator:** The only app that connects shooting data to mental performance through journaling, mood tracking, and (eventually) AI-driven insights about the relationship between mindset and on-court results. This is CourtIQ's differentiated development layer.
 
 ---
 
@@ -272,7 +272,7 @@ Roster-level view that gives players context on how they fit within their team.
 - AI-powered performance insights: "You perform best on days you journal before the game" or "Your 3PT% improves by 8% during weeks with 4+ practice sessions"
 - Mood-to-performance correlation dashboard
 - Computer vision shot detection (phone camera integration using ML model)
-- Pivot Training integration: mental health workshops and resources surfaced contextually within the journal
+- Mental-performance workshops and resources surfaced contextually within the journal
 - AAU program partnerships: bulk licensing for team accounts
 - Recruiting profile export: generate a one-page player profile with stats, heat map, and journal highlights for college coaches
 - Premium subscription tier
@@ -293,7 +293,7 @@ Roster-level view that gives players context on how they fit within their team.
 - Integration with wearables (Apple Watch, Whoop) for biometric data
 - Live game stat tracking with real-time team dashboard
 - College recruiting network: connect verified player profiles to college programs
-- Pivot mental performance curriculum built into the app as a structured program
+- Structured mental-performance curriculum built into the app
 - API for third-party integrations (league management systems, MaxPreps, etc.)
 
 ---
@@ -330,7 +330,7 @@ Roster-level view that gives players context on how they fit within their team.
 
 - Multi-team management
 - Program-wide analytics
-- Pivot Training workshop integration
+- Mental-performance workshop integration
 - Custom branding options
 - Dedicated support
 - Starting at $199/month for programs with 3+ teams
@@ -346,7 +346,7 @@ Mitigation: The streak system and daily practice reminders create habit loops. S
 Mitigation: Design the logging flow to be as fast as possible (2 taps per shot). Phase 3 introduces camera-based auto-detection. In the meantime, post-session batch entry (enter all shots after practice) reduces friction.
 
 **Risk: Competitors add journaling features.**
-Mitigation: Court IQ's journal is not a generic notes feature — it's built on Pivot's mental health framework. The mood-to-performance correlation engine and eventual integration with Pivot's professional development curriculum creates a moat that a feature copy can't replicate. The insight layer is the product, not the text box.
+Mitigation: Court IQ's journal is not a generic notes feature — it's designed around a basketball-specific mental-performance framework. The mood-to-performance correlation engine and eventual integration with Pivot's professional development curriculum creates a moat that a feature copy can't replicate. The insight layer is the product, not the text box.
 
 **Risk: Scaling to team/coach features adds complexity.**
 Mitigation: MVP is laser-focused on the individual player experience. Team features in Phase 2 are read-only aggregations of existing data, not a new data model. Coach tools are layered on incrementally.
@@ -357,7 +357,7 @@ Mitigation: MVP is laser-focused on the individual player experience. Team featu
 
 Court IQ succeeds when a 15-year-old AAU point guard opens the app after every practice and every game — not because someone told them to, but because they genuinely want to see their numbers, write about what happened, and watch themselves get better over time. The app becomes part of their routine the same way checking their phone is part of their routine.
 
-At scale, Court IQ succeeds when it becomes the standard development tool that AAU programs hand to every player at the start of the season, and when Pivot Training and Development is recognized not just as a workshop company but as the company that brought mental performance tracking to youth basketball.
+At scale, Court IQ succeeds when it becomes the standard development tool that AAU programs hand to every player at the start of the season, and when CourtIQ is recognized as a platform that brought measurable mental-performance tracking into youth basketball development.
 
 ---
 
@@ -385,4 +385,4 @@ At scale, Court IQ succeeds when it becomes the standard development tool that A
 
 ---
 
-*Court IQ is a product of Pivot Training and Development, founded by Christopher and Jazmine Davis. Building at the intersection of basketball performance and mental wellness.*
+*CourtIQ was created in Atlanta, Georgia, at the intersection of basketball performance, player development, and mental performance.*

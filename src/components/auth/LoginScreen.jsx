@@ -226,7 +226,7 @@ export default function LoginScreen() {
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: "auto", paddingTop: 16, paddingBottom: 8 }}>
           <p style={{ fontSize: 10, color: "var(--color-text-sec)", opacity: 0.5, margin: 0 }}>
-            A product of Pivot Training and Development
+            Made in Atlanta, Georgia
           </p>
           <p style={{ fontSize: 10, color: "var(--color-text-sec)", opacity: 0.4, marginTop: 4 }}>
             <a href="/terms" style={{ textDecoration: "underline", color: "inherit" }}>Terms</a>

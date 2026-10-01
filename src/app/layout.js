@@ -8,14 +8,14 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Court IQ — Basketball Performance Tracker",
+  title: "CourtIQ — Basketball Development Intelligence",
   description:
-    "Track your shots, visualize your game, and develop your mental edge. Built for youth and AAU basketball players.",
+    "Track games, analyze performance, train with 162 basketball drills, and turn data into the next development move.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Court IQ",
+    title: "CourtIQ",
   },
 };
 
