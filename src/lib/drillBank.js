@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════
    COURT IQ — COMPREHENSIVE DRILL BANK
-   150+ real basketball drills used by coaches at every level.
+   162 real basketball drills organized for player development.
    Organized by category, skill level, and age range.
    ══════════════════════════════════════════════════════════════ */
 
