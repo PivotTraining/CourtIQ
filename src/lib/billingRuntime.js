@@ -2,7 +2,7 @@ import 'server-only';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from './supabase-server';
-import { BillingError, BILLING_PLANS, billingConfig, sameOrigin } from './billingPolicy.mjs';
+import { BillingError, BILLING_PLANS, billingConfig, sameOrigin, hasOpenSubscription } from './billingPolicy.mjs';
 import { createBillingService } from './billingService.mjs';
 
 export const billingJson = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'X-Content-Type-Options': 'nosniff' } });
@@ -55,11 +55,12 @@ export function billingRuntime() {
 }
 export async function billingStatus(client) {
   const state = await readBilling(client);
+  const trialAvailable = process.env.COURTIQ_TRIAL_ENABLED === 'true' && !hasOpenSubscription(state.subscription);
   const proposed = Object.fromEntries(Object.entries(BILLING_PLANS).map(([key, plan]) => [key, { ...plan, month: plan.monthly, year: plan.annual }]));
   if (process.env.COURTIQ_BILLING_ENABLED !== 'true' || !state.enabled)
-    return { ...state, trialAvailable: process.env.COURTIQ_TRIAL_ENABLED === 'true', checkoutAvailable: false, mode: 'inactive', plans: proposed, proposed: true };
+    return { ...state, trialAvailable, checkoutAvailable: false, mode: 'inactive', plans: proposed, proposed: true };
   const { config, service } = billingRuntime(), catalog = await service.catalog();
   const plans = Object.fromEntries(Object.entries(BILLING_PLANS).map(([key, plan]) => [key, { ...plan,
     month: catalog[`${key}:month`].unit_amount, year: catalog[`${key}:year`].unit_amount }]));
-  return { ...state, trialAvailable: process.env.COURTIQ_TRIAL_ENABLED === 'true', checkoutAvailable: true, mode: 'test', termsVersion: config.termsVersion, plans, proposed: false };
+  return { ...state, trialAvailable, checkoutAvailable: true, mode: 'test', termsVersion: config.termsVersion, plans, proposed: false };
 }

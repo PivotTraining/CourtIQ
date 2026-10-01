@@ -1,0 +1,31 @@
+.membership-start { max-width: 620px; width: 100%; margin: auto; padding: 24px 20px 40px; color: var(--color-text); display: grid; gap: 20px; box-sizing: border-box; }
+.starter-hero { padding: 28px 2px 8px; }
+.starter-eyebrow { display: block; font-size: 11px; font-weight: 850; letter-spacing: 2px; color: var(--color-accent); }
+.starter-hero h1, .starter-upgrade h2 { font-size: clamp(36px, 9vw, 58px); line-height: 1.03; font-weight: 900; letter-spacing: -2px; margin: 16px 0; }
+.starter-hero em { color: var(--color-accent); font-style: normal; }
+.membership-start p { line-height: 1.65; color: var(--color-text-sec); font-size: 14px; }
+.starter-chip { display: inline-block; margin-top: 20px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 10px; letter-spacing: 1px; font-weight: 750; }
+.starter-panel { border: 1px solid var(--color-border); border-radius: 20px; padding: 22px; background: var(--color-card); }
+.starter-panel h2 { font-size: 22px; line-height: 1.2; font-weight: 850; margin: 10px 0; }
+.starter-score { display: flex; align-items: center; gap: 20px; margin: 20px 0; }
+.starter-score strong { font-size: 40px; font-weight: 900; line-height: 1; }
+.starter-score small { display: block; font-weight: 600; font-size: 11px; color: var(--color-text-sec); margin-top: 8px; }
+.starter-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.membership-start button { border: 1px solid var(--color-border); background: var(--color-muted); color: var(--color-text); font-size: 13px; font-weight: 750; border-radius: 12px; padding: 12px 16px; min-height: 46px; cursor: pointer; }
+.membership-start button:focus-visible, .membership-start a:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 3px; }
+.membership-start button:disabled { opacity: .55; cursor: default; }
+.membership-start .starter-primary { background: var(--color-accent); color: #fff; border-color: transparent; }
+.starter-wide { width: 100%; margin-top: 18px; }
+.membership-start .starter-note { font-size: 12px; margin-top: 12px; }
+.starter-error { padding: 14px; border: 1px solid #ef4444; border-radius: 12px; }
+.starter-drills { margin-top: 18px; display: grid; gap: 12px; }
+.starter-drills div { display: flex; gap: 12px; align-items: center; }
+.starter-drills span { color: var(--color-accent); font-weight: 800; font-size: 12px; }
+.starter-drills strong { flex: 1; font-size: 13px; }
+.starter-drills small { color: var(--color-text-sec); }
+.starter-limits { display: grid; gap: 10px; margin: 18px 0; padding-left: 20px; font-size: 13px; }
+.starter-upgrade { padding: 26px 22px; border: 1px solid var(--color-accent); border-radius: 22px; background: var(--color-card); }
+.starter-upgrade h2 { font-size: clamp(30px, 8vw, 44px); letter-spacing: -1px; }
+.starter-link { display: block; margin-top: 18px; font-size: 13px; font-weight: 700; color: var(--color-accent); text-align: center; }
+html.dark .starter-primary { box-shadow: 0 0 20px #ff6b3522; }
+@media (prefers-reduced-motion: reduce) { .membership-start * { animation: none !important; transition: none !important; } }

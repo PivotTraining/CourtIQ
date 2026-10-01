@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 
 const alice = '00000000-0000-0000-0000-000000000001', bob = '00000000-0000-0000-0000-000000000002', player = '10000000-0000-0000-0000-000000000001';
-const migrations = ['20260930171602_web_player_ownership_safeguards.sql', '20260930202201_reliable_sessions_and_development.sql', '20261001144325_owned_roster_games.sql', '20261001151920_ten_day_new_user_trials.sql', '20261001170545_courtiq_subscription_core.sql'];
+const migrations = ['20260930171602_web_player_ownership_safeguards.sql', '20260930202201_reliable_sessions_and_development.sql', '20261001144325_owned_roster_games.sql', '20261001151920_ten_day_new_user_trials.sql', '20261001170545_courtiq_subscription_core.sql','20261001175225_premium_player_analytics.sql','20261001184745_trial_checkout_exclusion.sql'];
 test('billing migration chain preserves history, isolates owners, gates new records only when enabled and protects accounts with recurring billing', async () => {
   const db = new PGlite();
   try {

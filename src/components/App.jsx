@@ -11,6 +11,7 @@ import Onboarding from "@/components/Onboarding";
 import Shell from "@/components/Shell";
 import LoginScreen from "@/components/auth/LoginScreen";
 import ProfileSetup from "@/components/auth/ProfileSetup";
+import StarterGate from '@/components/billing/StarterGate';
 
 function LoadingScreen() {
   return (
@@ -63,9 +64,11 @@ function AuthGate() {
   if (needsProfile) return <ProfileSetup />;
 
   return (
-    <AppProvider key={playerProfile?.id}>
-      <Shell />
-    </AppProvider>
+    <StarterGate key={user.id}>
+      <AppProvider key={playerProfile?.id}>
+        <Shell />
+      </AppProvider>
+    </StarterGate>
   );
 }
 

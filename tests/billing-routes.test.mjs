@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import Stripe from 'stripe';
-import { BillingError, sameOrigin } from '../src/lib/billingPolicy.mjs';
+import { BillingError, sameOrigin, hasOpenSubscription } from '../src/lib/billingPolicy.mjs';
 
 async function handler(route, overrides = {}) {
   const source = (await readFile(new URL(`../src/app/api/billing/${route}/route.js`, import.meta.url), 'utf8'))
     .replace(/^import .*;\n/gm, '').replaceAll('export ', '');
   const calls = [], context = {
     process: { env: { COURTIQ_TRIAL_ENABLED: 'true', STRIPE_COURTIQ_WEBHOOK_SECRET: 'whsec_local_fixture_only' } },
-    BillingError, sameOrigin,
+    BillingError, sameOrigin, hasOpenSubscription,
     billingJson: (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } }),
     billingFailure: error => Response.json({ error: error instanceof BillingError ? error.message : 'Billing unavailable' }, { status: error.status || 503 }),
     billingIdentity: async () => ({ client: { rpc: async () => ({ data: { status: 'active' } }) }, user: { id: 'verified-owner', email_confirmed_at: '2026-10-01' } }),
@@ -46,6 +46,13 @@ test('trial handler fails closed when inactive, email unverified or storage reje
   assert.equal((await inactive.run(request())).status, 503);
   const denied = await handler('trial', { billingIdentity: async () => ({ client: { rpc: async () => ({ error: new Error('fixture') }) }, user: { email_confirmed_at: 'fixture' } }) });
   assert.equal((await denied.run(request())).status, 403);
+});
+test('trial handler rejects all open subscription states before calling the activation RPC', async () => {
+  for(const status of ['active','past_due','unpaid','incomplete','paused','trialing']) {
+    let mutations=0;
+    const h=await handler('trial',{readBilling:async()=>({subscription:{status}}),billingIdentity:async()=>({user:{email_confirmed_at:'fixture'},client:{rpc:async()=>{mutations++;return{data:{status:'active'}};}}})});
+    assert.equal((await h.run(request())).status,409);assert.equal(mutations,0);
+  }
 });
 test('actual webhook handler verifies the raw Stripe signature before synchronizing, and rejects tampering without touching storage', async () => {
   const h = await handler('webhook'), stripe = new Stripe('sk_test_local_fixture_only');

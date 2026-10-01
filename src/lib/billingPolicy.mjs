@@ -5,6 +5,9 @@ export const BILLING_PLANS = Object.freeze({
 export class BillingError extends Error {
   constructor(message, status = 400) { super(message); this.name = 'BillingError'; this.status = status; }
 }
+export function hasOpenSubscription(subscription) {
+  return !!subscription && !['canceled', 'incomplete_expired'].includes(subscription.status);
+}
 export function billingConfig(env = process.env) {
   const enabled = env.COURTIQ_BILLING_ENABLED === 'true';
   if (!enabled) throw new BillingError('Subscriptions are not activated yet. Your records are unchanged.', 503);

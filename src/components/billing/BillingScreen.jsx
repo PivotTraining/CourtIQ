@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { providerUrl } from '@/lib/billingPolicy.mjs';
+import { providerUrl, hasOpenSubscription } from '@/lib/billingPolicy.mjs';
 import { trialSummary } from '@/lib/trialPolicy.mjs';
 
 const money = amount => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: amount % 100 ? 2 : 0 }).format(amount / 100);
@@ -18,7 +18,7 @@ async function billingApi(path, body, signal) {
   return result;
 }
 
-export default function BillingScreen({ api = billingApi, sample = false }) {
+export default function BillingScreen({ api = billingApi, sample = false, onTrialStarted }) {
   const [state, setState] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState('');
   const [interval, setInterval] = useState('month'), [plan, setPlan] = useState('player'), [consent, setConsent] = useState(false);
   const mounted = useRef(false), request = useRef(null), inFlight = useRef(false);
@@ -46,7 +46,7 @@ export default function BillingScreen({ api = billingApi, sample = false }) {
         const result = await api('portal', {});
         if (mounted.current) window.location.assign(providerUrl(result.url, 'portal'));
       } else {
-        if (kind === 'trial') await api('trial', {});
+        if (kind === 'trial') { await api('trial', {}); await onTrialStarted?.(); }
         if (kind === 'refresh' && state?.checkoutAvailable && !sample) await api('reconcile', {});
         await load();
       }
@@ -55,10 +55,10 @@ export default function BillingScreen({ api = billingApi, sample = false }) {
   };
   if (!state) return <main style={{ padding: 20, color: 'var(--color-text)' }}><p role="status">{error || 'Checking your account…'}</p>{error ? <button style={button} onClick={() => action('refresh')}>Try again</button> : null}</main>;
   const trial = trialSummary(state.trial), subscription = state.subscription;
-  const hasSubscription = subscription && !['canceled', 'incomplete_expired'].includes(subscription.status);
+  const hasSubscription = hasOpenSubscription(subscription);
   const canCheckout = state.checkoutAvailable && trial.status !== 'active' && !hasSubscription && !sample;
   const selected = state.plans[plan], amount = selected[interval];
-  const trialTitle = { eligible: 'Your next 10 days start here.', active: `${trial.daysRemaining} ${trial.daysRemaining === 1 ? 'day' : 'days'} left to find your rhythm.`,
+  const trialTitle = hasSubscription ? 'Manage your existing membership.' : { eligible: 'Your next 10 days start here.', active: `${trial.daysRemaining} ${trial.daysRemaining === 1 ? 'day' : 'days'} left to find your rhythm.`,
     expired: 'Trial complete. Keep your momentum.', verify_email: 'Verify your email to get started.', ineligible: 'Your account is not eligible for a new trial.', unavailable: 'Trials are not activated yet.' }[trial.status];
   return <main style={{ padding: 20, display: 'grid', gap: 16, color: 'var(--color-text)' }}>
     <div><p style={{ color: 'var(--color-accent)', fontWeight: 800, fontSize: 12, letterSpacing: 2 }}>COURTIQ · MEMBERSHIP</p><h2 style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 850, marginTop: 8 }}>More game.<br />Less guesswork.</h2><p style={{ color: 'var(--color-text-sec)', marginTop: 10 }}>Track the work. See the progress. Own the next game.</p></div>
@@ -66,9 +66,10 @@ export default function BillingScreen({ api = billingApi, sample = false }) {
     {error ? <p role="alert" style={{ ...panel, borderColor: '#EF4444' }}>{error}</p> : null}
     <section aria-label="Trial status" style={panel}>
       <h3 style={{ fontSize: 20, fontWeight: 800 }}>{trialTitle}</h3>
-      {trial.status === 'active' ? <p style={{ marginTop: 10 }}>Ends {date(trial.endsAt)}. No card on file from starting this trial. No automatic charge. Paid checkout opens after your trial ends.</p> : <p style={{ marginTop: 10 }}>10 days. No credit card. No automatic charge. One trial per eligible, verified account.</p>}
+      {hasSubscription ? <p style={{ marginTop: 10 }}>A no-card trial is unavailable while this subscription remains open. Subscription renewals and outstanding payments are managed separately.</p> : trial.status === 'active' ? <p style={{ marginTop: 10 }}>Ends {date(trial.endsAt)}. No card on file from starting this trial. No automatic charge. Paid checkout opens after your trial ends.</p> : <p style={{ marginTop: 10 }}>10 days. No credit card. No automatic charge. One trial per eligible, verified account.</p>}
       <p style={{ color: 'var(--color-text-sec)', marginTop: 10, fontSize: 13 }}>Your saved game history and exports stay available after expiry. Attached videos stay on this device, not in a cloud library.</p>
-      {trial.status === 'eligible' ? <button style={{ ...button, marginTop: 16, background: 'var(--color-accent)', color: '#fff', width: '100%', opacity: busy || !state.trialAvailable ? .5 : 1 }} disabled={!!busy || !state.trialAvailable} onClick={() => action('trial')}>{busy === 'trial' ? 'Starting…' : 'Start my 10-day trial'}</button> : null}
+      {trial.status === 'eligible' && !hasSubscription ? <button style={{ ...button, marginTop: 16, background: 'var(--color-accent)', color: '#fff', width: '100%', opacity: busy || !state.trialAvailable ? .5 : 1 }} disabled={!!busy || !state.trialAvailable} onClick={() => action('trial')}>{busy === 'trial' ? 'Starting…' : 'Start my 10-day trial'}</button> : null}
+      {hasSubscription && <p role="note" style={{ marginTop: 12 }}>Your existing subscription can still bill. A free starter or trial does not cancel it. Use billing management for payment changes or cancellation.</p>}
       {trial.status === 'verify_email' ? <p style={{ marginTop: 12 }}>Confirm the link in your signup email, then refresh this page.</p> : null}
     </section>
     {subscription ? <section aria-label="Subscription status" style={panel}><h3 style={{ fontSize: 20, fontWeight: 800 }}>Your {subscription.plan === 'coach' ? 'Coach' : 'Player'} membership</h3><p style={{ marginTop: 10 }}>Status: {subscription.status.replaceAll('_', ' ')}{subscription.paused ? ' · payments paused' : ''}</p><p style={{ marginTop: 8 }}>{subscription.cancel_at_period_end ? 'Cancellation scheduled for' : 'Current billing period ends'} {date(subscription.period_end)}.</p>{subscription.status === 'past_due' ? <p style={{ marginTop: 10 }}>Update your payment method in billing management. Access is verified by the server, not this status label.</p> : null}<button style={{ ...button, marginTop: 16, width: '100%' }} disabled={!!busy || !state.checkoutAvailable || sample} onClick={() => action('portal')}>Manage billing & cancellation</button><p style={{ color: 'var(--color-text-sec)', fontSize: 12, marginTop: 12 }}>End your subscription before deleting your account. Deleting data must not leave a recurring payment behind.</p></section> : null}

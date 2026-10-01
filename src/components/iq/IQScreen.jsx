@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from 'next/dynamic';
 import Icon from "@/components/ui/Icons";
 import PlayerInsights from "@/components/dashboard/PlayerInsights";
 import CoachDashboard from "./CoachDashboard";
 import TeamIQScreen from "./TeamIQScreen";
 import { useApp } from "@/context/AppContext";
+const PremiumAnalytics = dynamic(() => import('./PremiumAnalytics'));
 
 export default function IQScreen() {
   const { loading, isTeamIQ } = useApp();
@@ -50,7 +52,10 @@ export default function IQScreen() {
             <span style={{ fontSize: 8, fontWeight: 900, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", borderRadius: 5, padding: "1px 5px", marginLeft: 2 }}>SOON</span>
           )}
         </button>
+        {process.env.NEXT_PUBLIC_COURTIQ_PREMIUM_ANALYTICS_ENABLED === 'true' && <button onClick={() => setTab('lab')} style={{ flex: 1, minHeight: 44, padding: '10px 6px', borderRadius: 10, border: 0, fontSize: 12, fontWeight: 800, cursor: 'pointer', background: tab === 'lab' ? 'var(--color-card)' : 'transparent', color: tab === 'lab' ? 'var(--color-accent)' : 'var(--color-text-sec)' }}>Performance Lab</button>}
       </div>
+
+      {tab === 'lab' && process.env.NEXT_PUBLIC_COURTIQ_PREMIUM_ANALYTICS_ENABLED === 'true' && <PremiumAnalytics />}
 
       {/* ── Individual IQ ── */}
       {tab === "individual" && (
