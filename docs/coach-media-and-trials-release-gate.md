@@ -45,8 +45,11 @@ Stripe product, subscription, tax setting, charge or public release was changed.
   foreign-account and anonymous rejection, stale version/NULL version rejection,
   trial eligibility/privacy/expiry/retry, stored blob isolation and account cleanup,
   stats/CSV/formula escaping, safe SVG and true card dimensions, and spacing.
-- Lint passed. Production-build and preview-route checks must be recorded after
-  synchronizing the newer main-branch brand work.
+- Lint and production build passed after synchronizing the newer main-branch
+  brand work, using clearly fake Supabase configuration. Public homepage,
+  layout, privacy, terms and domain middleware remain identical to newer main.
+- Production-mode local server returned HTTP 404 for both `/dev/coach` and
+  `/dev/tracker` even with `COURTIQ_LOCAL_PREVIEW=true`; homepage returned 200.
 - Actual sample browser flow: roster creation with two players; player selection;
   shared manual period/clock; offline assist retained, finishing blocked until
   retry, synced assist counted once; all player records completed together;
