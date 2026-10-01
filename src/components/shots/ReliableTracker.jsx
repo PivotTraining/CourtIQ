@@ -13,15 +13,15 @@ import GameContextForm from './GameContextForm';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 
 export default function ReliableTracker({ onClose, darkMode, onToggleTheme }) {
-  const { playerId, refreshData } = useApp();
+  const { playerId, player, refreshData } = useApp();
   const { user } = useAuth();
-  return <ReliableTrackerWorkspace key={`${user.id}:${playerId}`} accountId={user.id} playerId={playerId} refreshData={refreshData}
+  return <ReliableTrackerWorkspace key={`${user.id}:${playerId}`} accountId={user.id} playerId={playerId} playerName={player?.name} refreshData={refreshData}
     onClose={onClose} darkMode={darkMode} onToggleTheme={onToggleTheme} />;
 }
 
 const DEFAULT_BACKEND = { fetchActiveSessions, fetchTrackerSession, createTrackerSession, applySessionCommand };
 
-export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onClose, darkMode, onToggleTheme, backend = DEFAULT_BACKEND }) {
+export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', refreshData, onClose, darkMode, onToggleTheme, backend = DEFAULT_BACKEND, gameSessionId, teamControls }) {
   const [value, setValue] = useState(null);
   const valueRef = useRef(null);
   const identity = useRef(`${accountId}:${playerId}`);
@@ -59,6 +59,18 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
     async function load() {
       try {
         const local = loadRecovery(window.localStorage, accountId, playerId);
+        if (gameSessionId) {
+          if (local?.pending.length && local.snapshot.session.id !== gameSessionId) {
+            throw new Error('Sync the player’s other pending game before opening this roster game.');
+          }
+          const next = local?.snapshot.session.id === gameSessionId && local.pending.length ? local
+            : { accountId, playerId, snapshot: await backend.fetchTrackerSession(gameSessionId, playerId), pending: [] };
+          if (!alive) return;
+          saveRecovery(window.localStorage, accountId, playerId, next);
+          valueRef.current = next; setValue(next); setReady(true);
+          setStatus(next.pending.length ? `${next.pending.length} entries on this device — not yet synced` : 'Saved to your account');
+          return;
+        }
         if (local && alive) { valueRef.current = local; setValue(local); setStatus(local.pending.length ? `${local.pending.length} entries on this device — not yet synced` : 'Restored on this device'); }
         const games = await backend.fetchActiveSessions(playerId);
         if (!alive) return;
@@ -71,13 +83,13 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
           saveRecovery(window.localStorage, accountId, playerId, next);
           valueRef.current = next; setValue(next); setStatus('Saved to your account');
         }
-      } catch {
-        if (alive) { setError('Saved-game recovery is unavailable. Your records have not been cleared. The database upgrade or connection must be checked.'); setStatus('Not connected'); }
+      } catch (err) {
+        if (alive) { setError(err.message?.includes('other pending game') ? err.message : 'Saved-game recovery is unavailable. Your records have not been cleared. The database upgrade or connection must be checked.'); setStatus('Not connected'); }
       }
     }
     load();
     return () => { alive = false; identity.current = null; };
-  }, [accountId, playerId, backend]);
+  }, [accountId, playerId, backend, gameSessionId]);
 
   useEffect(() => {
     const warn = event => { if (valueRef.current?.pending.length) { event.preventDefault(); event.returnValue = ''; } };
@@ -110,7 +122,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
       const current = valueRef.current;
       const command = { id: crypto.randomUUID(), sessionId: current.snapshot.session.id,
         version: current.snapshot.session.tracker_version,
-        payload: { ...payload, period, clock, recorded_at: new Date().toISOString() } };
+        payload: { ...payload, period: teamControls?.period ?? period, clock: teamControls?.clock ?? clock, recorded_at: new Date().toISOString() } };
       const next = { ...current, snapshot: projectCommand(current.snapshot, command), pending: [...current.pending, command] };
       persist(next);
       setStatus(`${next.pending.length} entries on this device — not yet synced`);
@@ -169,6 +181,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
   const shots = snapshot?.shots.filter(shot => shot.zone_id !== 'free-throw') || [];
   const freeThrows = snapshot?.shots.filter(shot => shot.zone_id === 'free-throw') || [];
   const liveReport = buildSessionReport(shots, stats, COURT_ZONES, freeThrows);
+  const recordingPlayerName=teamControls?.roster.find(player => player.id === playerId)?.name || playerName;
   const reversals = new Set(snapshot?.events.filter(event => event.payload.kind === 'reverse').map(event => event.payload.target));
   const reversible = snapshot?.events.filter(event => ['stat', 'shot'].includes(event.payload.kind) && !reversals.has(event.id)) || [];
   const inputStyle = { minHeight: 44, borderRadius: 10, padding: 10, color: 'var(--color-text)', background: 'var(--color-card)', border: '1px solid var(--color-border)' };
@@ -180,12 +193,12 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
       <label>Session type <select style={inputStyle} value={sessionType} onChange={event => setSessionType(event.target.value)}><option value="game">Game</option><option value="practice">Practice</option></select></label>
       <GameContextForm value={context} onChange={setContext} />
       <p className="text-sm text-text-sec">One player per session. Shared roster recording is not activated yet.</p>
-      <button style={{ ...inputStyle, width: '100%', marginTop: 16 }} disabled={!ready || busy} onClick={start}>{busy ? 'Starting…' : 'Start new session'}</button>
+      {!gameSessionId && <button style={{ ...inputStyle, width: '100%', marginTop: 16 }} disabled={!ready || busy} onClick={start}>{busy ? 'Starting…' : 'Start new session'}</button>}
     </div></div>;
 
   if (snapshot.session.tracker_status === 'completed' && !value.pending.length) return <div className="fixed inset-0 z-[200] overflow-y-auto bg-bg p-6"><div className="max-w-lg mx-auto">
     <p className="text-sm">{snapshot.session.date}{snapshot.session.tracker_context?.opponent ? ` vs ${snapshot.session.tracker_context.opponent}` : ''}</p>
-    <h2 className="text-2xl font-black mb-4">Saved session report</h2><AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={stats} sessionType={snapshot.session.type} />
+    <h2 className="text-2xl font-black mb-4">{recordingPlayerName?`${recordingPlayerName} · `:''}Saved session report</h2><AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={stats} sessionType={snapshot.session.type} date={snapshot.session.date} playerName={recordingPlayerName} accountId={accountId} sessionId={snapshot.session.id} />
     {recordedGameResult(snapshot.session.tracker_context) && <p>Team result: {recordedGameResult(snapshot.session.tracker_context).outcome} · {recordedGameResult(snapshot.session.tracker_context).team}–{recordedGameResult(snapshot.session.tracker_context).opponent}</p>}
     <h3 className="font-bold text-sm my-3">Player scoring by recorded period</h3>
     {recordedPeriodScoring(snapshot.events, COURT_ZONES).map(row => <p key={row.period} className="text-sm">Period {row.period}: {row.points} points</p>)}
@@ -193,12 +206,18 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
     <button style={inputStyle} onClick={onClose}>Done</button></div></div>;
 
   const tools = <section className="tracker-recovery-tools">
+    {teamControls && <div className="tracker-tool-row">
+      <label>Recording player <select style={{ ...inputStyle, maxWidth: '100%' }} value={playerId} disabled={busy} onChange={event => teamControls.onPlayerChange(event.target.value)}>
+        {teamControls.roster.map(player => <option key={player.id} value={player.id}>#{player.jersey_number ?? '—'} {player.name}</option>)}
+      </select></label>
+      <span>Period {teamControls.period} · {teamControls.clock}</span>
+    </div>}
     <div className="tracker-tool-row" aria-label="Live player totals"><strong>{liveReport.pts} PTS</strong><span>FG {liveReport.fgm}/{liveReport.fga}</span><span>FT {liveReport.ftm}/{liveReport.fta}</span></div>
     <div role="status" aria-live="polite">{status}</div>
     <div className="tracker-tool-row">
       {value.pending.length > 0 && <button style={inputStyle} disabled={busy || conflict} onClick={() => sync()}>Retry sync ({value.pending.length})</button>}
       <button style={inputStyle} onClick={() => setTimeline(!timeline)} aria-expanded={timeline}>Entries</button>
-      <button style={inputStyle} onClick={() => { setContext(snapshot.session.tracker_context); setShowContext(!showContext); }} aria-expanded={showContext}>Game details</button>
+      {!teamControls && <button style={inputStyle} onClick={() => { setContext(snapshot.session.tracker_context); setShowContext(!showContext); }} aria-expanded={showContext}>Game details</button>}
       <button style={inputStyle} onClick={() => { onClose(); }}>Save for later</button>
     </div>
     {value.pending.length > 0 && <button style={inputStyle} onClick={downloadPending}>Download unsynced entries</button>}
@@ -215,7 +234,8 @@ export function ReliableTrackerWorkspace({ accountId, playerId, refreshData, onC
     gameStats={stats} updateStat={(key, delta) => entry({ kind: 'stat', key, delta })}
     saving={busy || conflict} ending={false} saveError={error} tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
     courtTheme={courtTheme} setCourtTheme={setCourtTheme} undoCount={reversible.length}
-    undoLast={() => entry({ kind: 'reverse', target: reversible.at(-1)?.id })} endSession={finish}
+    undoLast={() => entry({ kind: 'reverse', target: reversible.at(-1)?.id })} endSession={teamControls ? onClose : finish}
+    endLabel={teamControls ? 'Back to team' : 'End session'} headerTitle={teamControls?.roster.find(player => player.id === playerId)?.name}
     logShot={made => { entry({ kind: 'shot', zone_id: selectedZone, made }); setSelectedZone(null); }}
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools} />;
 }

@@ -16,6 +16,7 @@ import ProfileEditor from "./auth/ProfileEditor";
 import PlayerSwitcher from "./PlayerSwitcher";
 import GameLogScreen from "./gamelog/GameLogScreen";
 import Icon from "./ui/Icons";
+import CoachWorkspace from './team/CoachWorkspace';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
 
@@ -29,6 +30,7 @@ const TITLES = {
   heatmap: "Heat Map",
   journal: "Journal",
   gamelog: "Game Log",
+  coach: "Coach workspace",
 };
 
 export default function Shell() {
@@ -99,11 +101,12 @@ export default function Shell() {
       case "heatmap": return <HeatMapScreen />;
       case "journal": return <JournalScreen />;
       case "gamelog": return <GameLogScreen />;
+      case "coach": return <CoachWorkspace darkMode={darkMode} onToggleTheme={() => setDarkMode(!darkMode)} onManagePlayers={() => setShowSwitcher(true)} />;
       default: return <HomeDashboard />;
     }
   };
 
-  const showFab = displayScreen !== "iq";
+  const showFab = displayScreen !== "iq" && displayScreen !== "coach";
 
   return (
     <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -209,6 +212,7 @@ export default function Shell() {
                     }}>
                       <Icon name="user" size={16} color="var(--color-text-sec)" /> Edit Profile
                     </button>
+                    {process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('coach'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Coach workspace</button>}
                     <button onClick={handleLogout} style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
                       padding: "12px 16px", background: "none", border: "none",

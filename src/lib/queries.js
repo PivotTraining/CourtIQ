@@ -4,6 +4,15 @@ import { checked, readAll, requireSavedRow } from "./dataSafety.mjs";
 
 // ─── PLAYER ───
 
+// Trial clock only. Do not enable a promotional UI until verified billing
+// entitlements consume the same server deadline and activation is authorized.
+export async function fetchTrialStatus() {
+  return checked(await getSupabase().rpc('get_courtiq_trial'));
+}
+export async function startNewUserTrial() {
+  return checked(await getSupabase().rpc('start_courtiq_trial'));
+}
+
 export async function fetchPlayerProfile(firebaseUid) {
   const result = await getSupabase()
     .from("players")
@@ -273,6 +282,9 @@ export async function fetchTrackerSession(sessionId, playerId) {
     readAll(() => getSupabase().from("shot_logs").select("*").eq("session_id", sessionId).eq("player_id", playerId).order("id")),
     readAll(() => getSupabase().from("session_commands").select("*").eq("session_id", sessionId).order("version")),
   ]);
+  const current = requireSavedRow(await getSupabase().from('sessions').select('id,tracker_version')
+    .eq('id', sessionId).eq('player_id', playerId).single(), 'Session consistency');
+  if (current.tracker_version !== session.tracker_version) throw new Error('Game changed during loading. Retry to load a consistent record.');
   return { session, shots, events };
 }
 
@@ -314,6 +326,30 @@ export async function saveWorkoutResult(playerId, result) {
 export async function fetchWorkoutResults(playerId) {
   return readAll(() => getSupabase().from("workout_results").select("*").eq("player_id", playerId)
     .order("completed_at", { ascending: false }).order("id"));
+}
+
+// Owner-managed roster games. These queries do not grant assistant/parent access.
+export async function fetchOwnedTeamGames(accountId) {
+  return readAll(() => getSupabase().from('team_games').select('*').eq('owner_id', accountId)
+    .order('created_at', { ascending: false }).order('id'));
+}
+
+export async function fetchOwnedTeamGame(gameId, accountId) {
+  const game = requireSavedRow(await getSupabase().from('team_games').select('*')
+    .eq('id', gameId).eq('owner_id', accountId).single(), 'Roster game');
+  const links = await readAll(() => getSupabase().from('team_game_players').select('*').eq('game_id', gameId).order('player_id'));
+  const members = await Promise.all(links.map(async link => ({ ...link, snapshot: await fetchTrackerSession(link.session_id, link.player_id) })));
+  return { game, members };
+}
+
+export async function createOwnedTeamGame(request) {
+  return checked(await getSupabase().rpc('create_owned_team_game', { p_id: request.id,
+    p_name: request.teamName, p_context: request.context, p_players: request.playerIds }));
+}
+
+export async function finishOwnedTeamGame(request) {
+  return checked(await getSupabase().rpc('finish_owned_team_game', { p_game: request.gameId,
+    p_id: request.id, p_versions: request.versions, p_team_score: request.teamScore, p_opponent_score: request.opponentScore }));
 }
 
 export async function insertShot(sessionId, playerId, zoneId, made) {

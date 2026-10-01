@@ -30,7 +30,11 @@ const Tracker = (await loadComponent('../src/components/shots/CourtTrackerView.j
 })).default;
 const Report = (await loadComponent('../src/components/shots/AdvancedSessionReport.jsx', {
   '@/lib/constants': constants, '@/lib/sessionReport.mjs': reports,
+  './SocialReportCard': { __esModule: true, default: () => null },
+  './SessionVideo': { __esModule: true, default: () => null },
+  '@/lib/browserDownload.mjs': { downloadBlob: noopDownload },
 })).default;
+function noopDownload() {}
 const noop = () => {};
 const props = {
   sessionType: 'game', shots: [], selectedZone: null, selectZone: noop,

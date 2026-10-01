@@ -1,5 +1,11 @@
 # CourtIQ reliability and recurring subscriptions — September 30, 2026
 
+Later checkpoint: [coach-media-and-trials-release-gate.md](coach-media-and-trials-release-gate.md).
+The October 1 work adds local owner-managed roster games, social report cards,
+device video clips and an inactive 10-day trial foundation. The historical
+remaining-work list below describes the September 30 checkpoint, not its new
+owner-roster implementation status.
+
 This is a local implementation checkpoint, not a completed public launch. It
 supersedes the test-count and browser-permission checkpoint in
 `stat-tracker-release-gate.md`. No live database rows, production configuration,

@@ -13,6 +13,7 @@ const APP_SECTIONS = new Set([
   "journal",
   "game-log",
   "iq",
+  "coach",
 ]);
 
 export default async function AppSectionPage({ params }) {

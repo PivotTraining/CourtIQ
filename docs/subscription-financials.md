@@ -14,10 +14,28 @@ checkout, payment methods, tax settings, or live entitlements have been activate
 
 Annual discounts: Player 26.9% versus twelve $9 payments; Coach 28.4% versus
 twelve $29 payments. These are hypotheses to test, not an approved public offer.
-Do not sell the Coach plan while its shared-roster workflow remains unbuilt.
+Owner-managed roster games are now built locally (October 1), but verified
+assistant/player/parent roles and coach assignments are still unbuilt. Do not
+sell the complete Coach offer until its advertised workflow is delivered.
 Keep customers' own existing records and a basic export available if they cancel.
-Recommended entry path: a free limited practice/demo, then an explicitly accepted
-subscription. Decide trial terms separately; no assumed card-required trial.
+Approved trial duration: **10 days for new users** (October 1). The inactive,
+server-timed trial foundation is in `20261001151920_ten_day_new_user_trials.sql`.
+It starts at explicit trial activation by an eligible verified account, lasts
+exactly 240 hours, and is not reset by refresh, device or plan changes. Eligibility
+uses a server-owned new-user cutoff; existing users are not silently re-enrolled.
+Recommended terms: no card required, no automatic charge, then an explicitly
+accepted paid subscription. Card requirements and conversion terms still need
+approval before public billing. The current migration starts disabled and does
+not grant/revoke feature access; real server-side entitlements are still pending.
+One-per-account is not complete abuse prevention: account deletion/recreation and
+multiple-account eligibility need a reviewed privacy-preserving policy.
+Trial accounts remain excluded from paying MRR/ARR.
+
+Stripe supports free trials with Checkout, including an optional no-payment-
+method flow. A future Checkout must use the original server trial deadline,
+not create a fresh ten-day period each time someone checks out or changes plans.
+Implement signed lifecycle webhooks and clear conversion consent. See
+[Stripe Checkout free trials](https://docs.stripe.com/payments/checkout/free-trials).
 
 Official comparison pages reviewed September 30, 2026:
 
@@ -78,7 +96,8 @@ baselines before asserting financial or retention targets.
 
 - Reconnect Stripe and verify the exact Pivot account plus isolated sandbox.
 - Complete Stripe's integration planner before writing payment integration code.
-- Approve currency/prices, trial, renewal/cancellation/refund policy, team roster
+- Approve currency/prices, card/conversion terms for the approved 10-day trial,
+  renewal/cancellation/refund policy, team roster
   and assistant-seat limits. Create separate Player and Coach Products, with
   monthly/annual Prices for each. Preserve existing Pivot products/settings.
 - Server-authenticated Checkout Sessions, allowlisted configured Price IDs,
