@@ -93,12 +93,12 @@ export default function Home() {
           <p style={{ color: "#9BA4B4", lineHeight: 1.65, fontSize: 16, marginTop: 14 }}>The tracker is optimized for quick entry on a phone. The web experience expands the same data into a larger review and development workspace.</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.7fr) minmax(240px, .7fr)", gap: 18, alignItems: "stretch" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(280px, 100%), 1fr))", gap: 18, alignItems: "stretch" }}>
           <figure style={{ margin: 0, background: "#151821", border: "1px solid #292E39", borderRadius: 22, overflow: "hidden" }}>
-            <Image src="/product-desktop.jpg" alt="CourtIQ desktop Gametime tracker" width={1200} height={840} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <Image src="/product-desktop.jpg" alt="CourtIQ desktop Gametime tracker" width={1200} height={840} style={{ width: "100%", height: "auto", objectFit: "cover", display: "block" }} />
           </figure>
           <figure style={{ margin: 0, background: "#151821", border: "1px solid #292E39", borderRadius: 22, overflow: "hidden", minHeight: 420 }}>
-            <Image src="/product-mobile.jpg" alt="CourtIQ mobile Gametime tracker" width={430} height={850} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }} />
+            <Image src="/product-mobile.jpg" alt="CourtIQ mobile Gametime tracker" width={430} height={850} style={{ width: "100%", height: "auto", objectFit: "cover", objectPosition: "top", display: "block" }} />
           </figure>
         </div>
         <div style={{ color: "#697386", fontSize: 11, marginTop: 10 }}>Product screenshots use sample data.</div>
