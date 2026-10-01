@@ -13,7 +13,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function WorkoutTimer({ drills, onComplete }) {
+export default function WorkoutTimer({ drills, onComplete, onClose, persistResult = false }) {
   const [currentDrill, setCurrentDrill] = useState(0);
   const [repsCompleted, setRepsCompleted] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -22,6 +22,25 @@ export default function WorkoutTimer({ drills, onComplete }) {
   const [paused, setPaused] = useState(false);
   const [done, setDone] = useState(false);
   const timerRef = useRef(null);
+  const resultsRef = useRef([]);
+  const resultRef = useRef(null);
+  const savingRef = useRef(false);
+  const [savingResult, setSavingResult] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  function recordDrill(reps, skipped) {
+    resultsRef.current.push({ drill_id: String(drill.id || drill.name), name: drill.name,
+      target_reps: drill.reps || 1, reps_completed: reps, skipped });
+  }
+  async function saveResult() {
+    if (savingRef.current) return;
+    if (!persistResult) { onComplete(); return; }
+    if (!resultRef.current) resultRef.current = { id: crypto.randomUUID(), elapsed_seconds: elapsed, drills: resultsRef.current };
+    savingRef.current = true; setSavingResult(true); setSaveError('');
+    try { await onComplete(resultRef.current); }
+    catch { setSaveError('Your result did not save. Keep this screen open and retry. No duplicate workout will be created.'); }
+    finally { savingRef.current = false; setSavingResult(false); }
+  }
 
   const drill = drills[currentDrill];
   const totalDrills = drills.length;
@@ -51,6 +70,7 @@ export default function WorkoutTimer({ drills, onComplete }) {
     haptic();
     const newReps = repsCompleted + 1;
     if (newReps >= (drill?.reps || 1)) {
+      recordDrill(newReps, false);
       // Drill complete
       if (currentDrill + 1 >= totalDrills) {
         setDone(true);
@@ -68,6 +88,7 @@ export default function WorkoutTimer({ drills, onComplete }) {
 
   const skipDrill = () => {
     haptic();
+    recordDrill(repsCompleted, true);
     if (currentDrill + 1 >= totalDrills) {
       setDone(true);
     } else {
@@ -94,10 +115,12 @@ export default function WorkoutTimer({ drills, onComplete }) {
       }}>
         <div>
           <div style={{ marginBottom: 16 }}><Icon name="trophy" size={64} color="#FF6B35" /></div>
-          <h2 style={{ fontSize: 28, fontWeight: 800, color: "var(--color-text)", marginBottom: 8 }}>Workout Complete!</h2>
-          <p style={{ fontSize: 15, color: "var(--color-text-sec)", marginBottom: 8 }}>{totalDrills} drills · {formatTime(elapsed)} total</p>
+          <h2 style={{ fontSize: 28, fontWeight: 800, color: "var(--color-text)", marginBottom: 8 }}>Workout results</h2>
+          <p style={{ fontSize: 15, color: "var(--color-text-sec)", marginBottom: 8 }}>{resultsRef.current.filter(result => !result.skipped).length} finished · {resultsRef.current.filter(result => result.skipped).length} skipped · {formatTime(elapsed)}</p>
+          {persistResult && <p>Not saved until you choose Save result.</p>}
+          {saveError && <p role="alert">{saveError}</p>}
         </div>
-        <button onClick={onComplete} style={{
+        <button onClick={saveResult} disabled={savingResult} style={{
           maxWidth: 300,
           width: "100%",
           padding: "14px 24px",
@@ -110,7 +133,7 @@ export default function WorkoutTimer({ drills, onComplete }) {
           cursor: "pointer",
           minHeight: 44,
           marginTop: 32,
-        }}>Done</button>
+        }}>{savingResult ? 'Saving…' : persistResult ? 'Save result' : 'Done'}</button>
       </div>
     );
   }
@@ -135,7 +158,7 @@ export default function WorkoutTimer({ drills, onComplete }) {
         <div key={restTime} style={{ fontSize: 80, fontWeight: 900, color: "white", lineHeight: 1 }}>
           {restTime}
         </div>
-        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", marginTop: 16, marginBottom: 32 }}>Next: {drills[currentDrill + 1]?.name || "Final drill"}</p>
+        <p style={{ fontSize: 15, color: "rgba(255,255,255,0.7)", marginTop: 16, marginBottom: 32 }}>Next: {drills[currentDrill]?.name || "Final drill"}</p>
         <button onClick={() => { setIsResting(false); haptic(); }}
           style={{
             padding: "16px 32px",
@@ -175,7 +198,7 @@ export default function WorkoutTimer({ drills, onComplete }) {
         paddingBottom: 8,
         flexShrink: 0,
       }}>
-        <button onClick={onComplete} style={{
+        <button onClick={() => { if (!persistResult || window.confirm('Leave this workout? The timer result has not been saved.')) (onClose || onComplete)(); }} style={{
           background: "transparent",
           border: "none",
           color: "var(--color-text-sec)",

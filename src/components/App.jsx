@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { registerServiceWorker, scheduleStreakReminder } from "@/lib/notifications";
+import { registerServiceWorker } from "@/lib/notifications";
 import { AppProvider } from "@/context/AppContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -30,7 +30,7 @@ function LoadingScreen() {
 }
 
 function AuthGate() {
-  const { user, loading, needsProfile, profileError, retryProfile } = useAuth();
+  const { user, playerProfile, loading, needsProfile, profileError, retryProfile } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ function AuthGate() {
   if (needsProfile) return <ProfileSetup />;
 
   return (
-    <AppProvider>
+    <AppProvider key={playerProfile?.id}>
       <Shell />
     </AppProvider>
   );
@@ -72,9 +72,6 @@ function AuthGate() {
 export default function App() {
   useEffect(() => {
     registerServiceWorker();
-    // Check streak reminder after 5 seconds
-    const t = setTimeout(scheduleStreakReminder, 5000);
-    return () => clearTimeout(t);
   }, []);
 
   return (

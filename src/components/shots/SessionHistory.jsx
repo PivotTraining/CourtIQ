@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { fetchSessionHistory } from "@/lib/queries";
 import { calcPct } from "@/lib/utils";
 import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
+import AdvancedSessionReport from './AdvancedSessionReport';
+import { buildSessionReport } from '@/lib/sessionReport.mjs';
+import { filterSessionRecords, recordedGameResult } from '@/lib/sessionRecovery.mjs';
+import HistoryFilters from './HistoryFilters';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -47,18 +52,15 @@ function StatCell({ value, label, color }) {
 }
 
 function SessionCard({ session }) {
-  const shots = session.shot_logs || [];
+  const [showReport, setShowReport] = useState(false);
   const stats = session.game_stats || {};
+  const report = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES);
+  const shots = report.fieldGoals;
   const madeShots = shots.filter((s) => s.made).length;
   const fgPct = calcPct(madeShots, shots.length);
 
-  const totalPts =
-    shots
-      .filter((s) => s.made)
-      .reduce((sum, s) => {
-        const zone = COURT_ZONES.find((z) => z.id === s.zone_id);
-        return sum + (zone?.pts || 2);
-      }, 0) + (stats.ft_made || 0);
+  const totalPts = report.pts;
+  const result = recordedGameResult(session.tracker_context);
 
   return (
     <div
@@ -94,7 +96,7 @@ function SessionCard({ session }) {
                 textTransform: "capitalize",
               }}
             >
-              {session.type}
+              {session.type}{session.tracker_context?.opponent ? ` vs ${session.tracker_context.opponent}` : ''}
             </div>
             <div
               style={{
@@ -102,7 +104,8 @@ function SessionCard({ session }) {
                 color: "var(--color-text-sec)",
               }}
             >
-              {formatDate(session.created_at)}
+              {formatDate(session.date ? `${session.date}T12:00:00` : session.created_at)}
+              {session.tracker_context?.season ? ` · ${session.tracker_context.season}` : ''}
             </div>
           </div>
         </div>
@@ -123,6 +126,7 @@ function SessionCard({ session }) {
       </div>
 
       {/* Stats Row */}
+      {result && <p style={{ fontSize: 12, marginBottom: 12 }}>{result.outcome} · Team {result.team}–{result.opponent}</p>}
       <div
         style={{
           display: "flex",
@@ -184,6 +188,11 @@ function SessionCard({ session }) {
           </div>
         )}
       </div>
+      <button onClick={() => setShowReport(value => !value)} aria-expanded={showReport}
+        style={{ marginTop: 12, width: '100%', minHeight: 44, border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-muted)', color: 'var(--color-text)', fontWeight: 700, fontSize: 12 }}>
+        {showReport ? 'Hide performance report' : 'View performance report'}
+      </button>
+      {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.created_at} />}
     </div>
   );
 }
@@ -193,18 +202,23 @@ export default function SessionHistory() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, game, practice
+  const [historyError, setHistoryError] = useState(false);
+  const [dateFilter, setDateFilter] = useState({ season: '', from: '', to: '' });
 
   useEffect(() => {
     if (!playerId) return;
+    let active = true;
+    setLoading(true); setHistoryError(false);
     fetchSessionHistory(playerId)
-      .then(setSessions)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .then(rows => { if (active) setSessions(rows); })
+      .catch(() => { if (active) setHistoryError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [playerId]);
 
-  const filtered =
-    filter === "all" ? sessions : sessions.filter((s) => s.type === filter);
+  const filtered = filterSessionRecords(sessions, { ...dateFilter, type: filter });
 
+  if (historyError) return <RecordsUnavailable />;
   if (loading) {
     return (
       <div
@@ -256,10 +270,11 @@ export default function SessionHistory() {
             color: "var(--color-text-sec)",
           }}
         >
-          {sessions.length} sessions
+          {filtered.length} of {sessions.length} saved sessions
         </span>
       </div>
 
+      <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
       {/* Filter */}
       <div
         style={{

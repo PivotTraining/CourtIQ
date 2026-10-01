@@ -48,6 +48,8 @@ export function AppProvider({ children }) {
   }, [pathname, router]);
 
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState(null);
+  const loadVersion = useRef(0);
   const isTeamIQ = false;
 
   const [player, setPlayer] = useState(null);
@@ -61,18 +63,21 @@ export function AppProvider({ children }) {
   const playerId = playerProfile?.id;
 
   const refreshData = useCallback(async () => {
-    if (!playerId) return;
+    if (!playerId) return false;
+    const version = ++loadVersion.current;
     setLoading(true);
+    setDataError(null);
     try {
       const [shots, trend, zones, journal, team, tInfo, streak] = await Promise.all([
         fetchShotData(playerId),
         fetchWeeklyTrend(playerId),
         fetchHeatZones(playerId),
         fetchJournalEntries(playerId),
-        fetchTeamData(playerId),
-        fetchTeamInfo(playerId),
+        isTeamIQ ? fetchTeamData(playerId) : [],
+        isTeamIQ ? fetchTeamInfo(playerId) : { name: "", season: "", record: "0-0", ppg: "0", fgPct: "0", apg: "0" },
         fetchStreak(playerId),
       ]);
+      if (version !== loadVersion.current) return false;
 
       setShotData(shots);
       setWeeklyTrend(trend);
@@ -89,25 +94,27 @@ export function AppProvider({ children }) {
         avatar: null,
         streak,
       });
+      return true;
     } catch (err) {
       console.error("Failed to load data:", err);
+      if (version === loadVersion.current) setDataError("Your records couldn't be loaded. They have not been cleared. Check your connection and try again.");
+      return false;
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
   }, [playerId, playerProfile]);
 
   useEffect(() => {
     refreshData();
+    return () => { loadVersion.current += 1; };
   }, [refreshData]);
 
   const addJournalEntry = async (entry) => {
-    if (!playerId) return;
-    try {
-      const newEntry = await insertJournalEntry(playerId, entry);
-      setJournalEntries((prev) => [newEntry, ...prev]);
-    } catch (err) {
-      console.error("Failed to add journal entry:", err);
-    }
+    if (!playerId) throw new Error("Select a player before saving a journal entry.");
+    const version = loadVersion.current;
+    const newEntry = await insertJournalEntry(playerId, entry);
+    if (version === loadVersion.current) setJournalEntries((prev) => [newEntry, ...prev]);
+    return newEntry;
   };
 
   return (
@@ -130,7 +137,18 @@ export function AppProvider({ children }) {
         isTeamIQ,
       }}
     >
-      {children}
+      {dataError && !player ? (
+        <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+          <div style={{ maxWidth: 360 }}>
+            <h1 style={{ fontSize: 22, marginBottom: 8 }}>Records unavailable</h1>
+            <p role="alert" style={{ color: "var(--color-text-sec)", lineHeight: 1.5 }}>{dataError}</p>
+            <button onClick={refreshData} style={{ marginTop: 16, minHeight: 44, padding: "0 24px", border: 0, borderRadius: 12, background: "var(--color-accent)", color: "white", fontWeight: 700 }}>Try again</button>
+          </div>
+        </main>
+      ) : <>
+        {dataError && <div role="alert" style={{ padding: 16, background: "var(--color-card)", color: "var(--color-danger)" }}>{dataError} <button onClick={refreshData}>Retry</button></div>}
+        {children}
+      </>}
     </AppContext.Provider>
   );
 }

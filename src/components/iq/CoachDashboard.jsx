@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useAuth } from "@/context/AuthContext";
 import { fetchManagedPlayers, fetchSessionHistory } from "@/lib/queries";
 import { computeSkillRatings, computeSeasonStats } from "@/lib/intelligence";
@@ -36,6 +37,7 @@ export default function CoachDashboard() {
   const { user } = useAuth();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -50,15 +52,17 @@ export default function CoachDashboard() {
       }));
       setPlayers(enriched);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { setHistoryError(true); setLoading(false); });
   }, [user]);
 
   if (loading) return <div style={{ height: 192, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />;
+  if (historyError) return <RecordsUnavailable />;
   if (players.length <= 1) return null;
 
   return (
     <div>
       <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--color-text)", marginBottom: 16 }}>Player Comparison</h3>
+      <p className="text-xs text-text-sec mb-4">Ratings are CourtIQ heuristics, not validated scouting grades. Differences in age, level, sample size and stat completeness limit player comparisons.</p>
 
       {/* Comparison table */}
       <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
@@ -107,7 +111,7 @@ export default function CoachDashboard() {
                   </td>
                   <td style={tdStyle}>{p.season?.ppg || "-"}</td>
                   <td style={{ ...tdStyle, color: (p.season?.fgPct || 0) >= 45 ? "var(--color-success)" : "var(--color-text-sec)" }}>
-                    {p.season?.fgPct ? `${p.season.fgPct}%` : "-"}
+                    {p.season?.fgPct != null ? `${p.season.fgPct}%` : "-"}
                   </td>
                   <td style={tdStyle}>{p.season?.apg || "-"}</td>
                   <td style={tdStyle}>{p.season?.rpg || "-"}</td>

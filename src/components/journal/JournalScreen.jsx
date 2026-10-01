@@ -53,6 +53,7 @@ export default function JournalScreen() {
   });
   const [stats, setStats] = useState({ pts: "", ast: "", reb: "", to: "", fgPct: "" });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   if (loading) {
     return (
@@ -65,8 +66,9 @@ export default function JournalScreen() {
   }
 
   const handleSave = async () => {
-    if (!newEntry.title.trim() || !newEntry.body.trim()) return;
+    if (saving || !newEntry.title.trim() || !newEntry.body.trim()) return;
     setSaving(true);
+    setSaveError("");
     try {
       const entryStats = {};
       if (newEntry.type === "game") {
@@ -82,6 +84,8 @@ export default function JournalScreen() {
       setNewEntry({ title: "", body: "", type: "practice", mood: "focused" });
       setStats({ pts: "", ast: "", reb: "", to: "", fgPct: "" });
       setShowNew(false);
+    } catch {
+      setSaveError("Your entry didn't save. Your draft is still here—check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -223,6 +227,7 @@ export default function JournalScreen() {
             </div>
           </div>
 
+          {saveError && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{saveError}</p>}
           <button onClick={handleSave} disabled={saving}
             style={{
               width: "100%",

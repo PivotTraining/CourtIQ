@@ -8,31 +8,18 @@ import { createSession, insertShot, deleteShot, updateSessionStats, findSessionB
 import { getHeatColor, calcPct } from "@/lib/utils";
 import { playSwish, playClank, playTap, playWhistle } from "@/lib/sounds";
 import { supabase } from "@/lib/supabase";
+import CourtTrackerView from './CourtTrackerView';
+import AdvancedSessionReport from './AdvancedSessionReport';
+import ReliableTracker from './ReliableTracker';
+
+export default function ShotLogger(props) {
+  // Release gate: do not use schema-dependent functionality before migration QA.
+  if (process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true') return <ReliableTracker {...props} />;
+  return <LegacyShotLogger {...props} />;
+}
 
 function haptic() {
   if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
-}
-
-/* ──────────────────────────────────────────────────────
-   STAT BUTTON — big chunky tap targets
-   ────────────────────────────────────────────────────── */
-function StatBtn({ icon, label, value, color, onTap }) {
-  return (
-    <button onClick={() => { haptic(); onTap(); }} style={{
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      gap: 6, borderRadius: 16, border: `2px solid ${color}40`, cursor: "pointer",
-      background: `${color}18`, padding: "18px 8px", minHeight: 110, width: "100%",
-      transition: "transform 0.15s ease", WebkitTapHighlightColor: "transparent",
-    }}>
-      <Icon name={icon} size={28} color={color} />
-      <span style={{ fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: 1, color }}>{label}</span>
-      {value > 0 && (
-        <span style={{ fontSize: 18, fontWeight: 900, color, background: "rgba(255,255,255,0.2)", borderRadius: 20, padding: "2px 14px" }}>
-          {value}
-        </span>
-      )}
-    </button>
-  );
 }
 
 /* ──────────────────────────────────────────────────────
@@ -53,7 +40,7 @@ function LiveStatBar({ shots, gameStats, freeThrows }) {
 
   const stats = [
     { label: "PTS", value: totalPts, color: "#FF6B35" },
-    { label: "FG", value: `${madeFG}/${totalFG}`, color: "#1A1D2E" },
+    { label: "FG", value: `${madeFG}/${totalFG}`, color: "var(--color-text)" },
     { label: "3PT", value: `${threesMade}/${threes.length}`, color: "#8B5CF6" },
     { label: "FT", value: `${ftMade}/${ftTotal}`, color: "#0EA5E9" },
     { label: "AST", value: gameStats.ast, color: "#22C55E" },
@@ -85,7 +72,7 @@ function calcEfficiency(shots, freeThrows, gameStats) {
     const zone = COURT_ZONES.find((z) => z.id === s.zone_id);
     return sum + (zone?.pts || 2);
   }, 0) + ftMade;
-  // NBA Efficiency = PTS + REB + AST + STL + BLK - Missed FG - Missed FT - TO
+  // Basic box-score efficiency tally (not PER or a possession-based rating).
   const missedFG = shots.length - madeFG;
   const missedFT = freeThrows.length - ftMade;
   return totalPts + (gameStats.reb || 0) + (gameStats.ast || 0) + (gameStats.stl || 0) + (gameStats.blk || 0) - missedFG - missedFT - (gameStats.to || 0);
@@ -120,15 +107,11 @@ function generateGameAnalysis(shots, freeThrows, gameStats) {
   const twosMade = twos.filter((s) => s.made).length;
   const twoPct = calcPct(twosMade, twos.length);
 
-  // Efficiency rating
-  if (eff >= 20) lines.push({ icon: "👑", text: "Elite efficiency rating. You dominated every aspect of the game.", tag: "MVP" });
-  else if (eff >= 10) lines.push({ icon: "🔥", text: "Strong efficiency. Your all-around game was a positive force.", tag: "Impact" });
-  else if (eff >= 0) lines.push({ icon: "⚡", text: "Neutral efficiency. Some good moments — tighten up the turnovers and missed shots.", tag: "Solid" });
-  else lines.push({ icon: "📉", text: "Negative efficiency. The missed shots and turnovers cost you. Focus on high-percentage plays.", tag: "Rebuild" });
+  lines.push({ icon: "📊", text: `EFF ${eff}: a basic tally of recorded points, rebounds, assists, steals and blocks, less misses and turnovers. It does not measure every part of your game.`, tag: "Box score" });
 
   // Shooting
   if (totalFG > 0) {
-    if (fgPct >= 55) lines.push({ icon: "🎯", text: `${fgPct}% from the field — you couldn't miss. Shot selection was elite.`, tag: "Sniper" });
+    if (fgPct >= 55) lines.push({ icon: "🎯", text: `${madeFG}/${totalFG} from the field (${fgPct}%). Review which looks you can create again; this session alone does not establish your usual shooting level.`, tag: "Shooting" });
     else if (fgPct >= 45) lines.push({ icon: "✅", text: `${fgPct}% from the field. Solid efficiency — keep being selective.`, tag: "Efficient" });
     else if (fgPct >= 35) lines.push({ icon: "⚠️", text: `${fgPct}% shooting is below standard. Were you rushing? Get to your spots.`, tag: "Work" });
     else lines.push({ icon: "🧊", text: `Cold shooting night at ${fgPct}%. Don't force it — trust your mechanics.`, tag: "Ice" });
@@ -151,7 +134,7 @@ function generateGameAnalysis(shots, freeThrows, gameStats) {
     const ratio = (gameStats.ast / gameStats.to).toFixed(1);
     if (ratio >= 3) lines.push({ icon: "🧠", text: `${ratio}:1 AST/TO ratio. Elite court vision and decision-making.`, tag: "General" });
     else if (ratio >= 2) lines.push({ icon: "👁️", text: `${ratio}:1 AST/TO. Good playmaking — keep reading the defense.`, tag: "Vision" });
-    else lines.push({ icon: "⚠️", text: `${ratio}:1 AST/TO. Protect the ball — every turnover is 2+ points lost.`, tag: "Careful" });
+    else lines.push({ icon: "⚠️", text: `${ratio}:1 AST/TO. Review the turnovers for avoidable passes or handling mistakes; points lost cannot be inferred from this box score.`, tag: "Review" });
   } else if (gameStats.ast >= 5) {
     lines.push({ icon: "🎭", text: `${gameStats.ast} dimes with zero turnovers. Floor general masterclass.`, tag: "Dime" });
   }
@@ -287,7 +270,7 @@ function ShareCard({ analysis, sessionType, gameStats, mode, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-6 animate-fade-in" onClick={onClose}>
-      <div className="bg-gradient-to-br from-[#1A1D2E] to-[#2D1B0E] rounded-3xl p-5 w-full max-w-[340px] shadow-2xl" ref={cardRef} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#1A1D2E] rounded-3xl p-5 w-full max-w-[340px] shadow-2xl" ref={cardRef} onClick={(e) => e.stopPropagation()}>
         {/* Card Header */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"><Icon name="basketball" size={20} color="#FF6B35" /></div>
@@ -430,6 +413,8 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
           </div>
         )}
 
+        <AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} />
+
         {/* Zone Heatmap */}
         {shots.length > 0 && (
           <div className="mb-5 animate-fade-in-up" style={{ animationDelay: "180ms" }}>
@@ -462,12 +447,12 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
         {/* Focus Check */}
         {focus && (
           <div className="mb-5 animate-fade-in-up" style={{ animationDelay: "210ms" }}>
-            <div className="bg-gradient-to-br from-[#EFF6FF] to-[#DBEAFE] rounded-2xl p-4 border border-[#93C5FD]/20">
+            <div className="bg-card rounded-2xl p-4 border border-border">
               <div className="flex items-center gap-2 mb-2">
-                <Icon name="target" size={16} color="#1E40AF" />
-                <h3 className="text-sm font-bold text-[#1E40AF]">Focus Check: {focus}</h3>
+                <Icon name="target" size={16} color="var(--color-text)" />
+                <h3 className="text-sm font-bold text-text">Focus Check: {focus}</h3>
               </div>
-              <p className="text-[12px] text-[#1E3A8A] leading-relaxed m-0">
+              <p className="text-[12px] text-text leading-relaxed m-0">
                 {focus === "3-Point Range" && (analysis.threePct >= 35 ? `${analysis.threePct}% from three — you delivered on your focus. Keep this range in your game.` : `${analysis.threePct}% from deep — below target. Add 50 spot-up threes to your next practice.`)}
                 {focus === "Mid-Range" && (analysis.fgPct >= 45 ? "Solid mid-range performance. Your pull-up game is developing." : "Mid-range needs more reps. Work on pull-ups off the dribble.")}
                 {focus === "Finishing" && "Review your paint touches. Were you finishing strong or settling for floaters?"}
@@ -484,13 +469,13 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
         {analysis.lines.length > 0 && (
           <div className="mb-5 animate-fade-in-up" style={{ animationDelay: "220ms" }}>
             <h3 className="text-sm font-bold text-text mb-3 flex items-center gap-1.5"><Icon name="brain" size={16} /> Court IQ Analysis</h3>
-            <div className="bg-gradient-to-br from-[#FFF7ED] to-[#FFF0E8] rounded-2xl p-4 border border-accent/10">
+            <div className="bg-card rounded-2xl p-4 border border-accent/10">
               <div className="flex flex-col gap-3">
                 {analysis.lines.map((line, i) => (
                   <div key={i} className="flex gap-2.5 items-start">
-                    <span className="flex-shrink-0 mt-0.5"><Emoji e={line.icon} size={16} color="#9A3412" /></span>
+                    <span className="flex-shrink-0 mt-0.5"><Emoji e={line.icon} size={16} color="var(--color-text)" /></span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] text-[#9A3412] leading-relaxed m-0">{line.text}</p>
+                      <p className="text-[12px] text-text leading-relaxed m-0">{line.text}</p>
                     </div>
                     <span className="text-[8px] font-black text-accent/60 uppercase bg-accent/10 px-1.5 py-0.5 rounded-md flex-shrink-0 mt-0.5">
                       {line.tag}
@@ -537,7 +522,7 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
 /* ══════════════════════════════════════════════════════
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
-export default function ShotLogger({ onClose }) {
+function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
   const { playerId, refreshData } = useApp();
   const [step, setStep] = useState("setup"); // setup | logging | summary
   const [sessionType, setSessionType] = useState("practice");
@@ -547,6 +532,7 @@ export default function ShotLogger({ onClose }) {
   const [freeThrows, setFreeThrows] = useState([]); // FTs (no zone)
   const [selectedZone, setSelectedZone] = useState(null);
   const [saving, setSaving] = useState(false);
+  const pendingWrite = useRef(false);
   const [saveError, setSaveError] = useState(null); // user-visible save error
   const [tab, setTab] = useState("court"); // court | stats
   const [gameStats, setGameStats] = useState({ ast: 0, reb: 0, stl: 0, blk: 0, to: 0, pf: 0, min: 0 });
@@ -594,18 +580,21 @@ export default function ShotLogger({ onClose }) {
   }, [session, mode, playerId]);
 
   const updateStat = (key, delta) => {
+    if (pendingWrite.current || ending || (delta < 0 && gameStats[key] <= 0)) return;
     haptic();
     playTap();
     setGameStats((prev) => ({ ...prev, [key]: Math.max(0, prev[key] + delta) }));
-    if (delta > 0) setUndoStack((prev) => [...prev, { type: "stat", key }]);
+    setUndoStack((prev) => [...prev, { type: "stat", key, delta }]);
   };
 
   const startSession = async () => {
+    if (pendingWrite.current) return;
     if (!playerId) {
       setSaveError("No player profile found. Please restart the app.");
       return;
     }
     setSaving(true);
+    pendingWrite.current = true;
     setSaveError(null);
     try {
       const s = await createSession(playerId, sessionType, mode);
@@ -615,6 +604,7 @@ export default function ShotLogger({ onClose }) {
       console.error("Failed to create session:", err);
       setSaveError("Couldn't start session — check your connection and try again.");
     } finally {
+      pendingWrite.current = false;
       setSaving(false);
     }
   };
@@ -642,7 +632,8 @@ export default function ShotLogger({ onClose }) {
   };
 
   const logShot = useCallback(async (made) => {
-    if (!session || !selectedZone) return;
+    if (pendingWrite.current || !session || !selectedZone) return;
+    pendingWrite.current = true;
     haptic();
     // Sound + ripple
     if (made) playSwish(); else playClank();
@@ -659,14 +650,15 @@ export default function ShotLogger({ onClose }) {
     } catch (err) {
       console.error("Failed to log shot:", err);
       setSaveError("Shot didn't save — check connection.");
-      setTimeout(() => setSaveError(null), 3000);
     } finally {
+      pendingWrite.current = false;
       setSaving(false);
     }
   }, [session, selectedZone, playerId]);
 
   const logFreeThrow = async (made) => {
-    if (!session) return;
+    if (pendingWrite.current || !session) return;
+    pendingWrite.current = true;
     haptic();
     if (made) playSwish(); else playClank();
     setSaving(true);
@@ -678,28 +670,35 @@ export default function ShotLogger({ onClose }) {
     } catch (err) {
       console.error("Failed to log FT:", err);
       setSaveError("FT didn't save — check connection.");
-      setTimeout(() => setSaveError(null), 3000);
     } finally {
+      pendingWrite.current = false;
       setSaving(false);
     }
   };
 
   const undoLast = async () => {
-    if (undoStack.length === 0) return;
+    if (pendingWrite.current || saving || ending || undoStack.length === 0) return;
+    pendingWrite.current = true;
     const last = undoStack[undoStack.length - 1];
-    if (last.type === "shot") {
-      try { await deleteShot(last.id); } catch (e) {}
-      setShots((prev) => prev.filter((s) => s.id !== last.id));
-    } else if (last.type === "ft") {
-      try { await deleteShot(last.id); } catch (e) {}
-      setFreeThrows((prev) => prev.filter((f) => f.id !== last.id));
-    } else if (last.type === "stat") {
-      setGameStats((prev) => ({ ...prev, [last.key]: Math.max(0, prev[last.key] - 1) }));
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (last.type === "shot" || last.type === "ft") await deleteShot(last.id);
+      if (last.type === "shot") setShots((prev) => prev.filter((s) => s.id !== last.id));
+      else if (last.type === "ft") setFreeThrows((prev) => prev.filter((f) => f.id !== last.id));
+      else if (last.type === "stat") setGameStats((prev) => ({ ...prev, [last.key]: Math.max(0, prev[last.key] - (last.delta ?? 1)) }));
+      setUndoStack((prev) => prev.slice(0, -1));
+    } catch {
+      setSaveError("Undo didn't save. The shot is still in your record—please try again.");
+    } finally {
+      pendingWrite.current = false;
+      setSaving(false);
     }
-    setUndoStack((prev) => prev.slice(0, -1));
   };
 
   const endSession = async () => {
+    if (pendingWrite.current || saving || ending) return;
+    pendingWrite.current = true;
     playWhistle();
     setEnding(true);
     if (session) {
@@ -712,10 +711,15 @@ export default function ShotLogger({ onClose }) {
         await updateSessionStats(session.id, { ...gameStats, pts: totalPts, ft_made: ftMade, ft_total: freeThrows.length, focus: focus || null });
       } catch (err) {
         console.error("Failed to save stats:", err);
+        setSaveError("Session stats didn't save. Keep this screen open and try ending the session again.");
+        setEnding(false);
+        pendingWrite.current = false;
+        return;
       }
     }
     await refreshData();
     setEnding(false);
+    pendingWrite.current = false;
     if (shots.length > 0 || freeThrows.length > 0 || Object.values(gameStats).some((v) => v > 0)) {
       setStep("summary");
     } else {
@@ -883,233 +887,14 @@ export default function ShotLogger({ onClose }) {
     return <SessionSummary shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} mode={mode} focus={focus} onDone={onClose} />;
   }
 
-  const COURT_THEMES = {
-    tan: { bg: "#E8D5B7", line: "#C4A87A", border: "#D4BE96", label: "Court" },
-    gray: { bg: "#D6D8DE", line: "#A0A4B0", border: "#BFC2CC", label: "Gray" },
-  };
-  const ct = COURT_THEMES[courtTheme];
-
-  /* ── LOGGING SCREEN ── */
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#1A1D2E", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      {/* Save error toast */}
-      {saveError && (
-        <div style={{ position: "absolute", top: "max(60px, env(safe-area-inset-top, 60px))", left: 16, right: 16, zIndex: 10, background: "rgba(239,68,68,0.9)", borderRadius: 10, padding: "8px 14px", textAlign: "center" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>{saveError}</span>
-        </div>
-      )}
-      {/* Header — with safe area for notch */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(12px, env(safe-area-inset-top, 12px))", paddingLeft: 20, paddingRight: 20, paddingBottom: 4, flexShrink: 0 }}>
-        <button onClick={endSession} disabled={ending} style={{
-          padding: "8px 16px", borderRadius: 12, background: "rgba(239,68,68,0.2)", color: "#FF6B6B",
-          fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer", opacity: ending ? 0.6 : 1, minHeight: 40,
-        }}>
-          {ending ? "Saving..." : "End"}
-        </button>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: 6 }}>
-          {mode === "team" && <Icon name="user" size={14} color="rgba(255,255,255,0.8)" />}
-          <Icon name={sessionType === "game" ? "trophy" : "zap"} size={14} color="rgba(255,255,255,0.8)" />
-          {sessionType === "game" ? "Gametime" : "Practice"}
-        </span>
-        <button onClick={undoLast} disabled={undoStack.length === 0} style={{
-          padding: "8px 16px", borderRadius: 12, background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)",
-          fontWeight: 700, fontSize: 13, border: "none", cursor: "pointer", opacity: undoStack.length === 0 ? 0.3 : 1, minHeight: 40,
-        }}>
-          <Icon name="undo" size={14} color="rgba(255,255,255,0.6)" /> Undo
-        </button>
-      </div>
-
-      {/* Live Stats Ticker */}
-      <LiveStatBar shots={shots} gameStats={gameStats} freeThrows={freeThrows} />
-
-      {/* Team join code banner — shows host's code or connected teammates */}
-      {mode === "team" && session?.game_stats?.join_code && !joinMode && (
-        <div style={{ margin: "0 16px 6px", padding: "8px 14px", borderRadius: 12, background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Icon name="link" size={14} color="#8B5CF6" />
-            <span style={{ fontSize: 11, color: "rgba(139,92,246,0.8)", fontWeight: 700 }}>Game Code</span>
-            <span style={{ fontSize: 16, fontWeight: 900, color: "#8B5CF6", letterSpacing: 3 }}>{session.game_stats.join_code}</span>
-          </div>
-          {teammates.length > 0 && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(139,92,246,0.7)" }}>
-              {teammates.length} connected
-            </span>
-          )}
-        </div>
-      )}
-      {mode === "team" && joinMode && (
-        <div style={{ margin: "0 16px 6px", padding: "8px 14px", borderRadius: 12, background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <Icon name="user" size={14} color="#22C55E" />
-          <span style={{ fontSize: 11, color: "#22C55E", fontWeight: 700 }}>Joined as teammate — syncing live</span>
-        </div>
-      )}
-
-      {/* Tabs + Theme Toggle */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 24px 8px", flexShrink: 0 }}>
-        <div style={{ display: "flex", flex: 1, background: "rgba(255,255,255,0.1)", borderRadius: 12, padding: 3 }}>
-          {["court", "stats"].map((t) => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, padding: "10px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
-              background: tab === t ? "white" : "transparent",
-              color: tab === t ? "#1A1D2E" : "rgba(255,255,255,0.5)",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-            }}>
-              <Icon name={t === "court" ? "basketball" : "barChart"} size={14} color={tab === t ? "#1A1D2E" : "rgba(255,255,255,0.5)"} />
-              {t === "court" ? "Shot Chart" : "Game Stats"}
-            </button>
-          ))}
-        </div>
-        {tab === "court" && (
-          <button onClick={() => setCourtTheme(courtTheme === "tan" ? "gray" : "tan")} style={{
-            width: 36, height: 36, borderRadius: 12, border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", background: ct.bg,
-          }}>
-            <Icon name="paint" size={16} color="#1A1D2E" />
-          </button>
-        )}
-      </div>
-
-      {tab === "court" ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-          {/* Court — hardwood texture */}
-          <div style={{ padding: "0 24px", flexShrink: 0 }}>
-            <div style={{ position: "relative", width: "100%", paddingBottom: "80%", borderRadius: 20, overflow: "hidden", background: ct.bg, border: `2px solid ${ct.border}`, boxShadow: "inset 0 2px 8px rgba(0,0,0,0.06)" }}>
-              <svg viewBox="0 0 500 400" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0.6 }}>
-                <rect x="25" y="10" width="450" height="380" fill="none" stroke={ct.line} strokeWidth="2" rx="4" />
-                <path d="M 60 380 L 60 300 Q 60 80 250 45 Q 440 80 440 300 L 440 380" fill="none" stroke={ct.line} strokeWidth="2" />
-                <rect x="160" y="230" width="180" height="160" fill="none" stroke={ct.line} strokeWidth="2" rx="2" />
-                <circle cx="250" cy="230" r="55" fill="none" stroke={ct.line} strokeWidth="1.5" strokeDasharray="6 4" />
-                <circle cx="250" cy="360" r="7" fill="none" stroke={ct.line} strokeWidth="2" />
-                <rect x="222" y="366" width="56" height="3" fill={ct.line} rx="1.5" />
-                <path d="M 220 380 Q 220 335 250 326 Q 280 335 280 380" fill="none" stroke={ct.line} strokeWidth="1.5" />
-              </svg>
-              {COURT_ZONES.filter((z) => z.id !== "free-throw").map((zone) => {
-                const isSelected = selectedZone === zone.id;
-                const zoneShots = shots.filter((s) => s.zone_id === zone.id);
-                const zoneMade = zoneShots.filter((s) => s.made).length;
-                const zoneTotal = zoneShots.length;
-                const zonePct = zoneTotal > 0 ? Math.round((zoneMade / zoneTotal) * 100) : -1;
-                return (
-                  <div key={zone.id} onClick={() => { haptic(); setSelectedZone(isSelected ? null : zone.id); }}
-                    style={{
-                      position: "absolute", cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%",
-                      left: `${zone.x}%`, top: `${zone.y}%`, transform: "translate(-50%, -50%)",
-                      width: isSelected ? 52 : 44, height: isSelected ? 52 : 44,
-                      background: zonePct >= 0 ? getHeatColor(zonePct) : "rgba(30,30,50,0.35)",
-                      border: isSelected ? "3px solid #FF6B35" : "2px solid rgba(255,255,255,0.5)",
-                      boxShadow: isSelected ? "0 0 24px rgba(255,107,53,0.5)" : "0 2px 8px rgba(0,0,0,0.15)",
-                      zIndex: isSelected ? 10 : 1,
-                      transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)",
-                    }}>
-                    <span style={{ fontWeight: 900, color: "white", fontSize: 11, textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-                      {zoneTotal > 0 ? `${zoneMade}/${zoneTotal}` : zone.label.split(" ")[0]}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Shot Buttons */}
-          <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
-            {selectedZone ? (
-              <div>
-                <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
-                  {COURT_ZONES.find((z) => z.id === selectedZone)?.label}
-                  <span style={{ marginLeft: 4, color: "#FF6B35" }}>({COURT_ZONES.find((z) => z.id === selectedZone)?.pts}PT)</span>
-                </div>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button onClick={() => logShot(true)} disabled={saving}
-                    style={{ flex: 1, padding: "16px 0", borderRadius: 16, background: "#22C55E", color: "white", fontSize: 16, fontWeight: 900, border: "none", cursor: "pointer", opacity: saving ? 0.5 : 1, boxShadow: "0 4px 16px rgba(34,197,94,0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 52 }}>
-                    <Icon name="check" size={16} color="white" /> Made
-                  </button>
-                  <button onClick={() => logShot(false)} disabled={saving}
-                    style={{ flex: 1, padding: "16px 0", borderRadius: 16, background: "#EF4444", color: "white", fontSize: 16, fontWeight: 900, border: "none", cursor: "pointer", opacity: saving ? 0.5 : 1, boxShadow: "0 4px 16px rgba(239,68,68,0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 52 }}>
-                    <Icon name="x" size={16} color="white" /> Missed
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>Free Throws</div>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button onClick={() => logFreeThrow(true)} disabled={saving}
-                    style={{ flex: 1, padding: "14px 0", borderRadius: 16, background: "rgba(34,197,94,0.2)", color: "#4ADE80", fontSize: 14, fontWeight: 900, border: "2px solid rgba(34,197,94,0.3)", cursor: "pointer", opacity: saving ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 48 }}>
-                    <Icon name="check" size={14} color="#4ADE80" /> Made FT
-                  </button>
-                  <button onClick={() => logFreeThrow(false)} disabled={saving}
-                    style={{ flex: 1, padding: "14px 0", borderRadius: 16, background: "rgba(239,68,68,0.2)", color: "#FCA5A5", fontSize: 14, fontWeight: 900, border: "2px solid rgba(239,68,68,0.3)", cursor: "pointer", opacity: saving ? 0.5 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, minHeight: 48 }}>
-                    <Icon name="x" size={14} color="#FCA5A5" /> Missed FT
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Stats — BIG buttons filling remaining space */}
-          <div style={{ flex: 1, padding: "12px 24px 20px", minHeight: 0 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, minHeight: 180 }}>
-              {[
-                { key: "ast", label: "AST", icon: "eye", color: "#22C55E" },
-                { key: "reb", label: "REB", icon: "refresh", color: "#F59E0B" },
-                { key: "stl", label: "STL", icon: "lock", color: "#10B981" },
-                { key: "blk", label: "BLK", icon: "shield", color: "#6366F1" },
-                { key: "to", label: "TO", icon: "zap", color: "#EF4444" },
-                { key: "pf", label: "PF", icon: "hand", color: "#F59E0B" },
-              ].map((s) => (
-                <button key={s.key} onClick={() => updateStat(s.key, 1)}
-                  style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 16, border: `2px solid ${s.color}40`, background: `${s.color}15`, cursor: "pointer", minHeight: 85 }}>
-                  <Icon name={s.icon} size={28} color={s.color} />
-                  <span style={{ fontSize: 14, fontWeight: 900, color: s.color }}>{s.label}</span>
-                  {gameStats[s.key] > 0 && (
-                    <span style={{ fontSize: 20, fontWeight: 900, color: s.color, background: "rgba(255,255,255,0.2)", borderRadius: 20, padding: "2px 14px" }}>{gameStats[s.key]}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Stats Tab */
-        <div className="flex-1 px-6 pt-3 pb-5 overflow-y-auto min-h-0">
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <StatBtn icon="👁️" label="Assist" value={gameStats.ast} color="#22C55E" onTap={() => updateStat("ast", 1)} />
-            <StatBtn icon="🔄" label="Rebound" value={gameStats.reb} color="#F59E0B" onTap={() => updateStat("reb", 1)} />
-            <StatBtn icon="🔒" label="Steal" value={gameStats.stl} color="#10B981" onTap={() => updateStat("stl", 1)} />
-            <StatBtn icon="🛡️" label="Block" value={gameStats.blk} color="#6366F1" onTap={() => updateStat("blk", 1)} />
-            <StatBtn icon="💥" label="Turnover" value={gameStats.to} color="#EF4444" onTap={() => updateStat("to", 1)} />
-            <StatBtn icon="🖐️" label="Foul" value={gameStats.pf} color="#F59E0B" onTap={() => updateStat("pf", 1)} />
-          </div>
-
-          {/* Minutes */}
-          <div className="bg-white/10 rounded-2xl p-5">
-            <h3 className="text-xs font-bold text-white/40 uppercase mb-3">Minutes Played</h3>
-            <div className="flex items-center justify-center gap-5">
-              <button onClick={() => updateStat("min", -1)} disabled={gameStats.min <= 0}
-                className="w-14 h-14 rounded-xl bg-white/10 text-white/60 text-2xl font-bold border-none cursor-pointer active:scale-[0.93] disabled:opacity-30">
-                -
-              </button>
-              <span className="text-5xl font-black text-white min-w-[70px] text-center">{gameStats.min}</span>
-              <button onClick={() => updateStat("min", 1)}
-                className="w-14 h-14 rounded-xl bg-accent text-white text-2xl font-bold border-none cursor-pointer active:scale-[0.93]">
-                +
-              </button>
-            </div>
-            <div className="flex gap-2 mt-4 justify-center">
-              {[5, 10, 20, 32].map((v) => (
-                <button key={v} onClick={() => setGameStats((prev) => ({ ...prev, min: v }))}
-                  className={`px-5 py-2 rounded-lg text-sm font-bold border-none cursor-pointer active:scale-[0.95] ${gameStats.min === v ? "bg-accent text-white" : "bg-white/10 text-white/50"}`}>
-                  {v} min
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom padding */}
-      <div className="h-4 flex-shrink-0" />
-    </div>
-  );
+  return <CourtTrackerView
+    sessionType={sessionType} shots={shots} selectedZone={selectedZone}
+    selectZone={zone => { haptic(); setSelectedZone(zone); }}
+    gameStats={gameStats} updateStat={updateStat} saving={saving} ending={ending} saveError={saveError}
+    tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
+    courtTheme={courtTheme} setCourtTheme={setCourtTheme}
+    undoCount={undoStack.length} undoLast={undoLast} endSession={endSession}
+    logShot={logShot} logFreeThrow={logFreeThrow}
+    ticker={<LiveStatBar shots={shots} gameStats={gameStats} freeThrows={freeThrows} />}
+  />;
 }

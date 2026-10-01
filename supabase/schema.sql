@@ -1,6 +1,8 @@
 -- Court IQ Database Schema
 -- Run this in the Supabase SQL Editor (fresh install)
--- For existing installs, run supabase/migrations/001_clean_rls.sql instead.
+-- Required second step for BOTH fresh and existing installs:
+-- supabase/migrations/20260930171602_web_player_ownership_safeguards.sql
+-- This file alone retains the legacy policies; do not launch without that migration.
 
 -- ─── Tables ───────────────────────────────────────────────────────────────────
 

@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-function safeNextPath(value) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
-  return value;
-}
+import { safeNextPath, passwordError } from "@/lib/webAuth.mjs";
 
 export default function AuthCallback() {
   const [message, setMessage] = useState("Finishing sign in…");
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [saving, setSaving] = useState(false);
+  const exchange = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -28,7 +29,10 @@ export default function AuthCallback() {
         return;
       }
 
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      // Reuse the exchange when React remounts effects in development: codes are single-use.
+      exchange.current ||= supabase.auth.exchangeCodeForSession(code);
+      const { data, error } = await exchange.current;
+      if (!active) return;
       if (error) {
         console.error("[auth/callback] exchange failed:", error.message);
         if (active) setMessage(`We could not complete sign in: ${error.message}`);
@@ -40,19 +44,53 @@ export default function AuthCallback() {
         return;
       }
 
+      if (params.get("mode") === "reset") {
+        setRecoveryReady(true);
+        setMessage("Choose a new password for CourtIQ.");
+        return;
+      }
+
       const next = safeNextPath(params.get("next"));
       window.location.replace(next);
     }
 
-    finishSignIn();
+    finishSignIn().catch(() => {
+      if (active) setMessage("We couldn't reach the sign-in service. Return to CourtIQ and try again.");
+    });
     return () => { active = false; };
   }, []);
+
+  async function savePassword(event) {
+    event.preventDefault();
+    const validation = passwordError(password, confirmation);
+    if (validation) { setMessage(validation); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      window.location.replace("/dashboard");
+    } catch (error) {
+      setMessage(error.message || "We couldn't update your password. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24 }}>
       <div style={{ textAlign: "center", maxWidth: 480 }}>
+        <h1 style={{ fontSize: 26, marginBottom: 16 }}>{recoveryReady ? "Reset your password" : "CourtIQ sign in"}</h1>
         <p role="status">{message}</p>
-        {message !== "Finishing sign in…" && (
+        {recoveryReady && (
+          <form onSubmit={savePassword} style={{ display: "grid", gap: 14, marginTop: 24, textAlign: "left" }}>
+            <label htmlFor="new-password">New password</label>
+            <input id="new-password" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} style={{ padding: 14, border: "1px solid var(--color-border)", borderRadius: 12 }} />
+            <label htmlFor="confirm-password">Confirm password</label>
+            <input id="confirm-password" type="password" autoComplete="new-password" required minLength={8} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} style={{ padding: 14, border: "1px solid var(--color-border)", borderRadius: 12 }} />
+            <button className="btn-primary" disabled={saving} type="submit">{saving ? "Saving…" : "Save new password"}</button>
+          </form>
+        )}
+        {message !== "Finishing sign in…" && !recoveryReady && (
           <a href="/dashboard" style={{ color: "#FF6B35", fontWeight: 700 }}>Return to CourtIQ</a>
         )}
       </div>

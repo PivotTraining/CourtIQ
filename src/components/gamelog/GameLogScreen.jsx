@@ -1,10 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
+import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { fetchSessionHistory } from "@/lib/queries";
+import { filterSessionRecords } from '@/lib/sessionRecovery.mjs';
+import HistoryFilters from '@/components/shots/HistoryFilters';
 import { COURT_ZONES } from "@/lib/constants";
 import { calcPct } from "@/lib/utils";
 import Icon from "@/components/ui/Icons";
+import AdvancedSessionReport from '@/components/shots/AdvancedSessionReport';
+import { buildSessionReport } from '@/lib/sessionReport.mjs';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -16,14 +21,7 @@ function formatDate(dateStr) {
 }
 
 function calcPoints(session) {
-  const shots = session.shot_logs || [];
-  const stats = session.game_stats || {};
-  return shots
-    .filter((s) => s.made)
-    .reduce((sum, s) => {
-      const zone = COURT_ZONES.find((z) => z.id === s.zone_id);
-      return sum + (zone?.pts || 2);
-    }, 0) + (stats.ft_made || 0);
+  return buildSessionReport(session.shot_logs || [], session.game_stats || {}, COURT_ZONES).pts;
 }
 
 function StatPill({ label, value, color }) {
@@ -37,8 +35,8 @@ function StatPill({ label, value, color }) {
 
 function GameCard({ session }) {
   const [expanded, setExpanded] = useState(false);
-  const shots = session.shot_logs || [];
   const stats = session.game_stats || {};
+  const shots = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES).fieldGoals;
   const made = shots.filter((s) => s.made).length;
   const total = shots.length;
   const fgPct = calcPct(made, total);
@@ -127,6 +125,7 @@ function GameCard({ session }) {
       {/* Expanded Details */}
       {expanded && (
         <div style={{ borderTop: "1px solid var(--color-border)", padding: 16 }}>
+          <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType="game" date={session.created_at} />
 
           {/* Full Stat Grid */}
           {(stats.ast > 0 || stats.reb > 0 || stats.stl > 0 || stats.blk > 0 || stats.to > 0 || stats.pf > 0 || stats.min > 0) && (
@@ -198,18 +197,24 @@ export default function GameLogScreen() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("individual"); // individual | team
+  const [historyError, setHistoryError] = useState(false);
+  const [dateFilter, setDateFilter] = useState({ season: '', from: '', to: '' });
 
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
+    let active = true;
+    setLoading(true); setHistoryError(false);
     fetchSessionHistory(playerId)
       .then((all) => {
         const games = all.filter((s) => s.type === "game");
-        setSessions(games);
+        if (active) setSessions(games);
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => { if (active) setHistoryError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [playerId]);
 
+  if (historyError) return <RecordsUnavailable />;
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -220,7 +225,7 @@ export default function GameLogScreen() {
     );
   }
 
-  const filteredSessions = sessions.filter((s) =>
+  const filteredSessions = filterSessionRecords(sessions, dateFilter).filter((s) =>
     tab === "team" ? s.mode === "team" : s.mode !== "team"
   );
 
@@ -230,17 +235,13 @@ export default function GameLogScreen() {
   const avgPPG = totalGames > 0
     ? (allPts.reduce((a, b) => a + b, 0) / totalGames).toFixed(1)
     : "0.0";
-  const allFGPcts = filteredSessions.map((s) => {
-    const shots = s.shot_logs || [];
-    const made = shots.filter((sh) => sh.made).length;
-    return calcPct(made, shots.length);
-  }).filter((p) => p > 0);
-  const avgFGPct = allFGPcts.length > 0
-    ? Math.round(allFGPcts.reduce((a, b) => a + b, 0) / allFGPcts.length)
-    : 0;
+  // Combine attempts, including 0%-shooting games; don't average percentages.
+  const reports = filteredSessions.map(session => buildSessionReport(session.shot_logs || [], session.game_stats || {}, COURT_ZONES));
+  const avgFGPct = calcPct(reports.reduce((sum, report) => sum + report.fgm, 0), reports.reduce((sum, report) => sum + report.fga, 0));
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
+      <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
 
       {/* Individual / Team Tabs */}
       <div style={{ display: "flex", background: "var(--color-muted)", borderRadius: 12, padding: 3 }}>

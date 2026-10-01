@@ -1,15 +1,16 @@
 import { getSupabase } from "./supabase";
 import { COURT_ZONES, ZONE_CATEGORIES } from "./constants";
+import { checked, readAll, requireSavedRow } from "./dataSafety.mjs";
 
 // ─── PLAYER ───
 
 export async function fetchPlayerProfile(firebaseUid) {
-  const { data } = await getSupabase()
+  const result = await getSupabase()
     .from("players")
     .select("*")
     .eq("firebase_uid", firebaseUid)
-    .single();
-  return data;
+    .maybeSingle();
+  return checked(result);
 }
 
 export async function createPlayerProfile(profile) {
@@ -25,21 +26,17 @@ export async function createPlayerProfile(profile) {
 // ─── MULTI-PLAYER ───
 
 export async function fetchManagedPlayers(firebaseUid) {
-  const { data } = await getSupabase()
-    .from("players")
-    .select("*")
-    .eq("manager_uid", firebaseUid)
-    .order("created_at", { ascending: true });
-  return data || [];
+  return readAll(() => getSupabase().from("players").select("*")
+    .eq("manager_uid", firebaseUid).order("created_at").order("id"));
 }
 
 export async function addManagedPlayer(firebaseUid, player) {
   const { data, error } = await getSupabase()
     .from("players")
     .insert({
-      firebase_uid: `${firebaseUid}_${Date.now()}`, // unique per managed player
+      firebase_uid: `${firebaseUid}_${crypto.randomUUID()}`,
       manager_uid: firebaseUid,
-      name: player.name,
+      name: player.name.trim(),
       team_name: player.team_name || null,
       position: player.position || "PG",
       jersey_number: player.jersey_number || null,
@@ -52,21 +49,18 @@ export async function addManagedPlayer(firebaseUid, player) {
 }
 
 export async function deleteManagedPlayer(playerId) {
-  // Delete all associated data first
-  await getSupabase().from("shot_logs").delete().eq("player_id", playerId);
-  await getSupabase().from("journal_entries").delete().eq("player_id", playerId);
-  await getSupabase().from("sessions").delete().eq("player_id", playerId);
-  const { error } = await getSupabase().from("players").delete().eq("id", playerId);
-  if (error) throw error;
+  // Foreign-key cascades make cleanup atomic. RLS protects the primary profile.
+  requireSavedRow(await getSupabase().from("players").delete().eq("id", playerId)
+    .select("id").single(), "Player deletion");
 }
 
 // ─── SHOT DATA (aggregated by game/practice) ───
 
 export async function fetchShotData(playerId) {
-  const { data: shots } = await getSupabase()
+  const shots = await readAll(() => getSupabase()
     .from("shot_logs")
     .select("zone_id, made, sessions(type)")
-    .eq("player_id", playerId);
+    .eq("player_id", playerId).order("id"));
 
   const empty = { total: 0, made: 0, threes: { total: 0, made: 0 }, midRange: { total: 0, made: 0 }, paint: { total: 0, made: 0 }, freeThrows: { total: 0, made: 0 } };
   const result = {
@@ -101,11 +95,11 @@ export async function fetchWeeklyTrend(playerId) {
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 6);
 
-  const { data: shots } = await getSupabase()
+  const shots = await readAll(() => getSupabase()
     .from("shot_logs")
     .select("made, created_at")
     .eq("player_id", playerId)
-    .gte("created_at", weekAgo.toISOString());
+    .gte("created_at", weekAgo.toISOString()).order("created_at").order("id"));
 
   const dayMap = {};
   for (let i = 0; i < 7; i++) {
@@ -135,10 +129,10 @@ export async function fetchWeeklyTrend(playerId) {
 // ─── HEAT ZONES ───
 
 export async function fetchHeatZones(playerId) {
-  const { data: shots } = await getSupabase()
+  const shots = await readAll(() => getSupabase()
     .from("shot_logs")
     .select("zone_id, made")
-    .eq("player_id", playerId);
+    .eq("player_id", playerId).order("id"));
 
   const zoneStats = {};
   if (shots) {
@@ -164,11 +158,11 @@ export async function fetchHeatZones(playerId) {
 // ─── JOURNAL ───
 
 export async function fetchJournalEntries(playerId) {
-  const { data } = await getSupabase()
+  const data = await readAll(() => getSupabase()
     .from("journal_entries")
     .select("*")
     .eq("player_id", playerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).order("id", { ascending: false }));
 
   return (data || []).map((e) => ({
     id: e.id,
@@ -237,32 +231,89 @@ export async function createSession(playerId, type, mode = "individual") {
 // Uses PostgREST JSONB text extraction filter: game_stats->>join_code
 export async function findSessionByJoinCode(code) {
   const cutoff = new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString();
-  const { data } = await getSupabase()
+  const result = await getSupabase()
     .from("sessions")
     .select("*")
     .gte("created_at", cutoff)
     .filter("game_stats->>join_code", "eq", code.toUpperCase().trim())
     .limit(1)
     .maybeSingle();
-  return data || null;
+  return checked(result) || null;
 }
 
 export async function updateSessionStats(sessionId, gameStats) {
-  const { error } = await getSupabase()
+  const result = await getSupabase()
     .from("sessions")
     .update({ game_stats: gameStats })
-    .eq("id", sessionId);
-  if (error) throw error;
+    .eq("id", sessionId).select("id").single();
+  requireSavedRow(result, "Session update");
 }
 
 export async function fetchSessionHistory(playerId) {
-  const { data } = await getSupabase()
-    .from("sessions")
-    .select("*, shot_logs(id, zone_id, made)")
-    .eq("player_id", playerId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  return data || [];
+  // Page both resources independently: nested PostgREST rows have their own cap.
+  const [sessions, shots] = await Promise.all([
+    readAll(() => getSupabase().from("sessions").select("*").eq("player_id", playerId)
+      .order("created_at", { ascending: false }).order("id", { ascending: false })),
+    readAll(() => getSupabase().from("shot_logs").select("id, session_id, zone_id, made, created_at")
+      .eq("player_id", playerId).order("id")),
+  ]);
+  const bySession = new Map();
+  for (const shot of shots) {
+    if (!bySession.has(shot.session_id)) bySession.set(shot.session_id, []);
+    bySession.get(shot.session_id).push(shot);
+  }
+  return sessions.filter(session => session.tracker_status !== 'active')
+    .map(session => ({ ...session, shot_logs: bySession.get(session.id) || [] }));
+}
+
+export async function fetchTrackerSession(sessionId, playerId) {
+  const session = requireSavedRow(await getSupabase().from("sessions").select("*")
+    .eq("id", sessionId).eq("player_id", playerId).single(), "Session recovery");
+  const [shots, events] = await Promise.all([
+    readAll(() => getSupabase().from("shot_logs").select("*").eq("session_id", sessionId).eq("player_id", playerId).order("id")),
+    readAll(() => getSupabase().from("session_commands").select("*").eq("session_id", sessionId).order("version")),
+  ]);
+  return { session, shots, events };
+}
+
+export async function fetchActiveSessions(playerId) {
+  return readAll(() => getSupabase().from("sessions").select("*").eq("player_id", playerId)
+    .eq("tracker_status", "active").order("created_at", { ascending: false }).order("id"));
+}
+
+export async function createTrackerSession(playerId, type, context) {
+  return requireSavedRow(await getSupabase().from("sessions").insert({ player_id: playerId, type,
+    mode: "individual", tracker_status: "active", tracker_context: context, date: context.date })
+    .select().single(), "Session creation");
+}
+
+export async function applySessionCommand(command) {
+  return checked(await getSupabase().rpc("apply_session_command", {
+    p_session: command.sessionId, p_id: command.id, p_version: command.version,
+    p_payload: command.payload,
+  }));
+}
+
+export async function saveWorkoutResult(playerId, result) {
+  const row = { id: result.id, player_id: playerId, elapsed_seconds: result.elapsed_seconds, drills: result.drills };
+  const saved = await getSupabase().from("workout_results").insert(row).select().single();
+  if (saved.error?.code !== '23505') return requireSavedRow(saved, "Workout result");
+  // A lost response is retried with the same ID, never counted as a new workout.
+  const existing = requireSavedRow(await getSupabase().from("workout_results").select("*")
+    .eq("id", result.id).eq("player_id", playerId).single(), "Workout recovery");
+  if (existing.elapsed_seconds !== row.elapsed_seconds || JSON.stringify(existing.drills) !== JSON.stringify(row.drills)) {
+    // JSONB may reorder object keys. Compare each recorded field explicitly.
+    if (existing.elapsed_seconds !== row.elapsed_seconds || existing.drills.length !== row.drills.length
+      || existing.drills.some((drill, index) => Object.keys(row.drills[index]).some(key => drill[key] !== row.drills[index][key]))) {
+      throw new Error('Workout ID belongs to a different result.');
+    }
+  }
+  return existing;
+}
+
+export async function fetchWorkoutResults(playerId) {
+  return readAll(() => getSupabase().from("workout_results").select("*").eq("player_id", playerId)
+    .order("completed_at", { ascending: false }).order("id"));
 }
 
 export async function insertShot(sessionId, playerId, zoneId, made) {
@@ -276,29 +327,29 @@ export async function insertShot(sessionId, playerId, zoneId, made) {
 }
 
 export async function deleteShot(shotId) {
-  const { error } = await getSupabase()
+  const result = await getSupabase()
     .from("shot_logs")
     .delete()
-    .eq("id", shotId);
-  if (error) throw error;
+    .eq("id", shotId).select("id").single();
+  requireSavedRow(result, "Shot removal");
 }
 
 // ─── TEAM ───
 
 export async function fetchTeamData(playerId) {
-  const { data: membership } = await getSupabase()
+  const membership = checked(await getSupabase()
     .from("team_members")
     .select("team_id")
     .eq("player_id", playerId)
     .limit(1)
-    .single();
+    .maybeSingle());
 
   if (!membership) return [];
 
-  const { data: members } = await getSupabase()
+  const members = checked(await getSupabase()
     .from("team_members")
     .select("role, player_id, players(id, name, position, jersey_number)")
-    .eq("team_id", membership.team_id);
+    .eq("team_id", membership.team_id));
 
   if (!members || members.length === 0) return [];
 
@@ -306,12 +357,12 @@ export async function fetchTeamData(playerId) {
   const enriched = await Promise.all(
     members.map(async (m) => {
       const pid = m.player_id;
-      const { data: sessions } = await getSupabase()
+      const sessions = checked(await getSupabase()
         .from("sessions")
         .select("game_stats, shot_logs(made)")
         .eq("player_id", pid)
         .eq("type", "game")
-        .limit(25);
+        .limit(25));
 
       const games = sessions || [];
       const gamesPlayed = Math.max(games.length, 1);
@@ -344,12 +395,12 @@ export async function fetchTeamData(playerId) {
 }
 
 export async function fetchTeamInfo(playerId) {
-  const { data: membership } = await getSupabase()
+  const membership = checked(await getSupabase()
     .from("team_members")
     .select("team_id, teams(name, season)")
     .eq("player_id", playerId)
     .limit(1)
-    .single();
+    .maybeSingle());
 
   if (!membership?.teams) {
     return { name: "", season: "", record: "0-0", ppg: "0", fgPct: "0", apg: "0" };
@@ -368,11 +419,11 @@ export async function fetchTeamInfo(playerId) {
 // ─── STREAK ───
 
 export async function fetchStreak(playerId) {
-  const { data: sessions } = await getSupabase()
+  const sessions = await readAll(() => getSupabase()
     .from("sessions")
     .select("date")
     .eq("player_id", playerId)
-    .order("date", { ascending: false });
+    .order("date", { ascending: false }).order("id", { ascending: false }));
 
   if (!sessions || sessions.length === 0) return 0;
 

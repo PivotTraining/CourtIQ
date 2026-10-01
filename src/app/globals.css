@@ -2,7 +2,7 @@
 
 /* ══════════════════════════════════════════════════════
    COURT IQ DESIGN SYSTEM
-   Apple HIG-compliant: 8px grid, strict type scale,
+   Responsive web: 8px grid, strict type scale,
    44pt touch targets, spring animations, 3-level shadows
    ══════════════════════════════════════════════════════ */
 
@@ -160,6 +160,11 @@ button {
 .btn-primary:active { transform: scale(0.97); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+a:focus-visible, button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
 /* Secondary */
 .btn-secondary {
   display: flex;
@@ -260,7 +265,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ══════════════════════════════════════════════════════
-   ANIMATIONS — iOS spring curves, 200ms standard
+   ANIMATIONS — spring curves, 200ms standard
    ══════════════════════════════════════════════════════ */
 
 @keyframes fadeInUp {

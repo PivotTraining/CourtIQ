@@ -26,18 +26,23 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   const [showAdd, setShowAdd] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: "", position: "PG", jersey_number: "", age: "", team_name: "" });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) return;
+    let active = true;
     fetchManagedPlayers(user.id).then((p) => {
+      if (!active) return;
       setPlayers(p);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => { if (active) { setError("Players couldn't be loaded. Please close this panel and try again."); setLoading(false); } });
+    return () => { active = false; };
   }, [user]);
 
   const handleAdd = async () => {
-    if (!newPlayer.name.trim()) return;
+    if (saving || !newPlayer.name.trim()) return;
     setSaving(true);
+    setError("");
     try {
       const p = await addManagedPlayer(user.id, {
         ...newPlayer,
@@ -49,6 +54,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
       setShowAdd(false);
     } catch (err) {
       console.error("Failed to add player:", err);
+      setError("Player wasn't added. Check your connection and permissions, then try again.");
     } finally {
       setSaving(false);
     }
@@ -61,7 +67,10 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   };
 
   const handleDelete = async (playerId) => {
+    if (saving) return;
     if (!window.confirm("Delete this player and all their data?")) return;
+    setSaving(true);
+    setError("");
     try {
       await deleteManagedPlayer(playerId);
       setPlayers((prev) => prev.filter((p) => p.id !== playerId));
@@ -72,6 +81,9 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
       }
     } catch (err) {
       console.error("Failed to delete:", err);
+      setError("Player wasn't deleted. Your records have not been cleared. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -98,6 +110,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
         <div style={{ width: 40, height: 4, background: "var(--color-muted)", borderRadius: 2, margin: "0 auto 16px" }} />
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Players</h2>
         <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>Switch between players or add a new one</p>
+        {error && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{error}</p>}
 
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -156,8 +169,8 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                     {isActive && (
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-accent)" }}>Active</span>
                     )}
-                    {players.length > 1 && (
-                      <button onClick={() => handleDelete(p.id)}
+                    {players.length > 1 && p.firebase_uid !== user?.id && (
+                      <button onClick={() => handleDelete(p.id)} disabled={saving} aria-label={`Delete ${p.name}`}
                         style={{
                           width: 32,
                           height: 32,

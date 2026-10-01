@@ -67,7 +67,7 @@ export default function ProfileSetup() {
   return (
     <div style={{
       width: "100%",
-      height: "100vh",
+      minHeight: "100dvh",
       height: "100dvh",
       background: "var(--color-bg)",
       display: "flex",

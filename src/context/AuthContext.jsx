@@ -1,106 +1,114 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { fetchManagedPlayers } from "@/lib/queries";
+import { selectPlayer, preferredPlayer, rememberPlayer } from "@/lib/playerSelection.mjs";
+import { clearAccountRecovery, hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
 
 const AuthContext = createContext(null);
 
-function isNativePlatform() {
-  if (typeof window === "undefined") return false;
-  return !!window.Capacitor?.isNativePlatform?.();
-}
-
-async function closeBrowser() {
-  try {
-    const { Browser } = await import("@capacitor/browser");
-    await Browser.close();
-  } catch {}
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [playerProfile, setPlayerProfile] = useState(null);
+  const [playerProfile, updatePlayerProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needsProfile, setNeedsProfile] = useState(false);
   const [profileError, setProfileError] = useState(null);
+  const identity = useRef(null);
+  const profileRef = useRef(null);
+  const requestVersion = useRef(0);
+  const inFlight = useRef(null);
+
+  const setPlayerProfile = (profile) => {
+    profileRef.current = profile;
+    updatePlayerProfile(profile);
+    if (profile && identity.current) rememberPlayer(identity.current, profile.id);
+  };
 
   async function loadProfile(supabaseUser) {
+    const version = ++requestVersion.current;
     setProfileError(null);
-    const { data: profile, error } = await supabase
-      .from("players")
-      .select("*")
-      .eq("firebase_uid", supabaseUser.id)
-      .maybeSingle();
-
-    if (error) {
-      setProfileError("We couldn't load your player profile. Check your connection and try again.");
+    try {
+      const players = await fetchManagedPlayers(supabaseUser.id);
+      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return;
+      const profile = selectPlayer(players, supabaseUser.id, profileRef.current?.id || preferredPlayer(supabaseUser.id));
+      setPlayerProfile(profile);
+      setNeedsProfile(!profile);
+    } catch {
+      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return;
+      setProfileError("We couldn't load your player profiles. Your records have not been cleared. Check your connection and try again.");
       setPlayerProfile(null);
       setNeedsProfile(false);
-      return;
-    }
-
-    if (profile) {
-      setPlayerProfile(profile);
-      setNeedsProfile(false);
-    } else {
-      setNeedsProfile(true);
     }
   }
 
   useEffect(() => {
-    let appUrlListener;
+    let active = true;
+    const pendingProfiles = new Set();
+    const acceptSession = (session) => {
+      if (!active) return;
+      if (!session?.user) {
+        identity.current = null;
+        requestVersion.current += 1;
+        inFlight.current = null;
+        setUser(null);
+        setPlayerProfile(null);
+        setNeedsProfile(false);
+        setProfileError(null);
+        setLoading(false);
+        return;
+      }
+      const nextUser = session.user;
+      if (identity.current === nextUser.id && (profileRef.current || inFlight.current === nextUser.id)) return;
+      if (identity.current !== nextUser.id) {
+        requestVersion.current += 1;
+        profileRef.current = null;
+        updatePlayerProfile(null);
+      }
+      identity.current = nextUser.id;
+      inFlight.current = nextUser.id;
+      setUser(nextUser);
+      setLoading(true);
+      // Start database work after the auth callback releases its SDK lock.
+      const timer = setTimeout(() => {
+        pendingProfiles.delete(timer);
+        if (!active || identity.current !== nextUser.id) return;
+        loadProfile(nextUser).finally(() => {
+          if (active && identity.current === nextUser.id) {
+            inFlight.current = null;
+            setLoading(false);
+          }
+        });
+      }, 0);
+      pendingProfiles.add(timer);
+    };
     // Resolve any existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        loadProfile(session.user).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
+      acceptSession(session);
+    }).catch(() => {
+      if (active) setLoading(false);
     });
 
     // Listen for auth state changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        await loadProfile(session.user);
-        // After OAuth completes on native, close the in-app browser
-        if (event === "SIGNED_IN" && isNativePlatform()) {
-          closeBrowser();
-        }
-      } else {
-        setUser(null);
-        setPlayerProfile(null);
-        setNeedsProfile(false);
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'SIGNED_OUT') {
+        // Auth expiry is not permission to discard unsynced work. Its account-scoped
+        // key can only be resumed by this same identity after signing in again.
+        try {
+          if (!hasPendingRecovery(window.localStorage, identity.current)) clearAccountRecovery(window.localStorage, identity.current);
+        } catch { /* storage unavailable: retain recovery data */ }
       }
-      setLoading(false);
+      acceptSession(session);
     });
 
-    // Native deep-link handler — fired when the app is opened via the
-    // com.pivottraining.courtiq://login-callback URL after OAuth.
-    if (isNativePlatform()) {
-      import("@capacitor/app")
-        .then(async ({ App }) => {
-          appUrlListener = await App.addListener("appUrlOpen", async ({ url }) => {
-            if (url.includes("login-callback") || url.includes("access_token") || url.includes("code=")) {
-              const code = new URL(url).searchParams.get("code");
-              if (code) {
-                // PKCE flow — exchange the auth code for a session.
-                const { error } = await supabase.auth.exchangeCodeForSession(code);
-                if (error) console.error("[Auth] exchangeCodeForSession error:", error.message);
-              }
-              closeBrowser();
-            }
-          });
-        })
-        .catch(() => {});
-    }
-
     return () => {
+      active = false;
+      requestVersion.current += 1;
+      inFlight.current = null;
+      pendingProfiles.forEach(clearTimeout);
       subscription.unsubscribe();
-      appUrlListener?.remove();
     };
   }, []);
 

@@ -26,6 +26,8 @@ jobs:
         run: npm run lint
       - name: Tests
         run: npm test
+      - name: Dependency security audit
+        run: npm audit --audit-level=moderate
       - name: Production build
         run: npm run build
         env:

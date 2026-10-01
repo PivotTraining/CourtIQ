@@ -1,5 +1,7 @@
 # Court IQ production-readiness audit
 
+> Historical audit of the former native release, retained for reference. As of September 30, 2026, CourtIQ's release target is a responsive web app. Native packaging, signing, and App Store steps below are superseded by [the web launch guide](web-launch.md).
+
 Audited August 11, 2026 from `PivotTraining/CourtIQ` at `9bb59bb`.
 
 ## Release decision

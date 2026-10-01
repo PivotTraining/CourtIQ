@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 import { getSupabase } from "@/lib/supabase";
 import { signOutUser } from "@/lib/firebase";
+import { clearAccountRecovery, hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
 import Icon from "@/components/ui/Icons";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
@@ -32,7 +33,7 @@ const labelStyle = {
 };
 
 export default function ProfileEditor({ onClose }) {
-  const { playerProfile, setPlayerProfile } = useAuth();
+  const { user, playerProfile, setPlayerProfile } = useAuth();
   const { refreshData } = useApp();
   const [form, setForm] = useState({
     name: playerProfile?.name || "",
@@ -183,6 +184,14 @@ export default function ProfileEditor({ onClose }) {
         {/* Reset Data */}
         <button
           onClick={async () => {
+            if (process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true') {
+              setError('Reset is unavailable for recovered games until the checked, atomic reset service is ready. Your records have not been changed.');
+              return;
+            }
+            if (hasPendingRecovery(window.localStorage, user?.id)) {
+              setError('Sync or resolve your pending game entries before resetting records.');
+              return;
+            }
             if (!window.confirm("This will delete all your sessions, shots, and journal entries but keep your account. Continue?")) return;
             setSaving(true);
             try {
@@ -222,7 +231,7 @@ export default function ProfileEditor({ onClose }) {
 
         {/* Sign Out */}
         <button
-          onClick={signOutUser}
+          onClick={async () => { try { await signOutUser(); } catch (err) { setError(err.message); } }}
           style={{
             width: "100%",
             marginTop: 8,
@@ -286,15 +295,18 @@ export default function ProfileEditor({ onClose }) {
               <div style={{ textAlign: "center", marginBottom: 16 }}>
                 <div style={{ marginBottom: 8 }}><Icon name="alert" size={32} color="#F59E0B" /></div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Delete Your Account?</h3>
-                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove all your sessions, shots, journal entries, and stats. This cannot be undone.</p>
+                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove this account, every player profile it manages, and their sessions, shots, journals, and stats. This cannot be undone.</p>
               </div>
               <button
                 onClick={async () => {
                   setSaving(true);
                   try {
-                    const { error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: {} });
+                    const { data, error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: { confirmation: "DELETE" } });
                     if (deleteError) throw deleteError;
+                    if (data?.deleted !== true) throw new Error("Account deletion was not confirmed.");
+                    clearAccountRecovery(window.localStorage, user?.id);
                     await signOutUser().catch(() => {});
+                    window.location.assign("/");
                   } catch (err) {
                     setError("Failed to delete. Contact support@pivottrainingdev.com");
                     setSaving(false);
