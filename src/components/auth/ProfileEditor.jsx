@@ -308,7 +308,7 @@ export default function ProfileEditor({ onClose }) {
                     await signOutUser().catch(() => {});
                     window.location.assign("/");
                   } catch (err) {
-                    setError("Failed to delete. Contact support@pivottrainingdev.com");
+                    setError("Failed to delete. Please contact CourtIQ support through getcourtiq.com");
                     setSaving(false);
                     setShowDeleteConfirm(false);
                   }
