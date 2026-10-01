@@ -1,9 +1,10 @@
 # CourtIQ subscription and recurring-revenue design
 
-Status: pricing proposal and tested financial calculation foundation, not live billing.
+Status: pricing proposal, financial calculations and inactive test-only billing implementation. Not live billing.
 Owner-approved receiving business: Pivot (confirmed September 30, 2026).
-Stripe connector requires reauthentication. No products, prices, subscriptions,
-checkout, payment methods, tax settings, or live entitlements have been activated.
+Stripe access was restored October 1; the connector exposes the live Pivot account,
+not an isolated test account. Used read-only planning only. No products, prices,
+subscriptions, payment methods, tax settings, or live entitlements were changed.
 
 ## Suggested starting offer — USD, subject to approval
 
@@ -25,16 +26,19 @@ exactly 240 hours, and is not reset by refresh, device or plan changes. Eligibil
 uses a server-owned new-user cutoff; existing users are not silently re-enrolled.
 Recommended terms: no card required, no automatic charge, then an explicitly
 accepted paid subscription. Card requirements and conversion terms still need
-approval before public billing. The current migration starts disabled and does
-not grant/revoke feature access; real server-side entitlements are still pending.
+approval before public billing. The trial migration starts disabled. The newer
+billing migration stages database access checks on new single-player sessions
+and owner-managed roster games, while preserving existing records and exports.
+These checks are locally tested and disabled, not verified on the live database.
 One-per-account is not complete abuse prevention: account deletion/recreation and
 multiple-account eligibility need a reviewed privacy-preserving policy.
 Trial accounts remain excluded from paying MRR/ARR.
 
-Stripe supports free trials with Checkout, including an optional no-payment-
-method flow. A future Checkout must use the original server trial deadline,
-not create a fresh ten-day period each time someone checks out or changes plans.
-Implement signed lifecycle webhooks and clear conversion consent. See
+The first version keeps the no-card trial entirely in CourtIQ: starting it never
+creates a Stripe customer or subscription. Checkout is blocked while the trial
+is active. After expiry, an explicit paid choice collects the first payment.
+Checkout sends no provider trial duration and cannot restart the ten-day window.
+Signed lifecycle webhooks and explicit consent are implemented test-only. See
 [Stripe Checkout free trials](https://docs.stripe.com/payments/checkout/free-trials).
 
 Official comparison pages reviewed September 30, 2026:
@@ -92,10 +96,10 @@ account access; visible save failures. These technical invariants are test
 requirements, not claims about live customer incident rates. Establish pilot
 baselines before asserting financial or retention targets.
 
-## Mandatory billing integration boundary — still pending
+## Mandatory billing integration boundary
 
-- Reconnect Stripe and verify the exact Pivot account plus isolated sandbox.
-- Complete Stripe's integration planner before writing payment integration code.
+- Read-only Pivot account verification and Stripe integration planning completed
+  October 1. Still need an isolated, authorized sandbox and test credentials.
 - Approve currency/prices, card/conversion terms for the approved 10-day trial,
   renewal/cancellation/refund policy, team roster
   and assistant-seat limits. Create separate Player and Coach Products, with
@@ -117,3 +121,27 @@ baselines before asserting financial or retention targets.
   [Stripe subscription tax](https://docs.stripe.com/billing/taxes/collect-taxes).
 - A sandbox pass is not live payment readiness. No real charge or live activation
   without the user approving the offer and release.
+
+## October 1 source implementation
+
+Added `/billing` within the existing authenticated app and a development-only
+`/dev/billing` fixture. Profile-menu discovery stays behind an inactive flag.
+The same component shows trial eligibility/deadline/expiry, proposed month/year
+offers, overdue/canceling subscription state, recurring consent, test Checkout
+and CourtIQ Portal. The sample disables all provider actions; no fake purchases.
+Checkout return parameters never grant membership; refresh reconciles provider state.
+
+Server routes verify Auth identities and same-origin writes. Test keys, account,
+allowlisted prices, distinct products and a cancelable CourtIQ-only portal must
+pass checks before a provider write. Durable checkout claims preserve request ID,
+expiration, consent and amount through retries. Raw signed webhooks deduplicate
+events and read current state under a per-customer lock, ignoring unrelated
+Pivot customer mappings. All billing/enforcement flags remain disabled.
+
+Finance integration is NOT complete: stored `unit_amount` is list price, not net
+discounts, collected cash, refunds, fees, retained cohorts or profit. Do not feed
+it directly into a claimed net-MRR dashboard. The existing calculator remains a
+tested model. Owner-restricted finance views and verified payment ingestion,
+refund/dispute handling, automated reconciliation, event retention and trial-
+ending email reminders remain work. See `billing-test-release-gate.md` for proof
+and mandatory live/provider activation gates.

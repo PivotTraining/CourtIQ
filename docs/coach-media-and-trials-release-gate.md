@@ -94,6 +94,10 @@ Stripe product, subscription, tax setting, charge or public release was changed.
 
 ## Activation gates
 
+October 1 follow-up: `billing-test-release-gate.md` records the newer inactive,
+locally tested Checkout/Portal/webhook/access implementation. The release gates
+below remain; billing is now source-built, not provider-tested or activated.
+
 1. Restore authorized Supabase access; inspect the real schema/policies, check
    advisors and take a verified restorable backup. Do not bypass prior denial.
 2. Apply the ownership, ledger and roster migrations in order only after review.
@@ -107,9 +111,10 @@ Stripe product, subscription, tax setting, charge or public release was changed.
    paywall record access/export or erase stats on trial expiry. No promotional
    trial UI is active today.
 4. Reconnect and verify the Pivot Stripe account/sandbox. Prices remain proposals.
-   Build authenticated Checkout/Portal, allowlisted prices, signed/deduplicated
-   webhooks, reconciliation and subscription lifecycle tests. Trial-to-checkout
-   must preserve the original deadline. Review tax registrations and public terms.
+   Exercise the new authenticated Checkout/Portal, allowlisted prices,
+   signed/deduplicated webhooks, reconciliation and lifecycle in an isolated sandbox.
+   The first version blocks checkout until trial expiry rather than restarting a
+   provider trial. Review tax registrations and public terms.
 5. Before cloud video: private owner-scoped storage, signed URLs, resumable upload,
    codec/real-device tests, account deletion, quota/cost/retention policies and
    age/guardian permission workflow. Do not advertise device-only clips as backup.
