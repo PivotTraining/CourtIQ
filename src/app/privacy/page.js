@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         <h2 className="text-base font-bold text-text">5. Children&apos;s Privacy</h2>
         <p>CourtIQ is intended for users age 13 and older. We do not knowingly permit children under 13 to create or operate their own CourtIQ accounts. A verified guardian-consent workflow for younger users is not currently offered.</p>
         <h2 className="text-base font-bold text-text">6. Your Choices and Rights</h2>
-        <p>You can update profile information in the service and may request access, correction, export, or deletion where applicable. <a href="mailto:privacy@pivottrainingdev.com" className="text-accent font-bold">Contact CourtIQ Privacy</a> for assistance.</p>
+        <p>You can update profile information in the service and may request access, correction, export, or deletion where applicable. <a href="https://getcourtiq.com" className="text-accent font-bold">Visit CourtIQ</a> for support and privacy assistance.</p>
         <h2 className="text-base font-bold text-text">7. Changes</h2>
         <p>We may update this policy as CourtIQ changes. The date above reflects the latest published revision.</p>
       </div>
