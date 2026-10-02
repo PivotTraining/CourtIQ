@@ -11,7 +11,7 @@ export default function PrivacyPage() {
         <h2 className="text-base font-bold text-text">1. Information We Collect</h2>
         <p><strong>Account Data:</strong> Information such as email address and name used to create and manage an account.</p>
         <p><strong>Player and Performance Data:</strong> Player profiles, shot logs, game statistics, workout results, journal entries, session history, and related basketball-development information you choose to enter.</p>
-        <p><strong>Device and Service Data:</strong> Basic browser, device, security, and service diagnostics used to operate and improve CourtIQ. CourtIQ does not require precise location data for its core web experience.</p>
+        <p><strong>Device and Service Data:</strong> Basic browser, security, service diagnostics, and privacy-minimized feature-usage events used to operate and improve CourtIQ. Product telemetry records event names and screen/feature context without sending a CourtIQ user ID, player name, game stats, journal text, film, or precise location.</p>
         <h2 className="text-base font-bold text-text">2. How We Use Data</h2>
         <p>We use data to authenticate users, provide player-development features, generate analytics and reports, preserve account history, maintain service security, and improve CourtIQ. We do not sell personal data to advertisers.</p>
         <h2 className="text-base font-bold text-text">3. Data Storage and Access</h2>

@@ -17,6 +17,9 @@ import PlayerSwitcher from "./PlayerSwitcher";
 import GameLogScreen from "./gamelog/GameLogScreen";
 import FamilyDashboard from "./family/FamilyDashboard";
 import SettingsScreen from "./settings/SettingsScreen";
+import FilmLab from "./film/FilmLab";
+import DevelopmentProfile from "./profile/DevelopmentProfile";
+import CoachWorkspace from "./coach/CoachWorkspace";
 import Icon from "./ui/Icons";
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
@@ -33,6 +36,9 @@ const TITLES = {
   gamelog: "Game Log",
   family: "Family",
   settings: "Settings",
+  film: "Film Lab",
+  developmentProfile: "Player Profile",
+  coach: "Coach",
 };
 
 export default function Shell() {
@@ -105,11 +111,14 @@ export default function Shell() {
       case "gamelog": return <GameLogScreen />;
       case "family": return <FamilyDashboard onManagePlayers={() => setShowSwitcher(true)} />;
       case "settings": return <SettingsScreen onEditProfile={() => setShowProfile(true)} onManagePlayers={() => setShowSwitcher(true)} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />;
+      case "film": return <FilmLab />;
+      case "developmentProfile": return <DevelopmentProfile />;
+      case "coach": return <CoachWorkspace />;
       default: return <HomeDashboard />;
     }
   };
 
-  const showFab = !["iq", "family", "settings"].includes(displayScreen);
+  const showFab = !["iq", "family", "settings", "film", "developmentProfile", "coach"].includes(displayScreen);
 
   return (
     <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>

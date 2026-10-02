@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { pathForScreen, screenFromPath } from "@/lib/routes";
+import { trackEvent } from "@/lib/telemetry";
 import {
   fetchShotData,
   fetchWeeklyTrend,
@@ -32,6 +33,10 @@ export function AppProvider({ children }) {
   const screen = screenFromPath(pathname);
   const [previousScreen, setPreviousScreen] = useState("home");
   const lastScreenRef = useRef(screen);
+
+  useEffect(() => {
+    trackEvent("screen_view", { screen });
+  }, [screen]);
 
   useEffect(() => {
     if (lastScreenRef.current !== screen) {

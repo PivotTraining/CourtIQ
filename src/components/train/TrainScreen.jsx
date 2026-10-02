@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DRILL_CATEGORIES as LEGACY_DRILL_CATEGORIES, DRILLS } from "@/lib/drills";
 import { DRILL_BANK, DRILL_CATEGORIES as BANK_DRILL_CATEGORIES } from "@/lib/drillBank";
 import { buildTrainingPrescription } from "@/lib/prescriptions.mjs";
+import { trackEvent } from "@/lib/telemetry";
 import { fetchSessionHistory, fetchWorkoutResults, saveWorkoutResult } from "@/lib/queries";
 import { computeSkillRatings } from "@/lib/intelligence";
 import Card from "@/components/ui/Card";
@@ -450,7 +451,7 @@ export default function TrainScreen() {
 
               {/* Start Workout Button */}
               <button
-                onClick={() => setActiveWorkout(plan.drills)}
+                onClick={() => { trackEvent("workout_started", { source: "prescription" }); setActiveWorkout(plan.drills); }}
                 style={{
                   width: "100%",
                   marginTop: 16,

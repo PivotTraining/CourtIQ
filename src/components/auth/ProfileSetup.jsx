@@ -41,6 +41,8 @@ export default function ProfileSetup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return;
+    const age = form.age ? parseInt(form.age) : null;
+    if (age !== null && age < 13) { setError("CourtIQ account profiles currently require age 13 or older. A verified guardian-consent flow for younger players is not live yet."); return; }
     setLoading(true);
     setError("");
     try {
@@ -50,7 +52,7 @@ export default function ProfileSetup() {
         team_name: form.team_name.trim() || null,
         position: form.position,
         jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
-        age: form.age ? parseInt(form.age) : null,
+        age,
         skill_level: form.level,
       });
       setPlayerProfile(profile);
@@ -124,7 +126,7 @@ export default function ProfileSetup() {
             <div style={{ width: 72 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Age</label>
               <input type="number" value={form.age} onChange={(e) => update("age", e.target.value)}
-                placeholder="16" min="8" max="30" style={inputStyle} />
+                placeholder="16" min="13" max="30" style={inputStyle} />
             </div>
           </div>
 

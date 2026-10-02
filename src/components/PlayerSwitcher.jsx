@@ -41,13 +41,15 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
 
   const handleAdd = async () => {
     if (saving || !newPlayer.name.trim()) return;
+    const age = newPlayer.age ? parseInt(newPlayer.age) : null;
+    if (age !== null && age < 13) { setError("Under-13 managed profiles are paused until CourtIQ has a verified guardian-consent workflow."); return; }
     setSaving(true);
     setError("");
     try {
       const p = await addManagedPlayer(user.id, {
         ...newPlayer,
         jersey_number: newPlayer.jersey_number ? parseInt(newPlayer.jersey_number) : null,
-        age: newPlayer.age ? parseInt(newPlayer.age) : null,
+        age,
       });
       setPlayers((prev) => [...prev, p]);
       setNewPlayer({ name: "", position: "PG", jersey_number: "", age: "", team_name: "" });
@@ -220,7 +222,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                 </div>
                 <div style={{ width: 64 }}>
                   <input type="number" value={newPlayer.age} onChange={(e) => setNewPlayer({ ...newPlayer, age: e.target.value })}
-                    placeholder="Age" style={inputStyle} />
+                    placeholder="Age" min="13" max="30" style={inputStyle} />
                 </div>
               </div>
               <input value={newPlayer.team_name} onChange={(e) => setNewPlayer({ ...newPlayer, team_name: e.target.value })}
