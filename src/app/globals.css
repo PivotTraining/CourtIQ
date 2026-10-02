@@ -405,3 +405,20 @@ input:focus, select:focus, textarea:focus {
 }
 .animate-step-in { animation: stepIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both; }
 .animate-step-out { animation: stepOut 0.2s ease-in both; }
+
+
+/* ── Accessibility: respect reduced-motion preferences ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Keep keyboard focus visible on form controls as well as links/buttons. */
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}

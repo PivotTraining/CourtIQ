@@ -7,6 +7,8 @@ import { fetchSessionHistory } from "@/lib/queries";
 import { computeSkillRatings } from "@/lib/intelligence";
 import { computeBadges } from "@/lib/badges";
 import { computeNextMove } from "@/lib/nextMove.mjs";
+import { buildTrainingPrescription } from "@/lib/prescriptions.mjs";
+import { DRILL_BANK } from "@/lib/drillBank";
 import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
 
@@ -42,6 +44,7 @@ export default function HomeDashboard() {
   const [ratings, setRatings] = useState(null);
   const [badges, setBadges] = useState(null);
   const [nextMove, setNextMove] = useState(null);
+  const [prescription, setPrescription] = useState(null);
   const [showRatingInfo, setShowRatingInfo] = useState(false);
   const [historyError, setHistoryError] = useState(false);
 
@@ -57,6 +60,7 @@ export default function HomeDashboard() {
         setRatings(computedRatings);
         setBadges(history.length ? computeBadges(history, player?.streak || 0, journalEntries.length) : null);
         setNextMove(computeNextMove(history, computedRatings));
+        setPrescription(buildTrainingPrescription({ sessions: history, ratings: computedRatings, drills: DRILL_BANK, age: player?.age }));
       })
       .catch(() => {
         if (active) setHistoryError(true);
@@ -65,7 +69,7 @@ export default function HomeDashboard() {
     return () => {
       active = false;
     };
-  }, [playerId, player?.streak, journalEntries.length]);
+  }, [playerId, player?.streak, player?.age, journalEntries.length]);
 
   if (historyError) return <RecordsUnavailable />;
   if (loading) {
@@ -198,6 +202,30 @@ export default function HomeDashboard() {
                 {nextMove.metric}
               </span>
             </div>
+          </div>
+        </section>
+      )}
+
+      {prescription?.drills?.length > 0 && (
+        <section style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 20, padding: 20, boxShadow: "var(--shadow-card)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 300px" }}>
+              <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: 1.2, textTransform: "uppercase", color: "#FF6B35" }}>Prescribed workout</div>
+              <h3 style={{ margin: "7px 0 0", fontSize: 18, fontWeight: 900, color: "var(--color-text)" }}>{prescription.title}</h3>
+              <p style={{ margin: "7px 0 0", fontSize: 12, color: "var(--color-text-sec)", lineHeight: 1.55 }}>{prescription.evidence} · {prescription.totalDuration} min · {prescription.confidence} confidence</p>
+            </div>
+            <button type="button" onClick={() => setScreen("train")} style={{ border: "none", borderRadius: 12, padding: "10px 14px", background: "#FFF0E8", color: "#FF6B35", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>
+              Start workout →
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: 14 }}>
+            {prescription.drills.slice(0, 4).map((drill, index) => (
+              <div key={drill.id} style={{ background: "var(--color-muted)", borderRadius: 14, padding: "12px 13px" }}>
+                <div style={{ fontSize: 10, color: "var(--color-text-sec)", fontWeight: 800 }}>#{index + 1} · {drill.level}</div>
+                <div style={{ marginTop: 4, fontSize: 12, fontWeight: 900, color: "var(--color-text)" }}>{drill.name}</div>
+                <div style={{ marginTop: 4, fontSize: 10, color: "var(--color-text-sec)" }}>{drill.reps} reps · ~{drill.duration} min</div>
+              </div>
+            ))}
           </div>
         </section>
       )}

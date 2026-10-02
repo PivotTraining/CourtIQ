@@ -5,9 +5,11 @@ import { useState, useEffect } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
-import { DRILL_CATEGORIES, DRILLS, generatePracticePlan } from "@/lib/drills";
+import { DRILL_CATEGORIES as LEGACY_DRILL_CATEGORIES, DRILLS } from "@/lib/drills";
+import { DRILL_BANK, DRILL_CATEGORIES as BANK_DRILL_CATEGORIES } from "@/lib/drillBank";
+import { buildTrainingPrescription } from "@/lib/prescriptions.mjs";
 import { fetchSessionHistory, fetchWorkoutResults, saveWorkoutResult } from "@/lib/queries";
-import { computePlayerMemory } from "@/lib/intelligence";
+import { computeSkillRatings } from "@/lib/intelligence";
 import Card from "@/components/ui/Card";
 import SectionDivider from "@/components/ui/SectionDivider";
 import WorkoutTimer from "./WorkoutTimer";
@@ -32,7 +34,7 @@ function extractSteps(description) {
 function DrillCard({ drill, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
-  const cat = DRILL_CATEGORIES.find((c) => c.id === drill.category);
+  const cat = BANK_DRILL_CATEGORIES.find((c) => c.id === drill.category) || LEGACY_DRILL_CATEGORIES.find((c) => c.id === drill.category);
   const steps = extractSteps(drill.description);
 
   const handleCameraClick = (e) => {
@@ -57,7 +59,7 @@ function DrillCard({ drill, compact = false }) {
             display: "flex", alignItems: "center", justifyContent: "center",
             background: `${cat?.color || "#6B7194"}15`,
           }}>
-            <Icon name={EMOJI_ICON_MAP[cat?.icon] || "basketball"} size={18} color={cat?.color || "#6B7194"} />
+            <Icon name={cat?.iconName || EMOJI_ICON_MAP[cat?.icon] || cat?.icon || "basketball"} size={18} color={cat?.color || "#6B7194"} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
@@ -137,7 +139,7 @@ function DrillCard({ drill, compact = false }) {
                   borderRadius: 10, padding: "6px 12px",
                   fontSize: 12, fontWeight: 700,
                 }}>
-                  <Icon name={EMOJI_ICON_MAP[cat.icon] || "basketball"} size={14} color={cat.color || "#6B7194"} />
+                  <Icon name={cat.iconName || EMOJI_ICON_MAP[cat.icon] || cat.icon || "basketball"} size={14} color={cat.color || "#6B7194"} />
                   {cat.label}
                 </span>
               </div>
@@ -226,19 +228,16 @@ export default function TrainScreen() {
     return () => { active = false; };
   }, [playerId, developmentEnabled]);
 
+  const playerAge = playerProfile?.age || player?.age;
+
   useEffect(() => {
     if (!playerId) { setLoading(false); return; }
     fetchSessionHistory(playerId).then((sessions) => {
-      if (sessions.length > 0) {
-        const memory = computePlayerMemory(sessions);
-        const generated = generatePracticePlan(memory.weakZones);
-        setPlan(generated);
-      }
+      const ratings = sessions.length > 0 ? computeSkillRatings(sessions) : null;
+      setPlan(buildTrainingPrescription({ sessions, ratings, drills: DRILL_BANK, age: playerAge }));
       setLoading(false);
     }).catch(() => { setHistoryError(true); setLoading(false); });
-  }, [playerId]);
-
-  const playerAge = playerProfile?.age || player?.age;
+  }, [playerId, playerAge]);
   const allowedDifficulties = getDifficultyForAge(playerAge);
   const ageDrills = DRILLS.filter((d) => allowedDifficulties.includes(d.difficulty));
   const filteredDrills = category === "all" ? ageDrills : ageDrills.filter((d) => d.category === category);
@@ -355,7 +354,7 @@ export default function TrainScreen() {
                       margin: 0,
                     }}
                   >
-                    Today's Practice Plan
+                    CourtIQ Prescription
                   </h3>
                   <span
                     style={{
@@ -378,9 +377,12 @@ export default function TrainScreen() {
                     lineHeight: 1.5,
                   }}
                 >
-                  Built from your Court IQ data — targeting your weak zones and
-                  building on strengths.
+                  {plan.reason}
                 </p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--color-accent)", background: "rgba(255,107,53,0.1)", padding: "5px 8px", borderRadius: 8 }}>{plan.evidence}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--color-text-sec)", background: "var(--color-muted)", padding: "5px 8px", borderRadius: 8 }}>{plan.confidence} confidence</span>
+                </div>
               </div>
 
               {/* Drill List with Step Numbers */}
