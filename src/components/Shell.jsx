@@ -109,7 +109,7 @@ export default function Shell() {
     }
   };
 
-  const showFab = displayScreen !== "iq";
+  const showFab = !["iq", "family", "settings"].includes(displayScreen);
 
   return (
     <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
