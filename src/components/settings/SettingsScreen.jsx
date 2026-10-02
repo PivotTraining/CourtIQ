@@ -30,7 +30,7 @@ export default function SettingsScreen({ onEditProfile, onManagePlayers, darkMod
         <div style={{ marginTop: 7, fontSize: 19, fontWeight: 950, color: "var(--color-text)" }}>{playerProfile?.name || "CourtIQ player"}</div>
         <div style={{ marginTop: 3, fontSize: 11, color: "var(--color-text-sec)" }}>{user?.email || "Signed-in account"}</div>
         <Row icon="user" title="Player profile" description="Name, team, jersey, position and age." action={onEditProfile} actionLabel="Edit" />
-        <Row icon="users" title="Players & family" description="Add, remove or switch managed player profiles." action={onManagePlayers} actionLabel="Manage" />
+        <Row icon="user" title="Players & family" description="Add, remove or switch managed player profiles." action={onManagePlayers} actionLabel="Manage" />
       </section>
 
       <section style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 20, padding: "18px 18px 4px", boxShadow: "var(--shadow-card)" }}>
