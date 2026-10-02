@@ -15,6 +15,8 @@ import ShotLogger from "./shots/ShotLogger";
 import ProfileEditor from "./auth/ProfileEditor";
 import PlayerSwitcher from "./PlayerSwitcher";
 import GameLogScreen from "./gamelog/GameLogScreen";
+import FamilyDashboard from "./family/FamilyDashboard";
+import SettingsScreen from "./settings/SettingsScreen";
 import Icon from "./ui/Icons";
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
@@ -29,6 +31,8 @@ const TITLES = {
   heatmap: "Heat Map",
   journal: "Journal",
   gamelog: "Game Log",
+  family: "Family",
+  settings: "Settings",
 };
 
 export default function Shell() {
@@ -99,6 +103,8 @@ export default function Shell() {
       case "heatmap": return <HeatMapScreen />;
       case "journal": return <JournalScreen />;
       case "gamelog": return <GameLogScreen />;
+      case "family": return <FamilyDashboard onManagePlayers={() => setShowSwitcher(true)} />;
+      case "settings": return <SettingsScreen onEditProfile={() => setShowProfile(true)} onManagePlayers={() => setShowSwitcher(true)} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />;
       default: return <HomeDashboard />;
     }
   };
@@ -208,6 +214,22 @@ export default function Shell() {
                       textAlign: "left",
                     }}>
                       <Icon name="user" size={16} color="var(--color-text-sec)" /> Edit Profile
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navTo("family"); }} style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: "12px 16px", background: "none", border: "none",
+                      cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--color-text)",
+                      textAlign: "left", borderTop: "1px solid var(--color-border)",
+                    }}>
+                      <Icon name="user" size={16} color="var(--color-text-sec)" /> Family
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navTo("settings"); }} style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: "12px 16px", background: "none", border: "none",
+                      cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--color-text)",
+                      textAlign: "left", borderTop: "1px solid var(--color-border)",
+                    }}>
+                      <Icon name="settings" size={16} color="var(--color-text-sec)" /> Settings
                     </button>
                     <button onClick={handleLogout} style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
