@@ -11,6 +11,7 @@ export const SCREEN_PATHS = Object.freeze({
   family: "/family",
   settings: "/settings",
   film: "/film",
+  developmentProfile: "/development-profile",
 });
 
 const PATH_SCREENS = Object.freeze({
@@ -25,6 +26,7 @@ const PATH_SCREENS = Object.freeze({
   "/family": "family",
   "/settings": "settings",
   "/film": "film",
+  "/development-profile": "developmentProfile",
 });
 
 export function pathForScreen(screen) {
