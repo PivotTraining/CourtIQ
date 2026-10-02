@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { id: "family", icon: "user", label: "Family", description: "Players & progress" },
   { id: "film", icon: "play", label: "Film Lab", description: "Review & tag game film" },
   { id: "developmentProfile", icon: "share", label: "Player Profile", description: "Share development evidence" },
+  { id: "coach", icon: "clipboard", label: "Coach", description: "Managed roster comparison" },
 ];
 
 export default function DesktopNav({ onStartSession }) {
