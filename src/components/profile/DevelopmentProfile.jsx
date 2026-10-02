@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { fetchSessionHistory } from "@/lib/queries";
 import { computeSeasonStats, computeSkillRatings } from "@/lib/intelligence";
 import { computeNextMove } from "@/lib/nextMove.mjs";
+import { trackEvent } from "@/lib/telemetry";
 
 export default function DevelopmentProfile() {
   const { playerId, player } = useApp();
@@ -39,12 +40,14 @@ export default function DevelopmentProfile() {
       const file = new File([blob], "courtiq-development-profile.png", { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "CourtIQ Development Profile" });
+        trackEvent("development_profile_shared", { source: "native-share" });
       } else {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
         link.download = file.name;
         link.click();
+        trackEvent("development_profile_shared", { source: "download" });
         setTimeout(() => URL.revokeObjectURL(url), 500);
       }
     } catch {
