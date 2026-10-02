@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { id: "iq", icon: "brain", label: "My IQ", description: "Insights & analytics" },
   { id: "family", icon: "user", label: "Family", description: "Players & progress" },
   { id: "film", icon: "play", label: "Film Lab", description: "Review & tag game film" },
+  { id: "developmentProfile", icon: "share", label: "Player Profile", description: "Share development evidence" },
 ];
 
 export default function DesktopNav({ onStartSession }) {
