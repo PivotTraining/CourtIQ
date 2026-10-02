@@ -16,6 +16,7 @@ const APP_SECTIONS = new Set([
   "family",
   "settings",
   "film",
+  "development-profile",
 ]);
 
 export default async function AppSectionPage({ params }) {
