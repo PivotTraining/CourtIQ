@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/telemetry";
 
 const TYPES = ["Made shot", "Missed shot", "Assist", "Turnover", "Steal", "Rebound", "Coaching note"];
 
@@ -25,6 +26,7 @@ export default function FilmLab() {
     setUrl(URL.createObjectURL(file));
     setName(file.name);
     setMarkers([]);
+    trackEvent("film_opened", { source: "device" });
   };
 
   const addMarker = () => {
@@ -32,6 +34,7 @@ export default function FilmLab() {
     const time = Number(player.current.currentTime.toFixed(2));
     setMarkers((rows) => [...rows, { id: crypto.randomUUID(), time, type, note: note.trim() }].sort((a, b) => a.time - b.time));
     setNote("");
+    trackEvent("film_marker_added", { source: type });
   };
 
   const seek = (time) => {
