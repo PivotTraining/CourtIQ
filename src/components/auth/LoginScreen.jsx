@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, resetPassword } from "@/lib/firebase";
 import Icon from "@/components/ui/Icons";
 
 const inputStyle = {
@@ -64,6 +64,18 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithGoogle();
+    } catch (err) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApple = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await signInWithApple();
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -135,14 +147,19 @@ export default function LoginScreen() {
             </div>
 
             {!isSignUp && (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -4 }}>
-                <button type="button" onClick={handleForgotPassword} disabled={loading} style={{
-                  fontSize: 12, color: "#FF6B35", fontWeight: 600,
-                  background: "none", border: "none", cursor: "pointer", padding: "4px 0",
-                }}>
-                  Forgot Password?
-                </button>
-              </div>
+              <>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -4 }}>
+                  <button type="button" onClick={handleForgotPassword} disabled={loading} style={{
+                    fontSize: 12, color: "#FF6B35", fontWeight: 600,
+                    background: "none", border: "none", cursor: "pointer", padding: "4px 0",
+                  }}>
+                    Forgot Password?
+                  </button>
+                </div>
+                <p style={{ fontSize: 11, lineHeight: 1.45, color: "var(--color-text-sec)", margin: "-6px 0 0" }}>
+                  Password reset is only for accounts created with email and password. If you normally use Google or Apple, use that sign-in method instead.
+                </p>
+              </>
             )}
 
             {resetSent && (
@@ -210,6 +227,17 @@ export default function LoginScreen() {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
             Continue with Google
+          </button>
+
+          <button onClick={handleApple} disabled={loading} style={{
+            width: "100%", padding: "14px 0", borderRadius: 14, marginTop: 10,
+            background: "#111827", color: "#FFFFFF",
+            fontSize: 14, fontWeight: 600, border: "1px solid #111827",
+            cursor: loading ? "default" : "pointer", minHeight: 48,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+          }}>
+            <span aria-hidden="true" style={{ fontSize: 20, lineHeight: 1 }}></span>
+            Continue with Apple
           </button>
 
           {/* Toggle sign-in / sign-up */}
