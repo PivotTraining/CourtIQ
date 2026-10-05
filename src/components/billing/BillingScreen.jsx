@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { providerUrl, hasOpenSubscription } from '@/lib/billingPolicy.mjs';
 import { trialSummary } from '@/lib/trialPolicy.mjs';
+import { internalApi } from '@/lib/internalApi.mjs';
 
 const money = amount => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: amount % 100 ? 2 : 0 }).format(amount / 100);
 const date = value => new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -11,11 +12,7 @@ const panel = { padding: 20, borderRadius: 20, background: 'var(--color-card)', 
 const button = { minHeight: 46, borderRadius: 12, padding: '10px 16px', border: '1px solid var(--color-border)', background: 'var(--color-muted)', color: 'var(--color-text)', fontWeight: 700, cursor: 'pointer' };
 
 async function billingApi(path, body, signal) {
-  const response = await fetch(`/api/billing/${path}`, { method: body ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store', signal,
-    ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Billing could not load. Please retry.');
-  return result;
+  return internalApi(`/api/billing/${path}`, { body, signal });
 }
 
 export default function BillingScreen({ api = billingApi, sample = false, onTrialStarted }) {

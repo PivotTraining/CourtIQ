@@ -6,10 +6,11 @@ import Stripe from 'stripe';
 import { PGlite } from '@electric-sql/pglite';
 import { createBillingService } from '../src/lib/billingService.mjs';
 import { billingConfig } from '../src/lib/billingPolicy.mjs';
+import { reconcileDueAccount } from '../src/lib/billingReconciliation.mjs';
 
 const alice='00000000-0000-0000-0000-000000000001',bob='00000000-0000-0000-0000-000000000002';
 const player='10000000-0000-0000-0000-000000000001';
-const migrations=['20260930171602_web_player_ownership_safeguards.sql','20260930202201_reliable_sessions_and_development.sql','20261001144325_owned_roster_games.sql','20261001151920_ten_day_new_user_trials.sql','20261001170545_courtiq_subscription_core.sql','20261001175225_premium_player_analytics.sql','20261001184745_trial_checkout_exclusion.sql'];
+const migrations=['20260930171602_web_player_ownership_safeguards.sql','20260930202201_reliable_sessions_and_development.sql','20261001144325_owned_roster_games.sql','20261001151920_ten_day_new_user_trials.sql','20261001170545_courtiq_subscription_core.sql','20261001175225_premium_player_analytics.sql','20261001184745_trial_checkout_exclusion.sql','20261005140000_billing_reconciliation_queue.sql'];
 async function database(){
   const db=new PGlite();
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;
@@ -87,7 +88,13 @@ test('local persisted free → no-card trial → expiry → signed test event �
     providerSub={...providerSub,status:'past_due'};await signed('evt_failure','invoice.payment_failed');
     await user(alice);assert.equal((await state()).mode,'free');assert.equal((await db.query('select * from journal_entries')).rows.length,1);
     await assert.rejects(db.query('select start_courtiq_trial()'),/can still bill/);
-    providerSub={...providerSub,status:'active',cancel_at_period_end:false};await service.reconcile(alice);await user(alice);assert.equal((await state()).billing.access,'player');
+    providerSub={...providerSub,status:'active',cancel_at_period_end:false};
+    // A missed recovery webhook is repaired by the actual queue + service using
+    // the same local provider double. No provider write or external call occurs.
+    await db.exec('reset role;update private.courtiq_billing_policy set reconciliation_enabled=true;');
+    const recovered=await reconcileDueAccount({service,store:{claim:token=>rpc('claim_courtiq_reconciliation',[token]),finish:(...args)=>rpc('finish_courtiq_reconciliation',args)}});
+    assert.deepEqual(recovered,{checked:1,synchronized:1,retry:0,review:0});
+    await user(alice);assert.equal((await state()).billing.access,'player');
     providerSub={...providerSub,status:'canceled'};await signed('evt_cancelled');await user(alice);assert.equal((await state()).mode,'free');assert.equal((await state()).workout,'used');
     await db.exec(`reset role;update private.courtiq_checkout_requests set expires_at=clock_timestamp()-interval '1 second';`);
     await user(alice);assert.equal((await db.query('select start_courtiq_trial() value')).rows[0].value.status,'expired');assert.equal((await db.query('select count(*)::int n from account_trials')).rows[0].n,1);

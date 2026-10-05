@@ -68,6 +68,18 @@ test('catalog blocks foreign accounts, changed displayed amounts, live prices, a
   const wide = harness(); wide.portal.features.subscription_update = { enabled: true }; await assert.rejects(wide.service.catalog(), /billing management/);
   const uncancelable = harness(); uncancelable.portal.features.subscription_cancel.enabled = false; await assert.rejects(uncancelable.service.catalog(), /billing management/);
 });
+
+test('reconciliation rejects deleted, foreign, live and unmarked customers without changing membership', async () => {
+  for (const customer of [{ id: 'cus_other', livemode: false, metadata: { app: 'courtiq' } },
+    { id: 'cus_fixture', deleted: true }, { id: 'cus_fixture', livemode: true, metadata: { app: 'courtiq' } },
+    { id: 'cus_fixture', livemode: false, metadata: { app: 'pivot' } }]) {
+    const h = harness(); h.store.account = async () => ({ customer_id: 'cus_fixture' });
+    h.stripe.customers.retrieve = async () => customer;
+    await assert.rejects(h.service.reconcile(owner), /billing review/);
+    assert.equal(h.calls.some(call => call[0] === 'snapshot'), false);
+    assert.equal(h.calls.at(-1)[0], 'releaseEvent');
+  }
+});
 test('subscription snapshots reject live/multiple/foreign items and retain provider failure/cancellation/paused state without awarding access', () => {
   for (const status of ['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'incomplete_expired', 'canceled', 'paused']) assert.equal(subscriptionSnapshot(sub(status), config).status, status);
   assert.equal(subscriptionSnapshot({ ...sub(), pause_collection: { behavior: 'void' } }, config).paused, true);

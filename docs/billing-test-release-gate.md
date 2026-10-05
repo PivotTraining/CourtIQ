@@ -1,5 +1,7 @@
 # CourtIQ billing checkpoint — October 1, 2026
 
+Later source checkpoint: [October 5 billing recovery and bounded requests](billing-reconciliation-release-gate.md). The original test counts below are historical; provider and live-release gates still apply.
+
 Inactive, test-only source implementation. No live Stripe or Supabase changes.
 No merge or production release authorized or performed. Prices and no-card terms
 are still recommendations awaiting approval.

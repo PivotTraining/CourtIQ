@@ -4,15 +4,12 @@ import Link from 'next/link';
 import { COURT_ZONES } from '@/lib/constants';
 import { premiumAnalysis, STYLE_FEATURES } from '@/lib/premiumAnalytics.mjs';
 import { NBA_REFERENCE_SOURCES } from '@/lib/nbaReferences.mjs';
+import { internalApi } from '@/lib/internalApi.mjs';
 import './premium.css';
 const number = value => value === null || value === undefined ? '—' : value.toFixed(1);
 const pct = value => value === null || value === undefined ? '—' : `${value.toFixed(1)}%`;
 async function analyticsApi(body, signal) {
-  const response = await fetch('/api/analytics', { method: body ? 'PATCH' : 'GET', credentials: 'same-origin', cache: 'no-store', signal,
-    ...(body ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}) });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'Analytics could not load. Please retry.');
-  return result;
+  return internalApi('/api/analytics', { body, method: body ? 'PATCH' : 'GET', signal });
 }
 export function PremiumView({ dataset, onCoverage, busy = '', sample = false }) {
   const [selected, setSelected] = useState(dataset.players[0]?.id || ''), [compare, setCompare] = useState('');

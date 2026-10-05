@@ -117,6 +117,9 @@ export function createBillingService({ stripe, store, config }) {
     const account = await store.account(owner);
     if (!account?.customer_id) return { received: true, noSubscription: true };
     return synchronize(`reconcile_${randomUUID()}`, 'reconcile', account.customer_id, async () => {
+      const customer = await stripe.customers.retrieve(account.customer_id);
+      if (customer.id !== account.customer_id || customer.deleted || customer.livemode !== false || customer.metadata?.app !== 'courtiq')
+        throw new BillingError('CourtIQ customer needs billing review.', 422);
       const subscriptions = [];
       let cursor;
       for (let page = 0; page < 10; page++) {

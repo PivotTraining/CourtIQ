@@ -9,6 +9,7 @@ import * as starter from '../src/lib/starterPolicy.mjs';
 import * as analytics from '../src/lib/premiumAnalytics.mjs';
 import * as references from '../src/lib/nbaReferences.mjs';
 import * as billing from '../src/lib/billingPolicy.mjs';
+import * as internal from '../src/lib/internalApi.mjs';
 import { premiumFixture } from '../src/lib/premiumFixtures.mjs';
 const require=createRequire(import.meta.url),{transform}=require('next/dist/build/swc');
 async function component(path,dependencies={}){
@@ -23,6 +24,7 @@ const Free=(await component('../src/components/billing/FreeStarter.jsx',{
 })).default;
 const Premium=(await component('../src/components/iq/PremiumAnalytics.jsx',{
   '@/lib/constants':constants,'@/lib/premiumAnalytics.mjs':analytics,'@/lib/nbaReferences.mjs':references,
+  '@/lib/internalApi.mjs':internal,
   'next/link':{default:({children,...props})=>React.createElement('a',props,children),__esModule:true},
 })).PremiumView;
 const render=(Component,props)=>renderToStaticMarkup(React.createElement(Component,props));

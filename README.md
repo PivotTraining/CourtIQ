@@ -15,3 +15,5 @@ The public homepage is `/`. The signed-in application starts at `/dashboard`; tr
 See [the web launch guide](docs/web-launch.md) for hosting, authentication callbacks, and the remaining live-backend checks.
 
 Latest verification: [October 5 repair and launch-readiness checkpoint](docs/launch-readiness-2026-10-05.md). Local functional checks pass; live backend, paid-release gates, and an unpatched development-tooling advisory remain open.
+
+Continuation: [Billing recovery and bounded requests](docs/billing-reconciliation-release-gate.md) adds an inactive server-only recovery queue and safer client requests. It has no active schedule or provider/production changes.

@@ -6,7 +6,7 @@ import { BillingError, BILLING_PLANS, billingConfig, sameOrigin, hasOpenSubscrip
 import { createBillingService } from './billingService.mjs';
 
 export const billingJson = (body, status = 200) => Response.json(body, { status, headers: { 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'X-Content-Type-Options': 'nosniff' } });
-export const billingFailure = error => billingJson({ error: error instanceof BillingError ? error.message : 'Billing could not complete. Your records are unchanged. Please retry.' }, error instanceof BillingError ? error.status : 503);
+export const billingFailure = error => billingJson({ error: error instanceof BillingError ? error.message : 'Billing could not complete. An action may already have finished. Refresh verified status before trying again.' }, error instanceof BillingError ? error.status : 503);
 const checked = result => { if (result.error) throw new BillingError('Billing storage could not complete safely. Please retry.', 503); return result.data; };
 
 export async function billingIdentity() {
@@ -30,13 +30,17 @@ export function trialOrigin(request) {
 export async function readBilling(client) {
   return checked(await client.rpc('get_courtiq_billing'));
 }
-export function billingRuntime() {
+export function billingRuntime({ scheduled = false } = {}) {
   const config = billingConfig();
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_URL)
     throw new BillingError('Server billing storage is not configured.', 503);
-  const stripe = new Stripe(config.key, { apiVersion: '2026-09-30.endive', timeout: 12000, maxNetworkRetries: 1 });
+  const stripe = new Stripe(config.key, { apiVersion: '2026-09-30.endive', timeout: scheduled ? 3000 : 12000, maxNetworkRetries: scheduled ? 0 : 1 });
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false, autoRefreshToken: false } });
+    { auth: { persistSession: false, autoRefreshToken: false }, ...(scheduled ? { global: {
+      fetch: (input, init = {}) => fetch(input, { ...init, signal: AbortSignal.any([
+        ...(init.signal ? [init.signal] : []), AbortSignal.timeout(5000),
+      ]) }),
+    } } : {}) });
   const rpc = async (name, args) => checked(await admin.rpc(name, args));
   const store = {
     account: async owner => checked(await admin.from('courtiq_billing_accounts').select('customer_id').eq('owner_id', owner).maybeSingle()),
@@ -51,7 +55,11 @@ export function billingRuntime() {
     finishEvent: (event, token, ignored) => rpc('finish_courtiq_event', { p_event: event, p_token: token, p_ignored: ignored }),
     releaseEvent: (event, token) => rpc('release_courtiq_event', { p_event: event, p_token: token }),
   };
-  return { config, stripe, admin, service: createBillingService({ stripe, store, config }) };
+  const reconciliationStore = {
+    claim: token => rpc('claim_courtiq_reconciliation', { p_token: token }),
+    finish: (owner, token, result) => rpc('finish_courtiq_reconciliation', { p_owner: owner, p_token: token, p_result: result }),
+  };
+  return { config, stripe, admin, reconciliationStore, service: createBillingService({ stripe, store, config }) };
 }
 export async function billingStatus(client) {
   const state = await readBilling(client);
