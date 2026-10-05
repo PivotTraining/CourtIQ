@@ -35,13 +35,13 @@ const SLIDES = [
   {
     Icon: IconBrain,
     title: "Your Player IQ",
-    subtitle: "Get a personal rating, see trends over time, and receive AI-powered analysis after every session.",
+    subtitle: "Review recorded stats, trends and development recommendations. Further analytics depend on your access and recorded game sample.",
     bg: "#8B5CF6",
   },
   {
     Icon: IconTrain,
     title: "Train Smarter",
-    subtitle: "Personalized practice plans built from your weak zones. 18 drills filtered by your age and level.",
+    subtitle: "Explore 162 drills across eight skill categories and four levels. Free access includes one introductory workout; trial and paid access unlock more.",
     bg: "#3B82F6",
   },
   {

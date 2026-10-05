@@ -35,13 +35,15 @@ function AuthGate() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("courtiq-onboarded")) {
-      setShowOnboarding(true);
-    }
+    // Onboarding is optional guidance, never an authentication prerequisite.
+    // Some private/restricted browsers throw even when reading localStorage.
+    try {
+      if (!localStorage.getItem("courtiq-onboarded")) setShowOnboarding(true);
+    } catch { setShowOnboarding(true); }
   }, []);
 
   const completeOnboarding = () => {
-    localStorage.setItem("courtiq-onboarded", "true");
+    try { localStorage.setItem("courtiq-onboarded", "true"); } catch { /* Continue without persisting optional guidance. */ }
     setShowOnboarding(false);
   };
 
@@ -61,7 +63,7 @@ function AuthGate() {
       </main>
     );
   }
-  if (needsProfile) return <ProfileSetup />;
+  if (needsProfile) return <ProfileSetup key={user.id} />;
 
   return (
     <StarterGate key={user.id}>

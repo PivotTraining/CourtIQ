@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { createPlayerProfile } from "@/lib/queries";
 import Icon from "@/components/ui/Icons";
@@ -37,10 +37,24 @@ export default function ProfileSetup() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const inFlight = useRef(false);
+  const alive = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (inFlight.current || !form.name.trim()) return;
+    const age = form.age === '' ? null : Number(form.age);
+    const jersey = form.jersey_number === '' ? null : Number(form.jersey_number);
+    if ((age !== null && (!Number.isInteger(age) || age < 13 || age > 100)) ||
+        (jersey !== null && (!Number.isInteger(jersey) || jersey < 0 || jersey > 99))) {
+      setError('Use a whole-number jersey from 0–99 and an age from 13–100. Self-operated accounts are for ages 13 and older.');
+      return;
+    }
+    inFlight.current = true;
     setLoading(true);
     setError("");
     try {
@@ -49,16 +63,18 @@ export default function ProfileSetup() {
         name: form.name.trim(),
         team_name: form.team_name.trim() || null,
         position: form.position,
-        jersey_number: form.jersey_number ? parseInt(form.jersey_number) : null,
-        age: form.age ? parseInt(form.age) : null,
+        jersey_number: jersey,
+        age,
         skill_level: form.level,
       });
+      if (!alive.current) return;
       setPlayerProfile(profile);
       setNeedsProfile(false);
     } catch (err) {
-      setError(err.message || "Failed to create profile");
+      if (alive.current) setError(err.message || "Failed to create profile");
     } finally {
-      setLoading(false);
+      inFlight.current = false;
+      if (alive.current) setLoading(false);
     }
   };
 
@@ -95,36 +111,36 @@ export default function ProfileSetup() {
         padding: 24,
         boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
       }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <form id="profile-setup-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Name</label>
-            <input value={form.name} onChange={(e) => update("name", e.target.value)}
-              placeholder="Your name" required style={inputStyle} />
+            <label htmlFor="profile-name" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Name</label>
+            <input id="profile-name" value={form.name} onChange={(e) => update("name", e.target.value)}
+              placeholder="Your name" required maxLength={100} disabled={loading} style={inputStyle} />
           </div>
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Team Name</label>
-            <input value={form.team_name} onChange={(e) => update("team_name", e.target.value)}
-              placeholder="e.g. Cleveland Elite AAU" style={inputStyle} />
+            <label htmlFor="profile-team" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Team Name</label>
+            <input id="profile-team" value={form.team_name} onChange={(e) => update("team_name", e.target.value)}
+              placeholder="e.g. Cleveland Elite AAU" maxLength={100} disabled={loading} style={inputStyle} />
           </div>
 
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Position</label>
-              <select value={form.position} onChange={(e) => update("position", e.target.value)}
+              <label htmlFor="profile-position" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Position</label>
+              <select id="profile-position" disabled={loading} value={form.position} onChange={(e) => update("position", e.target.value)}
                 style={inputStyle}>
                 {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div style={{ width: 80 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Jersey #</label>
-              <input type="number" value={form.jersey_number} onChange={(e) => update("jersey_number", e.target.value)}
-                placeholder="#" min="0" max="99" style={inputStyle} />
+              <label htmlFor="profile-jersey" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Jersey #</label>
+              <input id="profile-jersey" disabled={loading} type="number" value={form.jersey_number} onChange={(e) => update("jersey_number", e.target.value)}
+                placeholder="#" min="0" max="99" step="1" style={inputStyle} />
             </div>
             <div style={{ width: 72 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Age</label>
-              <input type="number" value={form.age} onChange={(e) => update("age", e.target.value)}
-                placeholder="16" min="8" max="30" style={inputStyle} />
+              <label htmlFor="profile-age" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Age</label>
+              <input id="profile-age" disabled={loading} type="number" value={form.age} onChange={(e) => update("age", e.target.value)}
+                placeholder="16" min="13" max="100" step="1" style={inputStyle} />
             </div>
           </div>
 
@@ -133,7 +149,7 @@ export default function ProfileSetup() {
             <label style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 8 }}>Skill Level</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {LEVELS.map((l) => (
-                <button key={l.id} type="button" onClick={() => update("level", l.id)}
+                <button key={l.id} type="button" disabled={loading} aria-pressed={form.level === l.id} onClick={() => update("level", l.id)}
                   style={{
                     padding: "12px",
                     borderRadius: 12,
@@ -167,7 +183,7 @@ export default function ProfileSetup() {
         }}>{error}</div>
       )}
 
-      <button onClick={handleSubmit} disabled={loading || !form.name.trim()} style={{
+      <button type="submit" form="profile-setup-form" disabled={loading || !form.name.trim()} style={{
         width: "100%", maxWidth: 400,
         padding: "16px 24px", borderRadius: 16,
         border: "none", background: "#FF6B35", color: "white",

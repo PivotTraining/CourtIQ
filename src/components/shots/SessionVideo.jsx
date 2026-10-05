@@ -1,10 +1,16 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createDeviceVideoStore, validateClip } from '@/lib/deviceVideo.mjs';
+import { createDeviceVideoStore, validateClip, clipKey } from '@/lib/deviceVideo.mjs';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 import './report-media.css';
 
 export default function SessionVideo({accountId,sessionId}) {
+  // Switching accounts/sessions must unmount the previous clip UI, including its
+  // pending save callbacks. Never reuse an alive flag for a different owner.
+  return <DeviceSessionVideo key={clipKey(accountId,sessionId)} accountId={accountId} sessionId={sessionId} />;
+}
+
+export function DeviceSessionVideo({accountId,sessionId}) {
   const store=useMemo(()=>createDeviceVideoStore(),[]);
   const [record,setRecord]=useState(null),[url,setUrl]=useState(''),[consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -31,6 +37,7 @@ export default function SessionVideo({accountId,sessionId}) {
           video.onloadedmetadata=()=>{clearTimeout(timer);resolve();};video.onerror=()=>{clearTimeout(timer);reject(new Error('This browser cannot play the selected video. Your previous clip was kept.'));};video.preload='metadata';video.src=probe;
         });
       } finally {video.removeAttribute('src');video.load();URL.revokeObjectURL(probe);}
+      if(!alive.current)return;
       const saved=await store.put(accountId,sessionId,file);
       if(alive.current){setRecord(saved);setMessage('Saved with this session on this device. Download a backup to keep it.');}
     } catch(err){if(alive.current)setError(err.message || 'Video save failed. Your previous clip was kept.');}

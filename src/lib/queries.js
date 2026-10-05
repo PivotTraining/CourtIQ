@@ -23,13 +23,11 @@ export async function fetchPlayerProfile(firebaseUid) {
 }
 
 export async function createPlayerProfile(profile) {
-  const { data, error } = await getSupabase()
+  return requireSavedRow(await getSupabase()
     .from("players")
     .insert({ ...profile, manager_uid: profile.firebase_uid })
     .select()
-    .single();
-  if (error) throw error;
-  return data;
+    .single(), "Profile creation");
 }
 
 // ─── MULTI-PLAYER ───
@@ -40,7 +38,7 @@ export async function fetchManagedPlayers(firebaseUid) {
 }
 
 export async function addManagedPlayer(firebaseUid, player) {
-  const { data, error } = await getSupabase()
+  return requireSavedRow(await getSupabase()
     .from("players")
     .insert({
       firebase_uid: `${firebaseUid}_${crypto.randomUUID()}`,
@@ -48,13 +46,11 @@ export async function addManagedPlayer(firebaseUid, player) {
       name: player.name.trim(),
       team_name: player.team_name || null,
       position: player.position || "PG",
-      jersey_number: player.jersey_number || null,
-      age: player.age || null,
+      jersey_number: player.jersey_number ?? null,
+      age: player.age ?? null,
     })
     .select()
-    .single();
-  if (error) throw error;
-  return data;
+    .single(), "Player creation");
 }
 
 export async function deleteManagedPlayer(playerId) {

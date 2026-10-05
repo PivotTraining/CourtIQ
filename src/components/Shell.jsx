@@ -20,6 +20,7 @@ import CoachWorkspace from './team/CoachWorkspace';
 import BillingScreen from './billing/BillingScreen';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
+import { useThemePreference } from "@/lib/useThemePreference";
 
 const TITLES = {
   home: null,
@@ -43,15 +44,7 @@ export default function Shell() {
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      let saved;
-      try { saved = localStorage.getItem("courtiq-theme"); } catch { /* Storage may be blocked. */ }
-      if (saved) return saved === "dark";
-      return true;
-    }
-    return true;
-  });
+  const [darkMode, setDarkMode] = useThemePreference();
   const [transitioning, setTransitioning] = useState(false);
   const [displayScreen, setDisplayScreen] = useState(screen);
 
@@ -77,13 +70,6 @@ export default function Shell() {
   }, [screen, displayScreen]);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [displayScreen]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    try { localStorage.setItem("courtiq-theme", darkMode ? "dark" : "light"); } catch { /* Keep the in-memory theme usable. */ }
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = darkMode ? "#0F1117" : "#FF6B35";
-  }, [darkMode]);
 
   useEffect(() => {
     if (!showProfileMenu) return;
