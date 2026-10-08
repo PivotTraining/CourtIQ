@@ -10,6 +10,10 @@ export const SCREEN_PATHS = Object.freeze({
   iq: "/iq",
   coach: "/coach",
   billing: "/billing",
+  family: "/family",
+  settings: "/settings",
+  film: "/film",
+  developmentProfile: "/development-profile",
 });
 
 const PATH_SCREENS = Object.freeze({
@@ -23,6 +27,10 @@ const PATH_SCREENS = Object.freeze({
   "/iq": "iq",
   "/coach": "coach",
   "/billing": "billing",
+  "/family": "family",
+  "/settings": "settings",
+  "/film": "film",
+  "/development-profile": "developmentProfile",
 });
 
 export function pathForScreen(screen) {

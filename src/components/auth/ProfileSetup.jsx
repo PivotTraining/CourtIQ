@@ -100,7 +100,7 @@ export default function ProfileSetup() {
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ marginBottom: 8 }}><Icon name="hand" size={40} color="#FF6B35" /></div>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-text)", margin: 0 }}>Set Up Your Profile</h1>
-        <p style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 6 }}>Let's get your player card ready</p>
+        <p style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 6 }}>Let&apos;s get your player card ready</p>
       </div>
 
       <div style={{
@@ -194,7 +194,7 @@ export default function ProfileSetup() {
         boxShadow: "0 4px 16px rgba(255,107,53,0.3)",
         boxSizing: "border-box",
       }}>
-        {loading ? "Creating..." : <><span>Let's Go</span> <Icon name="basketball" size={18} color="white" /></>}
+        {loading ? "Creating..." : <><span>Let&apos;s Go</span> <Icon name="basketball" size={18} color="white" /></>}
       </button>
     </div>
   );

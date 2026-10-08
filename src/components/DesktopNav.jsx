@@ -12,6 +12,10 @@ const NAV_ITEMS = [
   { id: "gamelog", icon: "trophy", label: "Game Log", description: "Games & performance" },
   { id: "journal", icon: "journal", label: "Journal", description: "Reflection & notes" },
   { id: "iq", icon: "brain", label: "My IQ", description: "Insights & analytics" },
+  { id: "family", icon: "user", label: "Family", description: "Players & progress" },
+  { id: "film", icon: "play", label: "Film Lab", description: "Review & tag game film" },
+  { id: "developmentProfile", icon: "share", label: "Player Profile", description: "Share development evidence" },
+  { id: "coach", icon: "clipboard", label: "Coach", description: "Managed roster comparison" },
 ];
 
 export default function DesktopNav({ onStartSession }) {
@@ -38,7 +42,9 @@ export default function DesktopNav({ onStartSession }) {
       </div>
 
       <nav className="courtiq-desktop-nav-list">
-        {[...NAV_ITEMS, ...(process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true' ? [{ id: 'coach', icon: 'trophy', label: 'Coach workspace', description: 'Roster games & reports' }] : [])].map((item) => {
+        {NAV_ITEMS.map((baseItem) => {
+          const item = baseItem.id === 'coach' && process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true'
+            ? { ...baseItem, label: 'Coach workspace', description: 'Roster games & reports' } : baseItem;
           const active = screen === item.id || (screen === "gametime" && item.id === "train");
           return (
             <button

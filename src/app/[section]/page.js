@@ -15,6 +15,10 @@ const APP_SECTIONS = new Set([
   "iq",
   "coach",
   "billing",
+  "family",
+  "settings",
+  "film",
+  "development-profile",
 ]);
 
 export default async function AppSectionPage({ params }) {

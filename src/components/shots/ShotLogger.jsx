@@ -736,7 +736,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
     const steps = [
       // Step 0: Who
       <div key="who" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Who's playing?</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Who&apos;s playing?</div>
         <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginBottom: 32 }}>Choose your tracking mode</div>
         <div style={{ display: "flex", gap: 12, width: "100%", maxWidth: 320, flexDirection: "column" }}>
           <div style={{ display: "flex", gap: 12 }}>
@@ -765,7 +765,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
             <Icon name="link" size={20} color={joinMode ? "#8B5CF6" : "var(--color-text-sec)"} />
             <div style={{ textAlign: "left" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: joinMode ? "#8B5CF6" : "var(--color-text)" }}>Join Game</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-sec)" }}>Enter a teammate's game code</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-sec)" }}>Enter a teammate&apos;s game code</div>
             </div>
           </button>
         </div>

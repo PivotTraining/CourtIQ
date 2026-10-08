@@ -15,8 +15,13 @@ import ShotLogger from "./shots/ShotLogger";
 import ProfileEditor from "./auth/ProfileEditor";
 import PlayerSwitcher from "./PlayerSwitcher";
 import GameLogScreen from "./gamelog/GameLogScreen";
+import FamilyDashboard from "./family/FamilyDashboard";
+import SettingsScreen from "./settings/SettingsScreen";
+import FilmLab from "./film/FilmLab";
+import DevelopmentProfile from "./profile/DevelopmentProfile";
+import CoachWorkspace from "./coach/CoachWorkspace";
 import Icon from "./ui/Icons";
-import CoachWorkspace from './team/CoachWorkspace';
+import RosterCoachWorkspace from './team/CoachWorkspace';
 import BillingScreen from './billing/BillingScreen';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
@@ -32,8 +37,12 @@ const TITLES = {
   heatmap: "Heat Map",
   journal: "Journal",
   gamelog: "Game Log",
-  coach: "Coach workspace",
+  coach: "Coach",
   billing: "Membership",
+  family: "Family",
+  settings: "Settings",
+  film: "Film Lab",
+  developmentProfile: "Player Profile",
 };
 
 export default function Shell() {
@@ -89,13 +98,19 @@ export default function Shell() {
       case "heatmap": return <HeatMapScreen />;
       case "journal": return <JournalScreen />;
       case "gamelog": return <GameLogScreen />;
-      case "coach": return <CoachWorkspace darkMode={darkMode} onToggleTheme={() => setDarkMode(!darkMode)} onManagePlayers={() => setShowSwitcher(true)} />;
+      case "coach": return process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true'
+        ? <RosterCoachWorkspace darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} onManagePlayers={() => setShowSwitcher(true)} />
+        : <CoachWorkspace />;
       case "billing": return process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' ? <BillingScreen /> : <p style={{ padding: 20 }}>Membership is not activated yet. Your saved records are unchanged.</p>;
+      case "family": return <FamilyDashboard onManagePlayers={() => setShowSwitcher(true)} />;
+      case "settings": return <SettingsScreen onEditProfile={() => setShowProfile(true)} onManagePlayers={() => setShowSwitcher(true)} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />;
+      case "film": return <FilmLab />;
+      case "developmentProfile": return <DevelopmentProfile />;
       default: return <HomeDashboard />;
     }
   };
 
-  const showFab = !["iq", "coach", "billing"].includes(displayScreen);
+  const showFab = !["iq", "family", "settings", "film", "developmentProfile", "coach", "billing"].includes(displayScreen);
 
   return (
     <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -203,6 +218,22 @@ export default function Shell() {
                     </button>
                     {process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('coach'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Coach workspace</button>}
                     {process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('billing'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Membership & billing</button>}
+                    <button onClick={() => { setShowProfileMenu(false); navTo("family"); }} style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: "12px 16px", background: "none", border: "none",
+                      cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--color-text)",
+                      textAlign: "left", borderTop: "1px solid var(--color-border)",
+                    }}>
+                      <Icon name="user" size={16} color="var(--color-text-sec)" /> Family
+                    </button>
+                    <button onClick={() => { setShowProfileMenu(false); navTo("settings"); }} style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: "12px 16px", background: "none", border: "none",
+                      cursor: "pointer", fontSize: 13, fontWeight: 600, color: "var(--color-text)",
+                      textAlign: "left", borderTop: "1px solid var(--color-border)",
+                    }}>
+                      <Icon name="settings" size={16} color="var(--color-text-sec)" /> Settings
+                    </button>
                     <button onClick={handleLogout} style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
                       padding: "12px 16px", background: "none", border: "none",

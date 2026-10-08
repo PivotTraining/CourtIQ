@@ -24,11 +24,20 @@
     "stripe": "23.0.0"
   },
   "overrides": {
+    "@tensorflow/tfjs": {
+      "argparse": "2.0.1"
+    },
+    "@next/eslint-plugin-next": {
+      ".": "14.2.35",
+      "glob": "13.0.6"
+    },
     "next": {
       "postcss": "8.5.28"
     }
   },
   "devDependencies": {
+    "@eslint/compat": "2.1.1",
+    "@next/eslint-plugin-next": "14.2.35",
     "@electric-sql/pglite": "0.5.8",
     "@eslint/eslintrc": "^3.3.6",
     "@tailwindcss/postcss": "^4.0.0",
