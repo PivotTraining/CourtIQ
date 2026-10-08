@@ -1,0 +1,13 @@
+.membership-overview { display:grid; gap:16px; color:var(--color-text); padding:4px 0 24px; }
+.membership-overview h2 { font-size:28px; font-weight:850; margin:0; line-height:1.15; }
+.membership-overview h3 { font-size:17px; font-weight:800; margin:0 0 10px; }
+.membership-overview p,.membership-overview li { font-size:13px; line-height:1.65; }
+.membership-overview-eyebrow { color:var(--color-accent); font-weight:800; letter-spacing:1px; }
+.membership-overview-status { padding:14px; border-radius:14px; background:var(--color-muted); border:1px solid var(--color-border); }
+.membership-overview-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); }
+.membership-overview article { padding:18px; background:var(--color-card); border:1px solid var(--color-border); border-radius:18px; min-width:0; }
+.membership-overview ul { padding-left:18px; margin:12px 0 0; }
+.membership-overview li+li { margin-top:6px; }
+.membership-overview-price { font-size:28px; font-weight:850; }
+.membership-overview-price small { font-size:13px; font-weight:500; }
+.membership-overview .membership-overview-note { font-size:12px; color:var(--color-text-sec); margin-top:10px; }

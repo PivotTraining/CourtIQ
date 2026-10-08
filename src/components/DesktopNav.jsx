@@ -2,9 +2,11 @@
 
 import { useApp } from "@/context/AppContext";
 import Icon from "@/components/ui/Icons";
+import GametimeAction from './GametimeAction';
 
 const NAV_ITEMS = [
   { id: "home", icon: "home", label: "Dashboard", description: "Overview & progress" },
+  { id: "billing", icon: "user", label: "VIP & membership", description: "Packages & billing status" },
   { id: "train", icon: "dumbbell", label: "Training", description: "Drills & workouts" },
   { id: "skills", icon: "skills", label: "Skills", description: "Skill development" },
   { id: "shots", icon: "target", label: "Sessions", description: "Shot sessions" },
@@ -41,6 +43,7 @@ export default function DesktopNav({ onStartSession }) {
         </div>
       </div>
 
+      <GametimeAction onStart={onStartSession} />
       <nav className="courtiq-desktop-nav-list">
         {NAV_ITEMS.map((baseItem) => {
           const item = baseItem.id === 'coach' && process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true'
@@ -65,11 +68,6 @@ export default function DesktopNav({ onStartSession }) {
           );
         })}
       </nav>
-
-      <button type="button" className="courtiq-desktop-session" onClick={onStartSession}>
-        <Icon name="plus" size={18} color="white" />
-        Start a session
-      </button>
 
       <div className="courtiq-desktop-footer">Track the work. Read the game. Get better.</div>
     </aside>
