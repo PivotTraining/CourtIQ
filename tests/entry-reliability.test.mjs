@@ -11,17 +11,20 @@ async function authFixture(readProfile) {
     getSession: () => bootstrap.promise,
     onAuthStateChange: next => { callback = next; return { data: { subscription: { unsubscribe() {} } } }; },
   };
+  const clock = { setTimeout: (fn, delay = 0) => { timers.set(++sequence, { fn, delay }); return sequence; }, clearTimeout: id => timers.delete(id) };
+  const { authRead } = await loadComponent(new URL('../src/lib/authRead.mjs', import.meta.url), {}, clock);
   const { AuthProvider } = await loadComponent(new URL('../src/context/AuthContext.jsx', import.meta.url), {
     react: h.react, '@/lib/supabase': { supabase: { auth } },
     '@/lib/queries': { fetchManagedPlayers: async owner => { fetched.push(owner); return readProfile ? readProfile(owner) : [{ id: `${owner}-player`, firebase_uid: owner }]; } },
     '@/lib/playerSelection.mjs': { selectPlayer, preferredPlayer: () => null, rememberPlayer() {} },
     '@/lib/sessionRecovery.mjs': { hasPendingRecovery: () => false, clearAccountRecovery() {} },
+    '@/lib/authRead.mjs': { authRead },
   }, {
-    setTimeout: fn => { timers.set(++sequence, fn); return sequence; }, clearTimeout: id => timers.delete(id), window: { localStorage: {} },
+    ...clock, window: { localStorage: {} },
   });
   h.render(AuthProvider, { children: null }); h.flush();
   return { h, bootstrap, fetched, event: (event, session) => { callback(event, session); h.flush(); },
-    runTimers: async () => { for (const [id, fn] of [...timers]) { timers.delete(id); fn(); } await h.settle(); } };
+    runTimers: async (delay = 0) => { for (const [id, timer] of [...timers]) if (timer.delay === delay) { timers.delete(id); timer.fn(); } await h.settle(); } };
 }
 
 test('late initial session cannot resurrect a user after sign-out', async () => {
@@ -43,6 +46,31 @@ test('late initial session cannot replace a newer signed-in identity', async () 
   assert.deepEqual(f.fetched, ['current-owner']);
 });
 
+test('refreshing a cached session restores its profile; token refresh updates the user without rereading players', async () => {
+  const f = await authFixture();
+  f.bootstrap.resolve({ data: { session: { user: { id: 'owner', email: 'first@example.test' } } } });
+  await f.h.settle(); await f.runTimers();
+  assert.equal(f.h.output.props.value.playerProfile.id, 'owner-player');
+  f.event('TOKEN_REFRESHED', { user: { id: 'owner', email: 'updated@example.test' } });
+  assert.equal(f.h.output.props.value.user.email, 'updated@example.test');
+  assert.equal(f.h.output.props.value.loading, false);
+  assert.deepEqual(f.fetched, ['owner']);
+  f.event('SIGNED_OUT', null);
+  assert.equal(f.h.output.props.value.user, null);
+  assert.equal(f.h.output.props.value.playerProfile, null);
+});
+
+test('signing out during profile loading cannot restore the former account', async () => {
+  const profile = deferred();
+  const f = await authFixture(() => profile.promise);
+  f.event('SIGNED_IN', { user: { id: 'owner' } }); await f.runTimers();
+  f.event('SIGNED_OUT', null);
+  profile.resolve([{ id: 'late', firebase_uid: 'owner' }]); await f.h.settle();
+  assert.equal(f.h.output.props.value.user, null);
+  assert.equal(f.h.output.props.value.playerProfile, null);
+  assert.equal(f.h.output.props.value.loading, false);
+});
+
 test('blocked optional onboarding storage cannot prevent skipping to sign-in', async () => {
   const h = reactHarness(), auth = { user: null, loading: false };
   const nothing = { default: () => null, __esModule: true };
@@ -53,6 +81,7 @@ test('blocked optional onboarding storage cannot prevent skipping to sign-in', a
     '@/components/ui/OfflineBanner': nothing, '@/components/Onboarding': nothing, '@/components/Shell': nothing,
     '@/components/auth/LoginScreen': { ...nothing, default: function LoginFixture() {} },
     '@/components/auth/ProfileSetup': nothing, '@/components/billing/StarterGate': nothing,
+    '@/components/auth/SignOutButton': nothing,
   };
   const source = new URL('../src/components/App.jsx', import.meta.url);
   // Export the otherwise private gate for this source-based test only.
@@ -70,6 +99,40 @@ test('blocked optional onboarding storage cannot prevent skipping to sign-in', a
   assert.ok(onboarding);
   assert.doesNotThrow(() => onboarding.props.onComplete()); h.flush();
   assert.equal(h.output.type.name, 'LoginFixture');
+});
+
+test('a session lookup error is not silently treated as a signed-out empty account', async () => {
+  const f = await authFixture();
+  f.bootstrap.resolve({ data: { session: null }, error: new Error('Unavailable') });
+  await f.h.settle();
+  assert.equal(f.h.output.props.value.loading, false);
+  assert.match(f.h.output.props.value.sessionError, /couldn't verify/);
+});
+
+test('stalled session lookup stops loading and a newer login clears its error', async () => {
+  const f = await authFixture();
+  await f.runTimers(15000);
+  assert.equal(f.h.output.props.value.loading, false);
+  assert.ok(f.h.output.props.value.sessionError);
+  f.event('SIGNED_IN', { user: { id: 'current-owner' } }); await f.runTimers();
+  assert.equal(f.h.output.props.value.sessionError, null);
+  assert.equal(f.h.output.props.value.playerProfile.id, 'current-owner-player');
+  f.bootstrap.resolve({ data: { session: { user: { id: 'old-owner' } } } }); await f.h.settle();
+  assert.equal(f.h.output.props.value.user.id, 'current-owner');
+});
+
+test('a stalled profile read cannot masquerade as a new account or overwrite a retry', async () => {
+  const reads = [];
+  const f = await authFixture(() => { const read = deferred(); reads.push(read); return read.promise; });
+  f.event('SIGNED_IN', { user: { id: 'owner' } }); await f.runTimers(); await f.runTimers(15000);
+  assert.equal(f.h.output.props.value.loading, false);
+  assert.equal(f.h.output.props.value.needsProfile, false);
+  assert.ok(f.h.output.props.value.profileError);
+  const retry = f.h.output.props.value.retryProfile();
+  reads[1].resolve([{ id: 'current', firebase_uid: 'owner' }]); await retry; await f.h.settle();
+  reads[0].resolve([{ id: 'late', firebase_uid: 'owner' }]); await f.h.settle();
+  assert.equal(f.h.output.props.value.playerProfile.id, 'current');
+  assert.equal(f.h.output.props.value.profileError, null);
 });
 
 test('an older profile request cannot clear the loading state of a newer retry', async () => {

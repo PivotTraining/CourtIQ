@@ -12,6 +12,7 @@ async function setup(save = async profile => ({ id: 'saved', ...profile })) {
     '@/context/AuthContext': { useAuth: () => ({ user: { id: 'owner' }, setPlayerProfile: profile => transitions.push(profile), setNeedsProfile: value => transitions.push(value) }) },
     '@/lib/queries': { createPlayerProfile: profile => { saved.push(profile); return save(profile); } },
     '@/components/ui/Icons': { default: () => null },
+    './SignOutButton': { default: function SignOutFixture() {} },
   });
   harness.render(ProfileSetup);
   harness.flush();

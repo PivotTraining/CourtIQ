@@ -12,6 +12,7 @@ import Shell from "@/components/Shell";
 import LoginScreen from "@/components/auth/LoginScreen";
 import ProfileSetup from "@/components/auth/ProfileSetup";
 import StarterGate from '@/components/billing/StarterGate';
+import SignOutButton from '@/components/auth/SignOutButton';
 
 function LoadingScreen() {
   return (
@@ -31,7 +32,7 @@ function LoadingScreen() {
 }
 
 function AuthGate() {
-  const { user, playerProfile, loading, needsProfile, profileError, retryProfile } = useAuth();
+  const { user, playerProfile, loading, needsProfile, profileError, retryProfile, sessionError } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,15 @@ function AuthGate() {
 
   if (showOnboarding) return <Onboarding onComplete={completeOnboarding} />;
   if (loading) return <LoadingScreen />;
+  if (sessionError) return (
+    <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+      <div style={{ maxWidth: 360 }}>
+        <h1>Sign-in unavailable</h1>
+        <p role="alert">{sessionError}</p>
+        <button className="btn-primary" onClick={() => window.location.reload()}>Reload CourtIQ</button>
+      </div>
+    </main>
+  );
   if (!user) return <LoginScreen />;
   if (profileError) {
     return (
@@ -59,6 +69,7 @@ function AuthGate() {
           <button onClick={retryProfile} style={{ marginTop: 16, minHeight: 44, padding: "0 24px", border: 0, borderRadius: 12, background: "var(--color-accent)", color: "white", fontWeight: 700 }}>
             Try again
           </button>
+          <SignOutButton />
         </div>
       </main>
     );
