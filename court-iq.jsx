@@ -893,7 +893,7 @@ export default function CourtIQ() {
             </div>
             {screen === "home" && (
               <div style={{ fontSize: 12, color: TEXT_SEC, marginTop: 2 }}>
-                What's good, {PLAYER.name.split(" ")[0]}! 👋
+                What&apos;s good, {PLAYER.name.split(" ")[0]}! 👋
               </div>
             )}
           </div>

@@ -22,7 +22,7 @@ export default function CoachWorkspace() {
           <div>
             <div style={{ fontSize: 12, fontWeight: 900, color: "var(--color-text)" }}>Permission-safe by default</div>
             <p style={{ margin: "4px 0 0", fontSize: 10, color: "var(--color-text-sec)", lineHeight: 1.55 }}>
-              CourtIQ does not expose another family's players through this screen. Cross-account coach invitations will only be enabled after backend-enforced roles and invitation verification are live.
+              CourtIQ does not expose another family&apos;s players through this screen. Cross-account coach invitations will only be enabled after backend-enforced roles and invitation verification are live.
             </p>
           </div>
         </div>

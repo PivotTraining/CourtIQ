@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from '@/context/AuthContext';
 import { fetchSessionHistory } from "@/lib/queries";
 import { calcPct } from "@/lib/utils";
 import { COURT_ZONES } from "@/lib/constants";
@@ -51,7 +52,7 @@ function StatCell({ value, label, color }) {
   );
 }
 
-function SessionCard({ session }) {
+function SessionCard({ session,playerName,accountId }) {
   const [showReport, setShowReport] = useState(false);
   const stats = session.game_stats || {};
   const report = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES);
@@ -192,13 +193,14 @@ function SessionCard({ session }) {
         style={{ marginTop: 12, width: '100%', minHeight: 44, border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-muted)', color: 'var(--color-text)', fontWeight: 700, fontSize: 12 }}>
         {showReport ? 'Hide performance report' : 'View performance report'}
       </button>
-      {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.created_at} />}
+      {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session.id} />}
     </div>
   );
 }
 
 export default function SessionHistory() {
-  const { playerId } = useApp();
+  const { playerId,player } = useApp();
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, game, practice
@@ -349,7 +351,7 @@ export default function SessionHistory() {
           }}
         >
           {filtered.map((s) => (
-            <SessionCard key={s.id} session={s} />
+            <SessionCard key={s.id} session={s} playerName={player?.name} accountId={user?.id} />
           ))}
         </div>
       )}

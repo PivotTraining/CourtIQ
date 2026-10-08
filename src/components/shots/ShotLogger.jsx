@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import Icon, { Emoji } from "@/components/ui/Icons";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from '@/context/AuthContext';
 import { COURT_ZONES, ZONE_CATEGORIES } from "@/lib/constants";
 import { createSession, insertShot, deleteShot, updateSessionStats, findSessionByJoinCode } from "@/lib/queries";
 import { getHeatColor, calcPct } from "@/lib/utils";
@@ -342,7 +343,7 @@ function ShareCard({ analysis, sessionType, gameStats, mode, onClose }) {
 /* ──────────────────────────────────────────────────────
    SESSION SUMMARY (Post-Game / Post-Practice)
    ────────────────────────────────────────────────────── */
-function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus, onDone }) {
+function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus, onDone,session,accountId,playerName }) {
   const [showShare, setShowShare] = useState(false);
   const isGame = sessionType === "game";
   const analysis = isGame
@@ -413,7 +414,7 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
           </div>
         )}
 
-        <AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} />
+        <AdvancedSessionReport shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} date={session?.date || session?.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session?.id}/>
 
         {/* Zone Heatmap */}
         {shots.length > 0 && (
@@ -523,7 +524,8 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
 function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
-  const { playerId, refreshData } = useApp();
+  const { playerId, player, refreshData } = useApp();
+  const { user } = useAuth();
   const [step, setStep] = useState("setup"); // setup | logging | summary
   const [sessionType, setSessionType] = useState("practice");
   const [mode, setMode] = useState("individual");
@@ -734,7 +736,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
     const steps = [
       // Step 0: Who
       <div key="who" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%" }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Who's playing?</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, letterSpacing: -0.4 }}>Who&apos;s playing?</div>
         <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginBottom: 32 }}>Choose your tracking mode</div>
         <div style={{ display: "flex", gap: 12, width: "100%", maxWidth: 320, flexDirection: "column" }}>
           <div style={{ display: "flex", gap: 12 }}>
@@ -763,7 +765,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
             <Icon name="link" size={20} color={joinMode ? "#8B5CF6" : "var(--color-text-sec)"} />
             <div style={{ textAlign: "left" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: joinMode ? "#8B5CF6" : "var(--color-text)" }}>Join Game</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-sec)" }}>Enter a teammate's game code</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-sec)" }}>Enter a teammate&apos;s game code</div>
             </div>
           </button>
         </div>
@@ -884,7 +886,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
 
   /* ── SUMMARY SCREEN ── */
   if (step === "summary") {
-    return <SessionSummary shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} mode={mode} focus={focus} onDone={onClose} />;
+    return <SessionSummary shots={shots} freeThrows={freeThrows} gameStats={gameStats} sessionType={sessionType} mode={mode} focus={focus} onDone={onClose} session={session} accountId={user?.id} playerName={player?.name}/>;
   }
 
   return <CourtTrackerView

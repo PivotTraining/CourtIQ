@@ -1,5 +1,7 @@
 # CourtIQ web launch
 
+> Latest local verification and access blockers: [October 5 repair checkpoint](launch-readiness-2026-10-05.md). Theme, account-switch, video isolation and profile-submission defects are fixed locally. The live backend remains uninspected, payment testing remains local by user choice, and one development-tooling advisory has no published patch.
+
 > Current repair status and mandatory backend/release sequence: [core-repair-release-gate.md](core-repair-release-gate.md). The original audit below is historical where contradicted by that record.
 
 ## Updated backend evidence

@@ -58,6 +58,13 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Enable only with the reviewed billing migration. The DB trigger also covers races.
+  if (Deno.env.get('COURTIQ_BILLING_DELETION_GUARD_ENABLED') === 'true') {
+    const { data: canDelete, error: billingError } = await admin.rpc('courtiq_can_delete_account', { p_owner: user.id });
+    if (billingError || typeof canDelete !== 'boolean') return Response.json({ error: 'Billing status could not be verified. Please retry.' }, { status: 503, headers });
+    if (!canDelete) return Response.json({ error: 'End your CourtIQ subscription in Membership & billing before deleting your account. Refresh billing after cancellation is complete.' }, { status: 409, headers });
+  }
+
   // Must deploy only after the owner FK migration. No separate data deletes:
   // Auth deletion and player/session/shot/journal cascades are one DB transaction.
   const { error: signOutError } = await admin.auth.admin.signOut(token, "global");

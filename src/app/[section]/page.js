@@ -13,11 +13,12 @@ const APP_SECTIONS = new Set([
   "journal",
   "game-log",
   "iq",
+  "coach",
+  "billing",
   "family",
   "settings",
   "film",
   "development-profile",
-  "coach",
 ]);
 
 export default async function AppSectionPage({ params }) {

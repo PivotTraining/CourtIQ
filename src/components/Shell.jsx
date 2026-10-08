@@ -21,8 +21,11 @@ import FilmLab from "./film/FilmLab";
 import DevelopmentProfile from "./profile/DevelopmentProfile";
 import CoachWorkspace from "./coach/CoachWorkspace";
 import Icon from "./ui/Icons";
+import RosterCoachWorkspace from './team/CoachWorkspace';
+import BillingScreen from './billing/BillingScreen';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
+import { useThemePreference } from "@/lib/useThemePreference";
 
 const TITLES = {
   home: null,
@@ -34,11 +37,12 @@ const TITLES = {
   heatmap: "Heat Map",
   journal: "Journal",
   gamelog: "Game Log",
+  coach: "Coach",
+  billing: "Membership",
   family: "Family",
   settings: "Settings",
   film: "Film Lab",
   developmentProfile: "Player Profile",
-  coach: "Coach",
 };
 
 export default function Shell() {
@@ -49,15 +53,7 @@ export default function Shell() {
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      let saved;
-      try { saved = localStorage.getItem("courtiq-theme"); } catch { /* Storage may be blocked. */ }
-      if (saved) return saved === "dark";
-      return true;
-    }
-    return true;
-  });
+  const [darkMode, setDarkMode] = useThemePreference();
   const [transitioning, setTransitioning] = useState(false);
   const [displayScreen, setDisplayScreen] = useState(screen);
 
@@ -85,13 +81,6 @@ export default function Shell() {
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [displayScreen]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    try { localStorage.setItem("courtiq-theme", darkMode ? "dark" : "light"); } catch { /* Keep the in-memory theme usable. */ }
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = darkMode ? "#0F1117" : "#FF6B35";
-  }, [darkMode]);
-
-  useEffect(() => {
     if (!showProfileMenu) return;
     const close = () => setShowProfileMenu(false);
     document.addEventListener("click", close);
@@ -109,16 +98,19 @@ export default function Shell() {
       case "heatmap": return <HeatMapScreen />;
       case "journal": return <JournalScreen />;
       case "gamelog": return <GameLogScreen />;
+      case "coach": return process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true'
+        ? <RosterCoachWorkspace darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} onManagePlayers={() => setShowSwitcher(true)} />
+        : <CoachWorkspace />;
+      case "billing": return process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' ? <BillingScreen /> : <p style={{ padding: 20 }}>Membership is not activated yet. Your saved records are unchanged.</p>;
       case "family": return <FamilyDashboard onManagePlayers={() => setShowSwitcher(true)} />;
       case "settings": return <SettingsScreen onEditProfile={() => setShowProfile(true)} onManagePlayers={() => setShowSwitcher(true)} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />;
       case "film": return <FilmLab />;
       case "developmentProfile": return <DevelopmentProfile />;
-      case "coach": return <CoachWorkspace />;
       default: return <HomeDashboard />;
     }
   };
 
-  const showFab = !["iq", "family", "settings", "film", "developmentProfile", "coach"].includes(displayScreen);
+  const showFab = !["iq", "family", "settings", "film", "developmentProfile", "coach", "billing"].includes(displayScreen);
 
   return (
     <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -224,6 +216,8 @@ export default function Shell() {
                     }}>
                       <Icon name="user" size={16} color="var(--color-text-sec)" /> Edit Profile
                     </button>
+                    {process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('coach'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Coach workspace</button>}
+                    {process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('billing'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Membership & billing</button>}
                     <button onClick={() => { setShowProfileMenu(false); navTo("family"); }} style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
                       padding: "12px 16px", background: "none", border: "none",

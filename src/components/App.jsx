@@ -11,6 +11,7 @@ import Onboarding from "@/components/Onboarding";
 import Shell from "@/components/Shell";
 import LoginScreen from "@/components/auth/LoginScreen";
 import ProfileSetup from "@/components/auth/ProfileSetup";
+import StarterGate from '@/components/billing/StarterGate';
 
 function LoadingScreen() {
   return (
@@ -34,13 +35,15 @@ function AuthGate() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("courtiq-onboarded")) {
-      setShowOnboarding(true);
-    }
+    // Onboarding is optional guidance, never an authentication prerequisite.
+    // Some private/restricted browsers throw even when reading localStorage.
+    try {
+      if (!localStorage.getItem("courtiq-onboarded")) setShowOnboarding(true);
+    } catch { setShowOnboarding(true); }
   }, []);
 
   const completeOnboarding = () => {
-    localStorage.setItem("courtiq-onboarded", "true");
+    try { localStorage.setItem("courtiq-onboarded", "true"); } catch { /* Continue without persisting optional guidance. */ }
     setShowOnboarding(false);
   };
 
@@ -60,12 +63,14 @@ function AuthGate() {
       </main>
     );
   }
-  if (needsProfile) return <ProfileSetup />;
+  if (needsProfile) return <ProfileSetup key={user.id} />;
 
   return (
-    <AppProvider key={playerProfile?.id}>
-      <Shell />
-    </AppProvider>
+    <StarterGate key={user.id}>
+      <AppProvider key={playerProfile?.id}>
+        <Shell />
+      </AppProvider>
+    </StarterGate>
   );
 }
 

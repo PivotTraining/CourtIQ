@@ -30,20 +30,23 @@ export function AuthProvider({ children }) {
     setProfileError(null);
     try {
       const players = await fetchManagedPlayers(supabaseUser.id);
-      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return;
+      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return false;
       const profile = selectPlayer(players, supabaseUser.id, profileRef.current?.id || preferredPlayer(supabaseUser.id));
       setPlayerProfile(profile);
       setNeedsProfile(!profile);
+      return true;
     } catch {
-      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return;
+      if (version !== requestVersion.current || identity.current !== supabaseUser.id) return false;
       setProfileError("We couldn't load your player profiles. Your records have not been cleared. Check your connection and try again.");
       setPlayerProfile(null);
       setNeedsProfile(false);
+      return true;
     }
   }
 
   useEffect(() => {
     let active = true;
+    let authRevision = 0;
     const pendingProfiles = new Set();
     const acceptSession = (session) => {
       if (!active) return;
@@ -73,8 +76,8 @@ export function AuthProvider({ children }) {
       const timer = setTimeout(() => {
         pendingProfiles.delete(timer);
         if (!active || identity.current !== nextUser.id) return;
-        loadProfile(nextUser).finally(() => {
-          if (active && identity.current === nextUser.id) {
+        loadProfile(nextUser).then(applied => {
+          if (active && applied && identity.current === nextUser.id) {
             inFlight.current = null;
             setLoading(false);
           }
@@ -83,16 +86,21 @@ export function AuthProvider({ children }) {
       pendingProfiles.add(timer);
     };
     // Resolve any existing session on mount
+    const bootstrapRevision = authRevision;
     supabase.auth.getSession().then(({ data: { session } }) => {
-      acceptSession(session);
+      // A login/logout event is newer than the initial cached-session request.
+      // Never let that delayed request restore a departed or different account.
+      if (active && bootstrapRevision === authRevision) acceptSession(session);
     }).catch(() => {
-      if (active) setLoading(false);
+      if (active && bootstrapRevision === authRevision) setLoading(false);
     });
 
     // Listen for auth state changes (sign-in, sign-out, token refresh)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      authRevision += 1;
       if (_event === 'SIGNED_OUT') {
         // Auth expiry is not permission to discard unsynced work. Its account-scoped
         // key can only be resumed by this same identity after signing in again.
@@ -125,8 +133,8 @@ export function AuthProvider({ children }) {
         retryProfile: async () => {
           if (!user) return;
           setLoading(true);
-          await loadProfile(user);
-          setLoading(false);
+          const applied = await loadProfile(user);
+          if (applied && identity.current === user.id) setLoading(false);
         },
       }}
     >

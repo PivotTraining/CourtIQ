@@ -106,7 +106,7 @@ export default function FamilyDashboard({ onManagePlayers }) {
 
               {!active && (
                 <button type="button" onClick={() => openPlayer(player)} style={{ width: "100%", marginTop: 14, minHeight: 44, border: 0, borderRadius: 12, background: "#FF6B35", color: "white", fontWeight: 900, cursor: "pointer" }}>
-                  Open {player.name.split(" ")[0]}'s dashboard
+                  Open {player.name.split(" ")[0]}&apos;s dashboard
                 </button>
               )}
             </article>

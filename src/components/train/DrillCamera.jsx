@@ -286,7 +286,7 @@ export default function DrillCamera({ drill, onClose }) {
           Coaching Focus
         </div>
         <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", lineHeight: 1.5, fontStyle: "italic" }}>
-          "{coachingCue}"
+          &quot;{coachingCue}&quot;
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           {[

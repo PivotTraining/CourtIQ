@@ -20,17 +20,30 @@
     "lottie-web": "^5.13.0",
     "next": "15.5.27",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "stripe": "23.0.0"
   },
   "overrides": {
-    "next": { "postcss": "8.5.28" }
+    "@tensorflow/tfjs": {
+      "argparse": "2.0.1"
+    },
+    "@next/eslint-plugin-next": {
+      ".": "14.2.35",
+      "glob": "13.0.6"
+    },
+    "next": {
+      "postcss": "8.5.28"
+    }
   },
   "devDependencies": {
+    "@eslint/compat": "2.1.1",
+    "@next/eslint-plugin-next": "14.2.35",
     "@electric-sql/pglite": "0.5.8",
     "@eslint/eslintrc": "^3.3.6",
     "@tailwindcss/postcss": "^4.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "15.5.27",
+    "fake-indexeddb": "6.2.5",
     "tailwindcss": "^4.0.0"
   }
 }

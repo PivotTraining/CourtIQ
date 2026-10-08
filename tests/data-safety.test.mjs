@@ -12,7 +12,7 @@ test('auth expiry preserves queued entries but clears synced recovery for the de
   let pending = true;
   const accepted = [];
   const callback = vm.runInNewContext(`((_event, session) => {${body}})`, {
-    window: { localStorage: {} }, identity: { current: 'alice' },
+    window: { localStorage: {} }, identity: { current: 'alice' }, active: true, authRevision: 0,
     hasPendingRecovery: () => pending, clearAccountRecovery: (_storage, id) => cleared.push(id),
     acceptSession: session => accepted.push(session),
   });
