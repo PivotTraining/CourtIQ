@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import BrandLogo from '@/components/ui/BrandLogo';
 import { DRILL_BANK, DRILL_CATEGORIES, SKILL_LEVELS } from "@/lib/drillBank";
 
 const featureCards = [
@@ -25,10 +26,9 @@ export default function Home() {
 
   return (
     <main style={{ width: "100%", minHeight: "100dvh", background: "#0F1117", color: "#F8FAFC" }}>
-      <nav style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20 }}>
+      <nav style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: 'wrap', gap: 20 }}>
         <Link href="/" style={{ color: "inherit", textDecoration: "none", display: "flex", alignItems: "center", gap: 10, fontWeight: 900, fontSize: 20 }}>
-          <Image src="/logo.svg" alt="CourtIQ" width={38} height={38} style={{ borderRadius: 10 }} />
-          CourtIQ
+          <BrandLogo surface="dark" width={170} />
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ color: "#778091", fontSize: 12, fontWeight: 700 }}>Made in Atlanta</span>

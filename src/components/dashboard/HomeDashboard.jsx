@@ -11,6 +11,7 @@ import { buildTrainingPrescription } from "@/lib/prescriptions.mjs";
 import { DRILL_BANK } from "@/lib/drillBank";
 import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
+import BrandLogo from '@/components/ui/BrandLogo';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -88,11 +89,7 @@ export default function HomeDashboard() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20, padding: "0 4px" }}>
       <div style={{ textAlign: "center", padding: "4px 0" }}>
-        <img
-          src={typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "/courtiq-dark.png" : "/courtiq-light.png"}
-          alt="Court IQ"
-          style={{ height: 68, maxWidth: "100%", objectFit: "contain" }}
-        />
+        <BrandLogo width={280} />
       </div>
 
       {player && (

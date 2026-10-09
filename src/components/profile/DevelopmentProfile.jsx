@@ -1,4 +1,5 @@
 "use client";
+import BrandLogo from '@/components/ui/BrandLogo';
 
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/context/AppContext";
@@ -67,6 +68,7 @@ export default function DevelopmentProfile() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div ref={cardRef} style={{ background: "linear-gradient(160deg,#111827,#0F1117 60%,#2D1B0E)", color: "white", borderRadius: 26, padding: 26, overflow: "hidden" }}>
+        <BrandLogo surface="dark" width={190} style={{ marginBottom: 12 }} />
         <div style={{ fontSize: 10, fontWeight: 900, color: "#FF8B61", textTransform: "uppercase", letterSpacing: 1.5 }}>CourtIQ Development Profile</div>
         <h2 style={{ margin: "8px 0 0", fontSize: 30, fontWeight: 950 }}>{name}</h2>
         <div style={{ marginTop: 4, fontSize: 12, color: "rgba(255,255,255,.55)" }}>

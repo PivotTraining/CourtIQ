@@ -12,6 +12,7 @@ async function loginFixture(overrides = {}) {
   }]));
   const { default: Login } = await loadComponent(new URL('../src/components/auth/LoginScreen.jsx', import.meta.url), {
     react: h.react, '@/lib/firebase': { ...provider, ...overrides }, '@/components/ui/Icons': { default: () => null, __esModule: true },
+    '@/components/ui/BrandLogo': { default: () => null, __esModule: true },
   });
   h.render(Login); h.flush();
   const change = (id, value) => { action(h.output, 'input', p => p.id === id).props.onChange({ target: { value } }); h.flush(); };

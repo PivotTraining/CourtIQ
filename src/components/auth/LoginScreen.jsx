@@ -1,4 +1,5 @@
 "use client";
+import BrandLogo from '@/components/ui/BrandLogo';
 
 import { useEffect, useRef, useState } from "react";
 import { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
@@ -103,7 +104,7 @@ export default function LoginScreen({ actions = liveActions } = {}) {
       }}>
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 300, height: 300, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.06)" }} />
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 180, height: 180, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.04)" }} />
-        <img src="/courtiq-dark.png" alt="Court IQ" style={{ height: 56, objectFit: "contain", marginBottom: 12, position: "relative", zIndex: 1 }} />
+        <BrandLogo surface="dark" width={320} style={{ marginBottom: 12, position: 'relative', zIndex: 1 }} />
         <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", margin: 0, position: "relative", zIndex: 1, letterSpacing: 0.5, fontWeight: 500 }}>
           Track your game. Sharpen your mind.
         </p>

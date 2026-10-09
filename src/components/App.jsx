@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from 'next/image';
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { registerServiceWorker } from "@/lib/notifications";
 import { AppProvider } from "@/context/AppContext";
@@ -18,7 +19,7 @@ function LoadingScreen() {
   return (
     <div className="w-full min-h-screen flex flex-col items-center justify-center" style={{ background: "linear-gradient(160deg, #FF6B35 0%, #E85A2A 100%)" }}>
       <div className="animate-count-reveal">
-        <img src="/logo.svg" alt="Court IQ" style={{ width: 80, height: 80, borderRadius: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }} className="mb-4 mx-auto block" />
+        <Image src="/brand/courtiq-v2/courtiq-app-icon.svg" alt="CourtIQ" width={80} height={80} style={{ borderRadius: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }} className="mb-4 mx-auto block" />
         <div className="t-title3 text-white text-center" style={{ opacity: 0.95 }}>Court IQ</div>
         <div className="t-footnote text-center mt-2" style={{ color: "rgba(255,255,255,0.6)" }}>Track your game. Sharpen your mind.</div>
       </div>

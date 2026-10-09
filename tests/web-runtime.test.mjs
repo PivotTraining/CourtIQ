@@ -22,13 +22,13 @@ function workerHarness({ offline = false } = {}) {
   const handlers = {};
   const offlinePage = { offline: true };
   const deleted = [];
-  const cache = new Map([["/offline.html", offlinePage], ["/logo.svg", { logo: true }]]);
+  const cache = new Map([["/offline.html", offlinePage], ["/brand/courtiq-v2/courtiq-app-icon.svg", { logo: true }]]);
   vm.runInNewContext(worker, {
     URL, Response,
     self: { location: { origin: "https://court.test" }, addEventListener: (name, handler) => { handlers[name] = handler; }, skipWaiting() {}, clients: { claim() {} } },
     clients: {},
     fetch: async () => { if (offline) throw new Error("offline"); return { live: true }; },
-    caches: { match: async (key) => cache.get(key), keys: async () => ["courtiq-v1", "courtiq-web-v2", "other-app"], delete: async (key) => { deleted.push(key); }, open: async () => ({ addAll: async () => {} }) },
+    caches: { match: async (key) => cache.get(key), keys: async () => ["courtiq-v1", "courtiq-web-v2", "courtiq-web-v3-brand", "other-app"], delete: async (key) => { deleted.push(key); }, open: async () => ({ addAll: async () => {} }) },
   });
   function request(path, mode = "cors") {
     let response;
@@ -48,7 +48,8 @@ test("service worker never intercepts auth, API, external, or player-data reques
 test("offline navigations return an honest offline page rather than a cached player's page", async () => {
   const harness = workerHarness({ offline: true });
   assert.equal(await harness.request("/dashboard", "navigate"), harness.offlinePage);
-  assert.deepEqual(await harness.request("/logo.svg"), { logo: true });
+  assert.deepEqual(await harness.request("/brand/courtiq-v2/courtiq-app-icon.svg"), { logo: true });
+  assert.equal(harness.request('/logo.svg'), undefined);
 });
 
 test("worker activation removes only older CourtIQ caches", async () => {
@@ -56,5 +57,5 @@ test("worker activation removes only older CourtIQ caches", async () => {
   let activation;
   harness.handlers.activate({ waitUntil(value) { activation = value; } });
   await activation;
-  assert.deepEqual(harness.deleted, ["courtiq-v1"]);
+  assert.deepEqual(harness.deleted, ["courtiq-v1", "courtiq-web-v2"]);
 });

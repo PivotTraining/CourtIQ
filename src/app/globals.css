@@ -83,6 +83,11 @@ body {
 #__next, main { overflow-x: hidden; }
 
 /* ── Dark mode: elements that use hardcoded colors need override ── */
+.courtiq-brand-auto .courtiq-brand-image-light { display: block; }
+.courtiq-brand-auto .courtiq-brand-image-dark { display: none; }
+html.dark .courtiq-brand-auto .courtiq-brand-image-light { display: none; }
+html.dark .courtiq-brand-auto .courtiq-brand-image-dark { display: block; }
+.courtiq-brand-light img, .courtiq-brand-dark img { display: block; }
 html.dark body { background: var(--color-bg); color: var(--color-text); }
 html.dark .border-\[\#F0F1F5\], html.dark .border-\[\#E2E4EB\], html.dark .border-\[\#E8E9F0\] { border-color: var(--color-border) !important; }
 html.dark .border-black\/\[0\.04\] { border-color: rgba(255,255,255,0.06) !important; }

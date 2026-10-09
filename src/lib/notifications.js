@@ -39,7 +39,7 @@ export async function scheduleStreakReminder() {
   if (hoursSince >= 20) {
     reg.showNotification("Court IQ", {
       body: "Don't break your streak! Get some shots up today 🔥",
-      icon: "/icon-192.svg",
+      icon: "/brand/courtiq-v2/icon-192.png",
       tag: "streak-reminder",
     });
   }

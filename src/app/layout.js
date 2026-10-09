@@ -30,8 +30,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/brand/courtiq-v2/apple-touch-icon.png" />
+        <link rel="icon" type="image/svg+xml" href="/brand/courtiq-v2/courtiq-app-icon.svg" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/brand/courtiq-v2/icon-48.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${inter.variable} font-sans w-full`}>{children}</body>

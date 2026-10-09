@@ -3,8 +3,8 @@
    Handles push notifications and basic offline caching.
    ══════════════════════════════════════════════════════ */
 
-const CACHE_NAME = "courtiq-web-v2";
-const STATIC_ASSETS = ["/offline.html", "/logo.svg", "/icon-192.png", "/icon-512.png", "/manifest.json"];
+const CACHE_NAME = "courtiq-web-v3-brand";
+const STATIC_ASSETS = ["/offline.html", "/brand/courtiq-v2/courtiq-app-icon.svg", "/brand/courtiq-v2/courtiq-logo-light.svg", "/brand/courtiq-v2/courtiq-logo-dark.svg", "/brand/courtiq-v2/icon-192.png", "/brand/courtiq-v2/icon-512.png", "/brand/courtiq-v2/icon-maskable-512.png", "/manifest.json"];
 
 // Install — cache critical assets
 self.addEventListener("install", (event) => {
@@ -47,8 +47,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Court IQ";
   const options = {
     body: data.body || "Time to get some reps in! 🏀",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: "/brand/courtiq-v2/icon-192.png",
+    badge: "/brand/courtiq-v2/icon-192.png",
     tag: data.tag || "courtiq-notification",
     data: { url: data.url || "/" },
     actions: [

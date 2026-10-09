@@ -26,8 +26,6 @@
     border-bottom: 1px solid var(--color-border);
   }
 
-  .courtiq-desktop-brand img { border-radius: 12px; }
-  .courtiq-desktop-brand-name { font-size: 18px; font-weight: 900; color: var(--color-text); letter-spacing: -0.35px; }
   .courtiq-desktop-brand-sub { margin-top: 2px; font-size: 10px; font-weight: 700; color: var(--color-text-sec); text-transform: uppercase; letter-spacing: 0.9px; }
 
   .courtiq-desktop-player {

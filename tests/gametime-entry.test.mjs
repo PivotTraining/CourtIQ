@@ -88,6 +88,7 @@ test('desktop GAMETIME appears before scrolling links and VIP is available indep
   const { default: Nav } = await loadComponent(new URL('DesktopNav.jsx', base), {
     '@/context/AppContext': { useApp: () => ({ screen: 'home', setScreen: value => routes.push(value), player: null }) },
     '@/components/ui/Icons': Empty, './GametimeAction': Action,
+    '@/components/ui/BrandLogo': Empty,
   }, { process: { env: {} } });
   let launches = 0;
   const tree = Nav({ onStartSession: () => launches++ });

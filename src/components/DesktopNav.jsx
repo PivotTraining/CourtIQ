@@ -3,6 +3,7 @@
 import { useApp } from "@/context/AppContext";
 import Icon from "@/components/ui/Icons";
 import GametimeAction from './GametimeAction';
+import BrandLogo from '@/components/ui/BrandLogo';
 
 const NAV_ITEMS = [
   { id: "home", icon: "home", label: "Dashboard", description: "Overview & progress" },
@@ -26,9 +27,8 @@ export default function DesktopNav({ onStartSession }) {
   return (
     <aside className="courtiq-desktop-nav" aria-label="Court IQ navigation">
       <div className="courtiq-desktop-brand">
-        <img src="/logo.svg" alt="" width="42" height="42" />
         <div>
-          <div className="courtiq-desktop-brand-name">Court IQ</div>
+          <BrandLogo width={188} />
           <div className="courtiq-desktop-brand-sub">Player Development</div>
         </div>
       </div>
