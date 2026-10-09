@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { fetchManagedPlayers } from "@/lib/queries";
 import { selectPlayer, preferredPlayer, rememberPlayer } from "@/lib/playerSelection.mjs";
 import { clearAccountRecovery, hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
+import { authRead } from '@/lib/authRead.mjs';
 
 const AuthContext = createContext(null);
 
@@ -14,22 +15,23 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [needsProfile, setNeedsProfile] = useState(false);
   const [profileError, setProfileError] = useState(null);
+  const [sessionError, setSessionError] = useState(null);
   const identity = useRef(null);
   const profileRef = useRef(null);
   const requestVersion = useRef(0);
   const inFlight = useRef(null);
 
-  const setPlayerProfile = (profile) => {
+  const setPlayerProfile = useCallback((profile) => {
     profileRef.current = profile;
     updatePlayerProfile(profile);
     if (profile && identity.current) rememberPlayer(identity.current, profile.id);
-  };
+  }, []);
 
-  async function loadProfile(supabaseUser) {
+  const loadProfile = useCallback(async (supabaseUser) => {
     const version = ++requestVersion.current;
     setProfileError(null);
     try {
-      const players = await fetchManagedPlayers(supabaseUser.id);
+      const players = await authRead(fetchManagedPlayers(supabaseUser.id));
       if (version !== requestVersion.current || identity.current !== supabaseUser.id) return false;
       const profile = selectPlayer(players, supabaseUser.id, profileRef.current?.id || preferredPlayer(supabaseUser.id));
       setPlayerProfile(profile);
@@ -42,7 +44,7 @@ export function AuthProvider({ children }) {
       setNeedsProfile(false);
       return true;
     }
-  }
+  }, [setPlayerProfile]);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +52,7 @@ export function AuthProvider({ children }) {
     const pendingProfiles = new Set();
     const acceptSession = (session) => {
       if (!active) return;
+      setSessionError(null);
       if (!session?.user) {
         identity.current = null;
         requestVersion.current += 1;
@@ -62,7 +65,10 @@ export function AuthProvider({ children }) {
         return;
       }
       const nextUser = session.user;
-      if (identity.current === nextUser.id && (profileRef.current || inFlight.current === nextUser.id)) return;
+      if (identity.current === nextUser.id && (profileRef.current || inFlight.current === nextUser.id)) {
+        setUser(nextUser);
+        return;
+      }
       if (identity.current !== nextUser.id) {
         requestVersion.current += 1;
         profileRef.current = null;
@@ -87,12 +93,16 @@ export function AuthProvider({ children }) {
     };
     // Resolve any existing session on mount
     const bootstrapRevision = authRevision;
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    authRead(supabase.auth.getSession()).then(({ data, error }) => {
+      if (error) throw error;
       // A login/logout event is newer than the initial cached-session request.
       // Never let that delayed request restore a departed or different account.
-      if (active && bootstrapRevision === authRevision) acceptSession(session);
+      if (active && bootstrapRevision === authRevision) acceptSession(data?.session);
     }).catch(() => {
-      if (active && bootstrapRevision === authRevision) setLoading(false);
+      if (active && bootstrapRevision === authRevision) {
+        setSessionError("We couldn't verify your sign-in session. Your records have not been cleared. Check your connection and reload CourtIQ.");
+        setLoading(false);
+      }
     });
 
     // Listen for auth state changes (sign-in, sign-out, token refresh)
@@ -118,7 +128,7 @@ export function AuthProvider({ children }) {
       pendingProfiles.forEach(clearTimeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadProfile, setPlayerProfile]);
 
   return (
     <AuthContext.Provider
@@ -130,6 +140,7 @@ export function AuthProvider({ children }) {
         needsProfile,
         setNeedsProfile,
         profileError,
+        sessionError,
         retryProfile: async () => {
           if (!user) return;
           setLoading(true);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from 'next/image';
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { registerServiceWorker } from "@/lib/notifications";
 import { AppProvider } from "@/context/AppContext";
@@ -12,12 +13,13 @@ import Shell from "@/components/Shell";
 import LoginScreen from "@/components/auth/LoginScreen";
 import ProfileSetup from "@/components/auth/ProfileSetup";
 import StarterGate from '@/components/billing/StarterGate';
+import SignOutButton from '@/components/auth/SignOutButton';
 
 function LoadingScreen() {
   return (
     <div className="w-full min-h-screen flex flex-col items-center justify-center" style={{ background: "linear-gradient(160deg, #FF6B35 0%, #E85A2A 100%)" }}>
       <div className="animate-count-reveal">
-        <img src="/logo.svg" alt="Court IQ" style={{ width: 80, height: 80, borderRadius: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }} className="mb-4 mx-auto block" />
+        <Image src="/brand/courtiq-v2/courtiq-app-icon.svg" alt="CourtIQ" width={80} height={80} style={{ borderRadius: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }} className="mb-4 mx-auto block" />
         <div className="t-title3 text-white text-center" style={{ opacity: 0.95 }}>Court IQ</div>
         <div className="t-footnote text-center mt-2" style={{ color: "rgba(255,255,255,0.6)" }}>Track your game. Sharpen your mind.</div>
       </div>
@@ -31,7 +33,7 @@ function LoadingScreen() {
 }
 
 function AuthGate() {
-  const { user, playerProfile, loading, needsProfile, profileError, retryProfile } = useAuth();
+  const { user, playerProfile, loading, needsProfile, profileError, retryProfile, sessionError } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -49,6 +51,15 @@ function AuthGate() {
 
   if (showOnboarding) return <Onboarding onComplete={completeOnboarding} />;
   if (loading) return <LoadingScreen />;
+  if (sessionError) return (
+    <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+      <div style={{ maxWidth: 360 }}>
+        <h1>Sign-in unavailable</h1>
+        <p role="alert">{sessionError}</p>
+        <button className="btn-primary" onClick={() => window.location.reload()}>Reload CourtIQ</button>
+      </div>
+    </main>
+  );
   if (!user) return <LoginScreen />;
   if (profileError) {
     return (
@@ -59,6 +70,7 @@ function AuthGate() {
           <button onClick={retryProfile} style={{ marginTop: 16, minHeight: 44, padding: "0 24px", border: 0, borderRadius: 12, background: "var(--color-accent)", color: "white", fontWeight: 700 }}>
             Try again
           </button>
+          <SignOutButton />
         </div>
       </main>
     );

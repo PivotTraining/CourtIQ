@@ -1,0 +1,9 @@
+.courtiq-gametime-action { display:flex; align-items:center; gap:12px; width:100%; min-height:60px; flex-shrink:0; padding:11px 16px; border:1px solid #c74918; border-radius:14px; background:linear-gradient(115deg,#c94a18,#a9360b); color:#fff; cursor:pointer; text-align:left; box-shadow:0 5px 16px rgba(201,74,24,.18); }
+.courtiq-gametime-action>span:not(.gametime-action-arrow) { display:flex; flex-direction:column; gap:3px; }
+.courtiq-gametime-action strong { font-size:17px; line-height:1.1; font-weight:900; letter-spacing:1.2px; }
+.courtiq-gametime-action small { font-size:12px; line-height:1.2; font-weight:650; }
+.gametime-action-arrow { margin-left:auto; font-size:26px; }
+.courtiq-gametime-action:focus-visible { outline:3px solid var(--color-text); outline-offset:3px; }
+.dark .courtiq-gametime-action,.courtiq-dark .courtiq-gametime-action { border-color:#ff8b5e; box-shadow:0 0 20px rgba(255,107,53,.25); }
+.courtiq-header-gametime { margin-top:12px; }
+.courtiq-desktop-nav>.courtiq-gametime-action { margin:0 0 12px; }

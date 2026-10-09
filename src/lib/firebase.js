@@ -4,6 +4,7 @@
  */
 import { supabase } from "./supabase";
 import { hasPendingRecovery, clearAccountRecovery } from './sessionRecovery.mjs';
+import { authRead } from './authRead.mjs';
 
 function browserOrigin() {
   if (typeof window === "undefined") return "";
@@ -139,16 +140,34 @@ export async function checkRedirectResult() {
   return data?.session ?? null;
 }
 
-export async function signOutUser() {
-  const { data, error: sessionError } = await supabase.auth.getSession();
+let pendingLogout = null;
+export function signOutUser() {
+  pendingLogout ||= leaveCurrentSession().finally(() => { pendingLogout = null; });
+  return pendingLogout;
+}
+
+async function leaveCurrentSession() {
+  const { data, error: sessionError } = await authRead(supabase.auth.getSession());
   if (sessionError) throw sessionError;
   const accountId = data.session?.user?.id;
   if (typeof window !== 'undefined') {
-    if (hasPendingRecovery(window.localStorage, accountId)) throw new Error('Sync your unsaved game entries before signing out. Open the tracker and choose Retry sync.');
+    let pending;
+    try { pending = hasPendingRecovery(window.localStorage, accountId); }
+    catch { throw new Error('CourtIQ could not check your unsaved game entries. Restore access to device storage and retry; no local records have been cleared.'); }
+    if (pending) throw new Error('Sync your unsaved game entries before signing out. Open the tracker and choose Retry sync.');
   }
-  const { error } = await supabase.auth.signOut();
+  // Ordinary logout leaves this browser session, not every phone/device.
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
   if (error) throw new Error(error.message);
-  if (typeof window !== 'undefined') clearAccountRecovery(window.localStorage, accountId);
+  if (typeof window !== 'undefined') {
+    // Successful logout must not be reported as a failure if storage becomes
+    // unavailable during cleanup. Recovery keys remain scoped to this account.
+    try {
+      // A tracker save may have queued after the first check while logout was
+      // awaiting the provider. Never erase that work on the way out.
+      if (!hasPendingRecovery(window.localStorage, accountId)) clearAccountRecovery(window.localStorage, accountId);
+    } catch { /* Retain inaccessible account-scoped data. */ }
+  }
 }
 
 export { supabase as auth };

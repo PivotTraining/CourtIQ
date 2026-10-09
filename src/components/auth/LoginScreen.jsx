@@ -1,8 +1,8 @@
 "use client";
+import BrandLogo from '@/components/ui/BrandLogo';
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
-import Icon from "@/components/ui/Icons";
 
 const inputStyle = {
   width: "100%", padding: "14px 16px", borderRadius: 14,
@@ -16,58 +16,74 @@ const labelStyle = {
   textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6,
 };
 
-export default function LoginScreen() {
+const liveActions = { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword };
+
+export default function LoginScreen({ actions = liveActions } = {}) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
+  const [resetSent, setResetSent] = useState("");
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const inFlight = useRef(false);
+  const alive = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
+
+  function beginRequest() {
+    if (inFlight.current) return false;
+    inFlight.current = true;
+    setError(""); setResetSent(""); setConfirmationSent(false); setLoading(true);
+    return true;
+  }
+  function endRequest() {
+    inFlight.current = false;
+    if (alive.current) setLoading(false);
+  }
 
   const handleForgotPassword = async () => {
-    if (loading) return;
-    if (!email) { setError("Enter your email first, then tap Forgot Password."); return; }
-    setError("");
-    setLoading(true);
-    setResetSent(false);
+    if (inFlight.current) return;
+    const requestedEmail = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail)) { setError("Enter a valid email first, then tap Forgot Password."); return; }
+    if (!beginRequest()) return;
     try {
-      await resetPassword(email);
-      setResetSent(true);
+      await actions.resetPassword(requestedEmail);
+      if (alive.current) setResetSent(requestedEmail);
     } catch (err) {
-      setError(err.message || "Could not send reset email");
+      if (alive.current) setError(err.message || "Could not send reset email");
     } finally {
-      setLoading(false);
+      endRequest();
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    if (!beginRequest()) return;
     try {
       if (isSignUp) {
-        const data = await signUpWithEmail(email, password);
-        if (!data?.session) setConfirmationSent(true);
+        const data = await actions.signUpWithEmail(email.trim(), password);
+        if (alive.current && !data?.session) setConfirmationSent(true);
       } else {
-        await signInWithEmail(email, password);
+        await actions.signInWithEmail(email.trim(), password);
       }
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      if (alive.current) setError(err.message || "Something went wrong");
     } finally {
-      setLoading(false);
+      endRequest();
     }
   };
 
   const handleGoogle = async () => {
-    setError("");
-    setLoading(true);
+    if (!beginRequest()) return;
     try {
-      await signInWithGoogle();
+      await actions.signInWithGoogle();
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      if (alive.current) setError(err.message || "Something went wrong");
     } finally {
-      setLoading(false);
+      endRequest();
     }
   };
 
@@ -88,7 +104,7 @@ export default function LoginScreen() {
       }}>
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 300, height: 300, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.06)" }} />
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 180, height: 180, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.04)" }} />
-        <img src="/courtiq-dark.png" alt="Court IQ" style={{ height: 56, objectFit: "contain", marginBottom: 12, position: "relative", zIndex: 1 }} />
+        <BrandLogo surface="dark" width={320} style={{ marginBottom: 12, position: 'relative', zIndex: 1 }} />
         <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", margin: 0, position: "relative", zIndex: 1, letterSpacing: 0.5, fontWeight: 500 }}>
           Track your game. Sharpen your mind.
         </p>
@@ -111,12 +127,12 @@ export default function LoginScreen() {
             {isSignUp ? "Start tracking your basketball journey" : "Pick up where you left off"}
           </p>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <form onSubmit={handleSubmit} aria-busy={loading} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label htmlFor="login-email" style={labelStyle}>Email</label>
               <input
                 id="login-email"
-                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                disabled={loading} type="email" value={email} onChange={(e) => { setEmail(e.target.value); setResetSent(""); setConfirmationSent(false); setError(""); }}
                 placeholder="you@email.com" required autoComplete="email"
                 style={inputStyle}
               />
@@ -126,7 +142,7 @@ export default function LoginScreen() {
               <label htmlFor="login-password" style={labelStyle}>Password</label>
               <input
                 id="login-password"
-                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                disabled={loading} type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder={isSignUp ? "8+ characters" : "Your password"}
                 required minLength={isSignUp ? 8 : 1}
                 autoComplete={isSignUp ? "new-password" : "current-password"}
@@ -146,17 +162,17 @@ export default function LoginScreen() {
             )}
 
             {resetSent && (
-              <div style={{
-                fontSize: 12, color: "#22C55E", background: "#F0FDF4",
+              <div role="status" style={{
+                fontSize: 12, color: "#166534", background: "#F0FDF4",
                 padding: "10px 14px", borderRadius: 12, border: "1px solid #BBF7D0", lineHeight: 1.5,
               }}>
-                If an account exists for {email}, a reset link has been requested. Check your inbox and spam folder.
+                If an account exists for {resetSent}, a reset link has been requested. Check your inbox and spam folder. Open the link in this same browser.
               </div>
             )}
 
             {error && (
-              <div style={{
-                fontSize: 12, color: "#DC2626", background: "#FEF2F2",
+              <div role="alert" style={{
+                fontSize: 12, color: "#B91C1C", background: "#FEF2F2",
                 padding: "10px 14px", borderRadius: 12, border: "1px solid #FECACA", lineHeight: 1.5,
               }}>
                 {error}
@@ -165,7 +181,7 @@ export default function LoginScreen() {
 
             {confirmationSent && (
               <p role="status" style={{ fontSize: 13, lineHeight: 1.5, color: "var(--color-text-sec)" }}>
-                Check your inbox to confirm your email, then return to CourtIQ to sign in.
+                Check your inbox to confirm your email. Open the link in this same browser, then return to CourtIQ to sign in.
               </p>
             )}
 
@@ -183,7 +199,7 @@ export default function LoginScreen() {
                   {isSignUp ? "Creating..." : "Signing In..."}
                 </span>
               ) : (
-                <>{isSignUp ? "Create Account" : "Sign In"} <Icon name="forward" size={16} color="white" /></>
+                <>{isSignUp ? "Create Account" : "Sign In"} <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></>
               )}
             </button>
           </form>
@@ -215,7 +231,7 @@ export default function LoginScreen() {
           {/* Toggle sign-in / sign-up */}
           <p style={{ textAlign: "center", fontSize: 13, color: "var(--color-text-sec)", marginTop: 20, marginBottom: 0 }}>
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button onClick={() => { setIsSignUp(!isSignUp); setError(""); setConfirmationSent(false); }} style={{
+            <button disabled={loading} onClick={() => { if (inFlight.current) return; setIsSignUp(!isSignUp); setError(""); setResetSent(""); setConfirmationSent(false); setPassword(""); }} style={{
               color: "#FF6B35", fontWeight: 700, background: "none", border: "none", cursor: "pointer", fontSize: 13,
             }}>
               {isSignUp ? "Sign In" : "Sign Up"}

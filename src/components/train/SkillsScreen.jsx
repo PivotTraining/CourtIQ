@@ -1,241 +1,96 @@
-"use client";
-
-import { useState, useMemo } from "react";
-import { DRILL_BANK, DRILL_CATEGORIES, SKILL_LEVELS } from "@/lib/drillBank";
-import Icon from "@/components/ui/Icons";
-
-const cardStyle = {
-  background: "var(--color-card)",
-  borderRadius: 16,
-  border: "1px solid var(--color-border)",
-  boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-  overflow: "hidden",
-};
+'use client';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useApp } from '@/context/AppContext';
+import { DRILL_BANK, DRILL_CATEGORIES, SKILL_LEVELS } from '@/lib/drillBank';
+import { FEATURED_IDS, GUIDED_DRILLS, practiceHistory, previousPractice } from '@/lib/skillPractice.mjs';
+import { fetchWorkoutResults, saveWorkoutResult } from '@/lib/queries';
+import Icon from '@/components/ui/Icons';
+import DrillWalkthrough from './DrillWalkthrough';
+import SkillPracticeSession from './SkillPracticeSession';
+import './skills.css';
+const FEATURED = FEATURED_IDS.map(id => DRILL_BANK.find(drill => drill.id === id));
+const EMPTY_HISTORY = { entries: [], categories: {} };
 
 export default function SkillsScreen() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedLevel, setSelectedLevel] = useState("all");
-  const [expandedDrill, setExpandedDrill] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const { playerId } = useApp();
+  return <SkillsWorkspace key={playerId || 'no-player'} playerId={playerId} />;
+}
 
-  const filteredDrills = useMemo(() => {
-    let drills = DRILL_BANK;
-    if (selectedCategory !== "all") drills = drills.filter((d) => d.category === selectedCategory);
-    if (selectedLevel !== "all") drills = drills.filter((d) => d.level === selectedLevel);
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      drills = drills.filter((d) =>
-        d.name.toLowerCase().includes(q) ||
-        d.description.toLowerCase().includes(q) ||
-        d.tags.some((t) => t.toLowerCase().includes(q))
-      );
+export function SkillsWorkspace({ playerId, preview = false, loadResults = fetchWorkoutResults, saveResult = saveWorkoutResult }) {
+  const [tab, setTab] = useState('train'), [category, setCategory] = useState('all'), [level, setLevel] = useState('all'), [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(FEATURED[0]), [activeDrill, setActiveDrill] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(24);
+  const [records, setRecords] = useState([]), [status, setStatus] = useState('loading'), [reload, setReload] = useState(0), [notice, setNotice] = useState('');
+  const mounted = useRef(false), startButton = useRef(null);
+  const persistenceEnabled = preview || process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true';
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => {
+    if (!persistenceEnabled || !playerId) { setStatus('unavailable'); return; }
+    let active = true;
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+    setStatus('loading');
+    loadResults(playerId, { signal: controller.signal }).then(rows => { if (active) { setRecords(rows); setStatus('ready'); } })
+      .catch(() => { if (active) setStatus('error'); }).finally(() => clearTimeout(timeout));
+    return () => { active = false; controller.abort(); clearTimeout(timeout); };
+  }, [playerId, persistenceEnabled, reload, loadResults]);
+  const history = useMemo(() => status === 'ready' ? practiceHistory(records, DRILL_BANK) : EMPTY_HISTORY, [records, status]);
+  const filtered = useMemo(() => DRILL_BANK.filter(drill => (category === 'all' || drill.category === category)
+    && (level === 'all' || drill.level === level)
+    && (!search.trim() || [drill.name, drill.description, ...drill.tags].join(' ').toLowerCase().includes(search.trim().toLowerCase()))), [category, level, search]);
+  const nextCategory = status === 'ready' ? [...DRILL_CATEGORIES].sort((a, b) => (history.categories[a.id]?.reps || 0) - (history.categories[b.id]?.reps || 0))[0] : null;
+  const closePractice = () => { setActiveDrill(null); startButton.current?.focus(); };
+  const savePractice = async result => {
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+    let saved;
+    try { saved = await saveResult(playerId, result, { signal: controller.signal }); }
+    finally { clearTimeout(timeout); }
+    if (!saved?.id || saved.id !== result.id || saved.player_id !== playerId) throw new Error('Practice storage did not confirm this player and result.');
+    if (mounted.current) {
+      setRecords(rows => [saved, ...rows.filter(row => row.id !== saved.id)]);
+      setNotice(`Saved ${result.drills[0].name}. Your practice result is in Progress.`);
     }
-    return drills;
-  }, [selectedCategory, selectedLevel, searchQuery]);
-
-  const categoryCount = useMemo(() => {
-    const counts = { all: DRILL_BANK.length };
-    DRILL_BANK.forEach((d) => { counts[d.category] = (counts[d.category] || 0) + 1; });
-    return counts;
-  }, []);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-      {/* Search */}
-      <div style={{ position: "relative" }}>
-        <Icon name="target" size={16} color="var(--color-text-sec)" style={{ position: "absolute", left: 14, top: 14 }} />
-        <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={`Search ${DRILL_BANK.length} drills...`}
-          style={{
-            width: "100%", padding: "12px 16px 12px 38px", borderRadius: 14,
-            border: "1px solid var(--color-border)", background: "var(--color-card)",
-            fontSize: 14, fontWeight: 600, outline: "none", boxSizing: "border-box",
-            color: "var(--color-text)", fontFamily: "inherit",
-          }}
-        />
-      </div>
-
-      {/* Skill Level Filter */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
-        <button
-          onClick={() => setSelectedLevel("all")}
-          style={{
-            padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-            fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-            background: selectedLevel === "all" ? "#FF6B35" : "var(--color-muted)",
-            color: selectedLevel === "all" ? "white" : "var(--color-text-sec)",
-          }}
-        >
-          All Levels
-        </button>
-        {SKILL_LEVELS.map((l) => (
-          <button
-            key={l.id}
-            onClick={() => setSelectedLevel(l.id === selectedLevel ? "all" : l.id)}
-            style={{
-              padding: "8px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-              fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-              background: selectedLevel === l.id ? l.color : "var(--color-muted)",
-              color: selectedLevel === l.id ? "white" : "var(--color-text-sec)",
-            }}
-          >
-            {l.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Category Pills */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2 }}>
-        <button
-          onClick={() => setSelectedCategory("all")}
-          style={{
-            padding: "8px 12px", borderRadius: 12, border: "none", cursor: "pointer",
-            fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-            display: "flex", alignItems: "center", gap: 4,
-            background: selectedCategory === "all" ? "var(--color-card)" : "var(--color-muted)",
-            color: selectedCategory === "all" ? "var(--color-accent)" : "var(--color-text-sec)",
-            boxShadow: selectedCategory === "all" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-          }}
-        >
-          All ({categoryCount.all})
-        </button>
-        {DRILL_CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSelectedCategory(c.id === selectedCategory ? "all" : c.id)}
-            style={{
-              padding: "8px 12px", borderRadius: 12, border: "none", cursor: "pointer",
-              fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0,
-              display: "flex", alignItems: "center", gap: 4,
-              background: selectedCategory === c.id ? "var(--color-card)" : "var(--color-muted)",
-              color: selectedCategory === c.id ? c.color : "var(--color-text-sec)",
-              boxShadow: selectedCategory === c.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-            }}
-          >
-            <Icon name={c.iconName} size={12} color={selectedCategory === c.id ? c.color : "var(--color-text-sec)"} />
-            {c.label} ({categoryCount[c.id] || 0})
-          </button>
-        ))}
-      </div>
-
-      {/* Results count */}
-      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-sec)", padding: "0 2px" }}>
-        {filteredDrills.length} drill{filteredDrills.length !== 1 ? "s" : ""}
-        {selectedLevel !== "all" && ` · ${SKILL_LEVELS.find((l) => l.id === selectedLevel)?.label}`}
-        {selectedCategory !== "all" && ` · ${DRILL_CATEGORIES.find((c) => c.id === selectedCategory)?.label}`}
-      </div>
-
-      {/* Drill List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {filteredDrills.map((drill) => {
-          const isExpanded = expandedDrill === drill.id;
-          const cat = DRILL_CATEGORIES.find((c) => c.id === drill.category);
-          const level = SKILL_LEVELS.find((l) => l.id === drill.level);
-
-          return (
-            <div key={drill.id} style={cardStyle}>
-              {/* Drill Header — always visible */}
-              <button
-                onClick={() => setExpandedDrill(isExpanded ? null : drill.id)}
-                style={{
-                  width: "100%", padding: "14px 16px", background: "none", border: "none",
-                  cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 12,
-                }}
-              >
-                {/* Category icon */}
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: `${cat?.color || "#6B7194"}15`,
-                }}>
-                  <Icon name={cat?.iconName || "basketball"} size={20} color={cat?.color || "#6B7194"} />
-                </div>
-
-                {/* Name + meta */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {drill.name}
-                    </span>
-                    {drill.hasAnimation && (
-                      <Icon name="stickman" size={14} color={cat?.color || "#FF6B35"} />
-                    )}
-                  </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: level?.color || "#6B7194" }}>{drill.level}</span>
-                    <span style={{ fontSize: 10, color: "var(--color-text-sec)" }}>{drill.reps} reps</span>
-                    <span style={{ fontSize: 10, color: "var(--color-text-sec)" }}>~{drill.duration}min</span>
-                  </div>
-                </div>
-
-                {/* Expand chevron */}
-                <Icon name="chevDown" size={16} color="var(--color-text-sec)"
-                  style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s ease" }} />
-              </button>
-
-              {/* Expanded Content */}
-              {isExpanded && (
-                <div style={{ padding: "0 16px 16px", borderTop: "1px solid var(--color-border)" }}>
-                  {/* Description */}
-                  <p style={{ fontSize: 13, color: "var(--color-text-sec)", lineHeight: 1.6, margin: "12px 0" }}>
-                    {drill.description}
-                  </p>
-
-                  {/* Coaching Tip */}
-                  {drill.videoTip && (
-                    <div style={{
-                      background: "rgba(255,107,53,0.06)", borderRadius: 12, padding: "10px 14px",
-                      border: "1px solid rgba(255,107,53,0.1)", marginBottom: 8,
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <Icon name="zap" size={12} color="#FF6B35" />
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#FF6B35" }}>Coaching Tip</span>
-                      </div>
-                      <p style={{ fontSize: 12, color: "var(--color-text-sec)", lineHeight: 1.5, margin: 0 }}>
-                        {drill.videoTip}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Tags */}
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 }}>
-                    {drill.tags.map((tag) => (
-                      <span key={tag} style={{
-                        fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 8,
-                        background: "var(--color-muted)", color: "var(--color-text-sec)",
-                        textTransform: "uppercase", letterSpacing: 0.3,
-                      }}>
-                        {tag}
-                      </span>
-                    ))}
-                    <span style={{
-                      fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 8,
-                      background: `${level?.color}15`, color: level?.color,
-                      textTransform: "uppercase",
-                    }}>
-                      {drill.ageRange === "all" ? "All ages" : `Ages ${drill.ageRange}`}
-                    </span>
-                  </div>
-
-                </div>
-              )}
-            </div>
-          );
+  };
+  const selectDrill = drill => { setSelected(drill); setTab('train'); setNotice(''); };
+  return <div className="skills-lab">
+    <section className="skill-hero"><p className="skill-eyebrow">COURTIQ SKILL LAB</p><h2>Learn it. Rep it. Track it.</h2><p>See the movement, practice with a purpose, and build your own baseline.</p>
+      <div className="skill-hero-stats"><span><strong>{FEATURED.length}</strong> guided walkthroughs</span><span><strong>{DRILL_BANK.length}</strong> playable drills</span></div>
+    </section>
+    <nav className="skill-tabs" aria-label="Skills views">{[['train', 'Train a skill'], ['library', 'Drill library'], ['progress', 'My progress']].map(([id, label]) => <button key={id} aria-pressed={id === tab} onClick={() => setTab(id)}>{label}</button>)}</nav>
+    {notice && <p className="skill-cue" role="status">{notice}</p>}
+    {status === 'error' && <div className="skill-record-error" role="alert">Your practice history could not be loaded. It has not been cleared. <button onClick={() => setReload(value => value + 1)}>Retry history</button></div>}
+    {tab === 'train' && <>
+      <div className="skill-grid">{FEATURED.map(drill => {
+        const cat = DRILL_CATEGORIES.find(item => item.id === drill.category);
+        return <button key={drill.id} aria-pressed={selected.id === drill.id} className="skill-category" onClick={() => selectDrill(drill)}><Icon name={cat.iconName === 'forward' ? 'target' : cat.iconName} size={20} color={cat.color} /><strong>{cat.label}</strong><span>{status === 'ready' ? `${history.categories[cat.id]?.sessions || 0} saved workouts` : 'History unavailable'}</span></button>;
+      })}</div>
+      {nextCategory && <p className="skill-muted">Balance your practice: <button className="skill-text-link" onClick={() => selectDrill(FEATURED.find(drill => drill.category === nextCategory.id))}>{nextCategory.label}</button> has the least recorded rep volume. That is a practice suggestion, not a skill assessment.</p>}
+      <article className="skill-lesson" aria-label={`Learn ${selected.name}`}>
+        <div className="skill-lesson-heading"><div><p className="skill-eyebrow">{selected.level} · ~{selected.duration} min</p><h3>{selected.name}</h3></div><span>{selected.reps} {GUIDED_DRILLS[selected.id]?.unit || 'reps'}</span></div>
+        <DrillWalkthrough key={selected.id} drill={selected} />
+        <button ref={startButton} className="skill-primary" disabled={!playerId} onClick={() => { setNotice(''); setActiveDrill(selected); }}>Start practice</button>
+        <p className="skill-muted">{persistenceEnabled ? 'Finish, then explicitly save your result. No camera or microphone is required.' : 'Practice is available, but saving is not activated in this environment.'}</p>
+      </article>
+    </>}
+    {tab === 'library' && <>
+      <label className="skill-search">Find your drill<input value={search} onChange={event => { setSearch(event.target.value); setVisibleCount(24); }} placeholder="Search by move, skill, or coaching cue" type="search" /></label>
+      <div className="skill-filters"><label>Skill<select value={category} onChange={event => { setCategory(event.target.value); setVisibleCount(24); }}><option value="all">All skills</option>{DRILL_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>Level<select value={level} onChange={event => { setLevel(event.target.value); setVisibleCount(24); }}><option value="all">All levels</option>{SKILL_LEVELS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label></div>
+      <p className="skill-muted" role="status">{filtered.length} drills · levels are difficulty guides, not age restrictions.</p>
+      {filtered.slice(0, visibleCount).map(drill => <article className="skill-library-card" key={drill.id}><div><h3>{drill.name}</h3><p>{drill.level} · {drill.reps} reps · ~{drill.duration} min{GUIDED_DRILLS[drill.id] ? ' · visual walkthrough' : ''}</p></div><button onClick={() => selectDrill(drill)}>Learn & practice</button></article>)}
+      {filtered.length > visibleCount && <button onClick={() => setVisibleCount(value => value + 24)}>Show more drills ({filtered.length - visibleCount} remaining)</button>}
+      {!filtered.length && <p>No drills match those filters. Try another skill or search.</p>}
+    </>}
+    {tab === 'progress' && <section className="skill-progress"><h3>Your practice, backed by records</h3><p className="skill-muted">Volume is saved work. Accuracy is self-recorded. Neither proves improvement in competitive games.</p>
+      {status === 'loading' ? <p role="status">Loading your practice history…</p> : status !== 'ready' ? <p>Progress is unavailable until your saved history can be loaded. No zero score or ranking is being assigned.</p> : <>
+        <div className="skill-volume">{DRILL_CATEGORIES.map(cat => <div key={cat.id}><strong>{cat.label}</strong><span>{history.categories[cat.id]?.reps || 0} reps · {history.categories[cat.id]?.sessions || 0} workouts</span></div>)}</div>
+        <h4>Recent measured practices</h4>
+        {!history.entries.length && <p>No measured result yet. Older timer workouts contribute to volume, but do not invent accuracy scores. Start a drill, record each attempt, and save to establish a baseline.</p>}
+        {history.entries.slice(0, 12).map((entry, index) => {
+          const previous = history.entries.slice(index + 1).find(item => item.drill_id === entry.drill_id && item.target_reps === entry.target_reps && item.reps_completed === entry.target_reps && !item.skipped);
+          const complete = entry.reps_completed === entry.target_reps && !entry.skipped;
+          return <article className="skill-history-card" key={`${entry.workoutId}:${entry.drill_id}:${index}`}><div><h4>{entry.name}</h4><p>{new Date(entry.completed_at).toLocaleDateString()} · {entry.reps_completed}/{entry.target_reps} reps · {complete ? 'target completed' : 'partial practice'}</p><p>{entry.successful_reps} {entry.outcome_kind === 'makes' ? 'made' : 'clean'} · {entry.rate}% {entry.outcome_kind === 'makes' ? 'accuracy' : 'clean-rep rate'}</p></div><span>{complete && previous ? `${entry.rate - previous.rate > 0 ? '+' : ''}${entry.rate - previous.rate} pp` : complete ? 'Baseline' : 'Partial'}<small>{complete && previous ? 'vs last same target' : complete ? 'same drill + target' : 'no comparison'}</small></span></article>;
         })}
-      </div>
-
-      {filteredDrills.length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          <Icon name="target" size={40} color="var(--color-text-sec)" />
-          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text)", marginTop: 12 }}>No drills found</div>
-          <div style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 4 }}>Try a different filter or search term</div>
-        </div>
-      )}
-
-      <div style={{ height: 20 }} />
-    </div>
-  );
+      </>}
+    </section>}
+    {activeDrill && <SkillPracticeSession key={`${playerId}:${activeDrill.id}`} drill={activeDrill} previous={previousPractice(history.entries, activeDrill)} canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} onClose={closePractice} />}
+  </div>;
 }

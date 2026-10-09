@@ -23,6 +23,8 @@ import CoachWorkspace from "./coach/CoachWorkspace";
 import Icon from "./ui/Icons";
 import RosterCoachWorkspace from './team/CoachWorkspace';
 import BillingScreen from './billing/BillingScreen';
+import MembershipOverview from './billing/MembershipOverview';
+import GametimeAction from './GametimeAction';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
 import { useThemePreference } from "@/lib/useThemePreference";
@@ -101,7 +103,7 @@ export default function Shell() {
       case "coach": return process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true'
         ? <RosterCoachWorkspace darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} onManagePlayers={() => setShowSwitcher(true)} />
         : <CoachWorkspace />;
-      case "billing": return process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' ? <BillingScreen /> : <p style={{ padding: 20 }}>Membership is not activated yet. Your saved records are unchanged.</p>;
+      case "billing": return process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' ? <BillingScreen /> : <MembershipOverview />;
       case "family": return <FamilyDashboard onManagePlayers={() => setShowSwitcher(true)} />;
       case "settings": return <SettingsScreen onEditProfile={() => setShowProfile(true)} onManagePlayers={() => setShowSwitcher(true)} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />;
       case "film": return <FilmLab />;
@@ -109,8 +111,6 @@ export default function Shell() {
       default: return <HomeDashboard />;
     }
   };
-
-  const showFab = !["iq", "family", "settings", "film", "developmentProfile", "coach", "billing"].includes(displayScreen);
 
   return (
     <div className="courtiq-shell-root" style={{ width: "100%", minHeight: "100vh", minHeight: "100dvh", background: "var(--color-bg)", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflowX: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -217,7 +217,7 @@ export default function Shell() {
                       <Icon name="user" size={16} color="var(--color-text-sec)" /> Edit Profile
                     </button>
                     {process.env.NEXT_PUBLIC_COACH_GAMES_ENABLED === 'true' && process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('coach'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Coach workspace</button>}
-                    {process.env.NEXT_PUBLIC_COURTIQ_BILLING_ENABLED === 'true' && <button onClick={() => { setShowProfileMenu(false); navTo('billing'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>Membership & billing</button>}
+                    <button onClick={() => { setShowProfileMenu(false); navTo('billing'); }} style={{ width: '100%', minHeight: 44, padding: '12px 16px', textAlign: 'left', background: 'var(--color-card)', color: 'var(--color-text)', border: 0, fontSize: 13 }}>VIP & membership</button>
                     <button onClick={() => { setShowProfileMenu(false); navTo("family"); }} style={{
                       display: "flex", alignItems: "center", gap: 10, width: "100%",
                       padding: "12px 16px", background: "none", border: "none",
@@ -247,6 +247,7 @@ export default function Shell() {
               </div>
             </div>
           </div>
+          <div className="courtiq-header-gametime"><GametimeAction onStart={() => setShowLogger(true)} /></div>
         </header>
 
         <main ref={scrollRef} className="courtiq-shell-content" style={{
@@ -258,25 +259,6 @@ export default function Shell() {
           {renderScreen()}
         </main>
       </div>
-
-      {showFab && (
-        <button
-          className="courtiq-mobile-fab"
-          onClick={() => setShowLogger(true)}
-          style={{
-            position: "fixed", zIndex: 200, bottom: 96, right: 20,
-            width: 56, height: 56, borderRadius: 28,
-            background: "#FF6B35", color: "white", border: "none",
-            cursor: "pointer", fontSize: 28, fontWeight: 700,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 8px 32px rgba(255,107,53,0.4)",
-            WebkitTapHighlightColor: "transparent",
-          }}
-          aria-label="Start Gametime"
-        >
-          <Icon name="plus" size={24} color="white" />
-        </button>
-      )}
 
       <BottomNav />
 

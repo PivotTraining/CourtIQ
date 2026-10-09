@@ -302,13 +302,16 @@ export async function applySessionCommand(command) {
   }));
 }
 
-export async function saveWorkoutResult(playerId, result) {
+export async function saveWorkoutResult(playerId, result, { signal } = {}) {
   const row = { id: result.id, player_id: playerId, elapsed_seconds: result.elapsed_seconds, drills: result.drills };
-  const saved = await getSupabase().from("workout_results").insert(row).select().single();
+  let insert = getSupabase().from("workout_results").insert(row).select().single();
+  if (signal) insert = insert.abortSignal(signal);
+  const saved = await insert;
   if (saved.error?.code !== '23505') return requireSavedRow(saved, "Workout result");
   // A lost response is retried with the same ID, never counted as a new workout.
-  const existing = requireSavedRow(await getSupabase().from("workout_results").select("*")
-    .eq("id", result.id).eq("player_id", playerId).single(), "Workout recovery");
+  let recovery = getSupabase().from("workout_results").select("*").eq("id", result.id).eq("player_id", playerId).single();
+  if (signal) recovery = recovery.abortSignal(signal);
+  const existing = requireSavedRow(await recovery, "Workout recovery");
   if (existing.elapsed_seconds !== row.elapsed_seconds || JSON.stringify(existing.drills) !== JSON.stringify(row.drills)) {
     // JSONB may reorder object keys. Compare each recorded field explicitly.
     if (existing.elapsed_seconds !== row.elapsed_seconds || existing.drills.length !== row.drills.length
@@ -319,9 +322,12 @@ export async function saveWorkoutResult(playerId, result) {
   return existing;
 }
 
-export async function fetchWorkoutResults(playerId) {
-  return readAll(() => getSupabase().from("workout_results").select("*").eq("player_id", playerId)
-    .order("completed_at", { ascending: false }).order("id"));
+export async function fetchWorkoutResults(playerId, { signal } = {}) {
+  return readAll(() => {
+    const query = getSupabase().from("workout_results").select("*").eq("player_id", playerId)
+      .order("completed_at", { ascending: false }).order("id");
+    return signal ? query.abortSignal(signal) : query;
+  });
 }
 
 // Owner-managed roster games. These queries do not grant assistant/parent access.

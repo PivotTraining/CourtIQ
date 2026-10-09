@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { createPlayerProfile } from "@/lib/queries";
 import Icon from "@/components/ui/Icons";
+import SignOutButton from './SignOutButton';
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const LEVELS = [
@@ -196,6 +197,7 @@ export default function ProfileSetup() {
       }}>
         {loading ? "Creating..." : <><span>Let&apos;s Go</span> <Icon name="basketball" size={18} color="white" /></>}
       </button>
+      {!loading && <SignOutButton />}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { percent } from './sessionReport.mjs';
 import { resolveCardEnergy } from './cardEnergy.mjs';
+import { COURTIQ_DARK_LOGO_PATHS } from './brandArtwork.mjs';
 
 const escapeXml = value => String(value).replace(/[<>&"']/g, char => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[char]));
 const short = (value, length) => { const chars=Array.from(String(value || '')); return chars.length>length?chars.slice(0,length-1).join('')+'…':chars.join(''); };
@@ -15,7 +16,7 @@ export function socialCardSvg(report, { format='square', title='Player recap', d
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="${height}" viewBox="0 0 1080 ${height}" role="img" aria-label="CourtIQ recorded stats card">
     <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#151A2B"/><stop offset="1" stop-color="#080D16"/></linearGradient></defs>
     <rect width="1080" height="${height}" fill="url(#bg)"/><path d="M790 0L1080 0L1080 ${height}L650 ${height}" fill="#FF6B35" opacity=".05"/>
-    <rect x="64" y="64" width="10" height="54" rx="5" fill="#FF6B35"/>${text(98,106,'COURT IQ',38)}
+    <g transform="translate(64 56) scale(.62)">${COURTIQ_DARK_LOGO_PATHS}</g>
     ${text(64,180+offset,type==='practice'?'PRACTICE RECAP':'GAME RECAP',24,'#98A4BE')}${text(64,250+offset,short(title,28),48)}${text(64,295+offset,short(date || 'Date not recorded',40),24,'#98A4BE')}
     ${headline?`<rect x="64" y="${318+offset}" width="952" height="60" rx="12" fill="#68E5C1" fill-opacity=".10"/><path d="M84 ${333+offset}L92 ${333+offset}L88 ${345+offset}L97 ${345+offset}L82 ${365+offset}L87 ${350+offset}L79 ${350+offset}Z" fill="#68E5C1"/>${text(112,360+offset,headline.phrase,40,'#68E5C1',900)}`:''}
     ${text(64,490+body,report.pts,170,'#FF895D',900)}${text(64,540+body,'RECORDED POINTS',26,'#CBD5E1')}
