@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { publicPageMetadata } from "@/lib/siteMetadata";
+
+export const metadata = publicPageMetadata({
+  title: "Privacy Policy",
+  description: "How CourtIQ handles accounts, basketball development records, analytics and privacy choices.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (
