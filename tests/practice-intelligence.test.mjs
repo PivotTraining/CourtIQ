@@ -34,7 +34,7 @@ test('matched practice groups exclude partial, different-target and subjective c
   const rows = [
     entry(0, 15), entry(1, 14), entry(2, 13),
     entry(3, 12, { reps_completed: 15, skipped: true }),
-    entry(4, 18, { target_reps: 25 }),
+    entry(4, 18, { target_reps: 25, reps_completed: 25 }),
     entry(5, 14, { outcome_kind: 'clean-reps' }),
   ];
   const result = buildPracticeIntelligence(rows);
