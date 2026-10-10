@@ -70,7 +70,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
         <DrillWalkthrough key={selected.id} drill={selected} />
         <aside className="skill-video-resources">
           <strong>Need to watch real basketball coaching?</strong>
-          <p>Until CourtIQ has licensed drill-specific footage, explore <a href="https://about.fiba.basketball/en/wabc-coaching-development-project" target="_blank" rel="noopener noreferrer">FIBA's official coaching demonstration library</a>. These general examples are third-party resources, not CourtIQ-certified demonstrations of this specific drill.</p>
+          <p>Until CourtIQ has licensed drill-specific footage, explore <a href="https://about.fiba.basketball/en/wabc-coaching-development-project" target="_blank" rel="noopener noreferrer">FIBA’s official coaching demonstration library</a>. These general examples are third-party resources, not CourtIQ-certified demonstrations of this specific drill.</p>
         </aside>
         <button ref={startButton} className="skill-primary" disabled={!playerId} onClick={() => { setNotice(''); setActiveDrill(selected); }}>Start practice</button>
         <p className="skill-muted">{persistenceEnabled ? 'Finish, then explicitly save your result. No camera or microphone is required.' : 'Practice is available, but saving is not activated in this environment.'}</p>
