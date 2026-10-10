@@ -5,7 +5,7 @@ export default function PrivacyPage() {
     <div className="max-w-[680px] mx-auto px-6 py-10 min-h-screen bg-bg">
       <Link href="/" className="text-accent text-sm font-bold mb-4 inline-block">&larr; Back</Link>
       <h1 className="text-2xl font-black text-text mb-4">Privacy Policy</h1>
-      <p className="text-xs text-text-sec mb-2">Last updated: October 1, 2026</p>
+      <p className="text-xs text-text-sec mb-2">Last updated: October 10, 2026</p>
       <div className="text-sm text-text-sec leading-relaxed flex flex-col gap-4">
         <p>CourtIQ (&quot;we&quot;, &quot;us&quot;) operates the CourtIQ basketball development service. This policy explains how information is collected, used, and protected.</p>
         <h2 className="text-base font-bold text-text">1. Information We Collect</h2>
@@ -16,6 +16,8 @@ export default function PrivacyPage() {
         <p>We use data to authenticate users, provide player-development features, generate analytics and reports, preserve account history, maintain service security, and improve CourtIQ. We do not sell personal data to advertisers.</p>
         <h2 className="text-base font-bold text-text">3. Data Storage and Access</h2>
         <p>Account and performance data are stored using service providers including Supabase. Access controls are designed to restrict player data to authorized accounts and relationships.</p>
+        <h2 className="text-base font-bold text-text">3a. Optional AI Coach Pilot</h2>
+        <p>AI Coach is disabled by default and intended for eligible adult player profiles during its initial pilot. If enabled and you consent separately for each question, CourtIQ may send your basketball question and an aggregated, minimized summary of your recorded shooting, game, and drill performance to a third-party AI model provider through an AI gateway. CourtIQ does not include your player name, account identifiers, journal text, or raw video in that request. You can continue using other CourtIQ features without AI Coach. AI output can be inaccurate and should not be considered a verified athletic assessment. Provider processing and retention may be subject to provider policies, which must be reviewed before this feature is launched.</p>
         <h2 className="text-base font-bold text-text">4. Data Retention and Deletion</h2>
         <p>Data is retained while an account remains active or as otherwise required for legitimate service, security, or legal purposes. Account-deletion tools are provided in CourtIQ; some deletion requests may require support if an automated deletion cannot complete safely.</p>
         <h2 className="text-base font-bold text-text">5. Children&apos;s Privacy</h2>
