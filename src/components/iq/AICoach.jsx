@@ -47,7 +47,7 @@ export default function AICoach({ playerId }) {
       <h2>Ask about your game.</h2>
       <p>Get an explanation and suggested next steps grounded in your recorded game and practice results, not invented scouting ratings.</p>
     </div>
-    <p className="courtiq-ai-notice">Adult player profiles only during the pilot. No journals, private videos, names or direct identifiers are sent to the AI provider. This is one question at a time and is not saved as a conversation.</p>
+    <p className="courtiq-ai-notice">Adult player profiles only during the pilot. CourtIQ does not attach journal text, video, names or account identifiers. Your question is transmitted as typed, so do not include private information. This is one question at a time and is not saved as a conversation.</p>
     <div className="courtiq-ai-suggestions">{SUGGESTIONS.map(value =>
       <button type="button" key={value} onClick={() => setQuestion(value)} disabled={busy || !playerId}>{value}</button>)}
     </div>
