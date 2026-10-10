@@ -7,6 +7,7 @@ const ALLOWED = new Set([
   "film_opened",
   "film_marker_added",
   "development_profile_shared",
+  "marketing_cta_click",
 ]);
 
 export async function trackEvent(event, properties = {}) {
