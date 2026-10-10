@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import ShareStoryCard from "@/components/ShareStoryCard";
+import GameShotOutlook from "@/components/iq/GameShotOutlook";
 import { fetchSessionHistory } from "@/lib/queries";
 import { computePlayerMemory, computeTrends, computeSkillRatings, computeSeasonStats, computeCoachReport } from "@/lib/intelligence";
 import Icon from "@/components/ui/Icons";
@@ -126,6 +127,7 @@ export default function PlayerInsights() {
         ratings,
         season: computeSeasonStats(sessions),
         coachReport: computeCoachReport(sessions, ratings),
+        gameSessions: sessions,
       });
       setLoading(false);
     }).catch(() => { setHistoryError(true); setLoading(false); });
@@ -193,6 +195,8 @@ export default function PlayerInsights() {
               ))}
             </div>
           </div>
+
+          <GameShotOutlook sessions={data.gameSessions} />
 
           {/* Player Memory Insights */}
           {(memory.insights.length > 0 || memory.tendencies.length > 0) && (
