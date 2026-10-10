@@ -11,7 +11,7 @@ import { useApp } from "@/context/AppContext";
 const PremiumAnalytics = dynamic(() => import('./PremiumAnalytics'));
 
 export default function IQScreen() {
-  const { loading, isTeamIQ, playerId } = useApp();
+  const { loading, isTeamIQ, playerId, player } = useApp();
   const [tab, setTab] = useState("individual"); // individual | team
 
   if (loading) {
@@ -78,7 +78,7 @@ export default function IQScreen() {
           </div>
 
           <PlayerInsights />
-          {process.env.NEXT_PUBLIC_COURTIQ_AI_COACH_ENABLED === "true" && playerId && <AICoach key={playerId} playerId={playerId} />}
+          {process.env.NEXT_PUBLIC_COURTIQ_AI_COACH_ENABLED === "true" && playerId && player?.age >= 18 && <AICoach key={playerId} playerId={playerId} />}
           <CoachDashboard />
         </div>
       )}
