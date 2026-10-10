@@ -30,3 +30,24 @@
 ## Verification
 
 Node regression tests are in `tests/practice-intelligence.test.mjs`; existing skills-screen React harness mocks the new evidence view. CI, browser smoke tests on phone/desktop, and signed-in Supabase testing are separate required gates. This document is not evidence that production is deployed.
+
+## AI Coach pilot implementation (same draft PR)
+
+- My IQ shows the opt-in AI Coach panel only when `NEXT_PUBLIC_COURTIQ_AI_COACH_ENABLED=true` and the selected profile reports age 18+.
+- The server `POST /api/coach` independently verifies signed-in Supabase Auth identity, confirmed email, selected player ownership through manager_uid and row-level security, adult-profile age, strict configured same-origin POST, explicit per-question opt-in, and bounded question size.
+- Only aggregates from 12 or fewer completed, owner-confirmed game sessions and at most 75 saved workout results are included. Journals, profiles, identifiers and raw film are not sent. The user's question IS sent as entered after rejecting common phone/email/link patterns; the UI warns not to type identifying or sensitive details.
+- Missing or invalid made/missed records exclude the entire affected game's shooting evidence. Missing box-score stats are null, never assumed zero. Drill comparisons match version, complete reps, drill ID and target.
+- The model receives a server-generated system policy and aggregate evidence JSON. The response is rendered as plain React text, not trusted HTML. It is not a validated ML predictor and cannot be assumed fully reliable.
+- The AI provider call uses Vercel AI Gateway's documented OpenAI-compatible Chat Completions REST API, with a server-only `AI_GATEWAY_API_KEY` or Vercel `VERCEL_OIDC_TOKEN` and an explicitly configured `AI_GATEWAY_MODEL`. No app-scoped secret is required in source.
+- The separate unapplied SQL migration `supabase/migrations/20261010230000_courtiq_ai_coach_quota.sql` creates an atomic per-account UTC-day usage claim, 10 calls/day and 12-second cooldown. No in-memory bypass is permitted. This database migration must be reviewed and applied in the correct verified environment before activation.
+- There is no persistent chat history, no messages written to Supabase, no upload, no browser-side gateway key, and no paid enrollment change.
+- Feature remains disabled by default. A healthy source build is NOT permission to activate AI calls.
+
+### Mandatory manual release gates
+1. Legal/privacy and provider-data-retention review, especially whether a chat provider is permissible for minor-related data. Adult self-reported age does not constitute legal age verification.
+2. Back up and audit Supabase policies, then apply/test quota migration on isolated development storage.
+3. Confirm with two signed-in real test accounts that another account's player UUID always returns 404, and managed youth profiles (even with older account guardians) always return 403.
+4. Test concurrent quota requests, 10/day limit, 12-second cooldown, failed provider requests, and requests without Origin header.
+5. Configure an approved AI Gateway model and server-only credentials; set a provider budget, review logs/retention, run a bounded real provider call only after authorized.
+6. Browser test on phone and desktop (including dark mode, focus, loading, error and changing between player profiles).
+7. Update published privacy and terms before public activation. For youth access, build verifiable guardian consent first.
