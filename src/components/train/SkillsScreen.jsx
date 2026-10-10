@@ -7,6 +7,7 @@ import { fetchWorkoutResults, saveWorkoutResult } from '@/lib/queries';
 import Icon from '@/components/ui/Icons';
 import DrillWalkthrough from './DrillWalkthrough';
 import SkillPracticeSession from './SkillPracticeSession';
+import PracticeOutlook from './PracticeOutlook';
 import './skills.css';
 const FEATURED = FEATURED_IDS.map(id => DRILL_BANK.find(drill => drill.id === id));
 const EMPTY_HISTORY = { entries: [], categories: {} };
@@ -67,6 +68,10 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
       <article className="skill-lesson" aria-label={`Learn ${selected.name}`}>
         <div className="skill-lesson-heading"><div><p className="skill-eyebrow">{selected.level} · ~{selected.duration} min</p><h3>{selected.name}</h3></div><span>{selected.reps} {GUIDED_DRILLS[selected.id]?.unit || 'reps'}</span></div>
         <DrillWalkthrough key={selected.id} drill={selected} />
+        <aside className="skill-video-resources">
+          <strong>Need to watch real basketball coaching?</strong>
+          <p>Until CourtIQ has licensed drill-specific footage, explore <a href="https://about.fiba.basketball/en/wabc-coaching-development-project" target="_blank" rel="noopener noreferrer">FIBA's official coaching demonstration library</a>. These general examples are third-party resources, not CourtIQ-certified demonstrations of this specific drill.</p>
+        </aside>
         <button ref={startButton} className="skill-primary" disabled={!playerId} onClick={() => { setNotice(''); setActiveDrill(selected); }}>Start practice</button>
         <p className="skill-muted">{persistenceEnabled ? 'Finish, then explicitly save your result. No camera or microphone is required.' : 'Practice is available, but saving is not activated in this environment.'}</p>
       </article>
@@ -82,6 +87,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     {tab === 'progress' && <section className="skill-progress"><h3>Your practice, backed by records</h3><p className="skill-muted">Volume is saved work. Accuracy is self-recorded. Neither proves improvement in competitive games.</p>
       {status === 'loading' ? <p role="status">Loading your practice history…</p> : status !== 'ready' ? <p>Progress is unavailable until your saved history can be loaded. No zero score or ranking is being assigned.</p> : <>
         <div className="skill-volume">{DRILL_CATEGORIES.map(cat => <div key={cat.id}><strong>{cat.label}</strong><span>{history.categories[cat.id]?.reps || 0} reps · {history.categories[cat.id]?.sessions || 0} workouts</span></div>)}</div>
+        <PracticeOutlook entries={history.entries} />
         <h4>Recent measured practices</h4>
         {!history.entries.length && <p>No measured result yet. Older timer workouts contribute to volume, but do not invent accuracy scores. Start a drill, record each attempt, and save to establish a baseline.</p>}
         {history.entries.slice(0, 12).map((entry, index) => {
