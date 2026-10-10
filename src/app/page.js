@@ -1,6 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import BrandLogo from '@/components/ui/BrandLogo';
+import MarketingCTA from '@/components/marketing/MarketingCTA';
+import { publicPageMetadata, DEFAULT_DESCRIPTION } from '@/lib/siteMetadata';
+import './marketing.css';
+
+export const metadata = publicPageMetadata({
+  title: "Basketball Game Tracking & Player Development",
+  description: DEFAULT_DESCRIPTION,
+  path: "/",
+});
 import { DRILL_BANK, DRILL_CATEGORIES, SKILL_LEVELS } from "@/lib/drillBank";
 
 const featureCards = [
@@ -25,7 +34,7 @@ export default function Home() {
   const levelCount = SKILL_LEVELS.length;
 
   return (
-    <main style={{ width: "100%", minHeight: "100dvh", background: "#0F1117", color: "#F8FAFC" }}>
+    <main className="courtiq-home" style={{ width: "100%", minHeight: "100dvh", background: "#0F1117", color: "#F8FAFC" }}>
       <nav style={{ maxWidth: 1180, margin: "0 auto", padding: "22px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: 'wrap', gap: 20 }}>
         <Link href="/" style={{ color: "inherit", textDecoration: "none", display: "flex", alignItems: "center", gap: 10, fontWeight: 900, fontSize: 20 }}>
           <BrandLogo surface="dark" width={170} />
@@ -50,7 +59,7 @@ export default function Home() {
             CourtIQ connects game tracking, player analytics, a {drillCount}-drill development library, heat maps, journaling, and training recommendations in one basketball platform.
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 32 }}>
-            <Link href="/dashboard" style={{ color: "#fff", textDecoration: "none", background: "#FF6B35", borderRadius: 14, padding: "14px 20px", fontWeight: 900 }}>Open the web app</Link>
+            <MarketingCTA placement="hero" label="Open the web app" className="courtiq-marketing-cta" />
             <a href="#product" style={{ color: "#E5E7EB", textDecoration: "none", border: "1px solid #303644", borderRadius: 14, padding: "14px 20px", fontWeight: 800 }}>See the product</a>
           </div>
 
@@ -157,6 +166,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      <aside className="courtiq-mobile-cta" aria-label="Open CourtIQ on mobile">
+        <MarketingCTA placement="mobile-sticky" label="Open CourtIQ free" className="courtiq-marketing-cta" />
+      </aside>
     </main>
   );
 }
