@@ -1,0 +1,22 @@
+.courtiq-ai-coach{background:var(--color-card);color:var(--color-text);border:1px solid var(--color-border);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px;max-width:100%;overflow-wrap:anywhere}
+.courtiq-ai-eyebrow{display:block;color:var(--color-accent);font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:800}
+.courtiq-ai-head h2{font-size:22px;font-weight:900;margin:6px 0 8px}
+.courtiq-ai-head p,.courtiq-ai-notice,.courtiq-ai-small,.courtiq-ai-footer{font-size:12px;line-height:1.65;color:var(--color-text-sec);margin:0}
+.courtiq-ai-notice{padding:12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-muted)}
+.courtiq-ai-suggestions{display:flex;gap:8px;flex-wrap:wrap}
+.courtiq-ai-suggestions button{min-height:44px;padding:9px 12px;text-align:left;font-size:11px;line-height:1.45;border:1px solid var(--color-border);border-radius:11px;background:var(--color-muted);color:var(--color-text);cursor:pointer}
+.courtiq-ai-coach button:focus-visible,.courtiq-ai-coach textarea:focus-visible,.courtiq-ai-coach input:focus-visible{outline:3px solid var(--color-accent);outline-offset:2px}
+.courtiq-ai-coach form{display:flex;flex-direction:column;gap:9px}
+.courtiq-ai-label{font-size:12px;font-weight:800}
+.courtiq-ai-coach textarea{border:1px solid var(--color-border);border-radius:12px;background:var(--color-card);color:var(--color-text);padding:12px;min-height:100px;width:100%;box-sizing:border-box;font-family:inherit;font-size:14px;resize:vertical}
+.courtiq-ai-consent{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:1.5;padding:6px 0;cursor:pointer}
+.courtiq-ai-consent input{margin:3px 0 0;min-width:18px;min-height:18px;accent-color:var(--color-accent)}
+.courtiq-ai-submit{padding:13px 16px;min-height:48px;background:var(--color-accent);border:0;border-radius:12px;color:white;font-size:13px;font-weight:800}
+.courtiq-ai-coach button:disabled{opacity:.55;cursor:not-allowed}
+.courtiq-ai-error{color:var(--color-danger);font-size:12px;line-height:1.6;padding:10px;border:1px solid var(--color-danger);border-radius:10px}
+.courtiq-ai-answer{border-top:1px solid var(--color-border);padding-top:16px}
+.courtiq-ai-asked{font-size:12px;color:var(--color-text-sec);font-weight:700}
+.courtiq-ai-response{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.8;color:var(--color-text)}
+.courtiq-ai-evidence{border:1px solid var(--color-border);background:var(--color-muted);border-radius:12px;padding:12px}
+.courtiq-ai-evidence strong{font-size:12px}.courtiq-ai-evidence p{font-size:12px;line-height:1.6}.courtiq-ai-evidence small{color:var(--color-text-sec);font-size:10px;line-height:1.5}
+@media (max-width:390px){.courtiq-ai-coach{padding:13px}.courtiq-ai-head h2{font-size:19px}}
