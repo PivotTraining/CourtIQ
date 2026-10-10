@@ -18,15 +18,22 @@ export function coachQuestion(value) {
 
 export function summarizeCoachEvidence({ sessions = [], shots = [], workouts = [] } = {}) {
   // Only completed, user-attested full-coverage games are included.
-  const eligible = sessions.filter(session => session?.type === 'game' &&
+  const candidates = sessions.filter(session => session?.type === 'game' &&
     session.tracker_status === 'completed' && session.coverage_confirmed === true &&
     typeof session.id === 'string');
-  const eligibleIds = new Set(eligible.map(g => g.id));
-  const bySession = new Map(eligible.map(g => [g.id, []]));
+  const candidateIds = new Set(candidates.map(g => g.id));
+  const invalid = new Set();
+  const bySession = new Map(candidates.map(g => [g.id, []]));
   for (const shot of shots) {
-    if (!eligibleIds.has(shot?.session_id) || typeof shot.made !== 'boolean' || !shotZone(shot.zone_id)) continue;
+    if (!candidateIds.has(shot?.session_id)) continue;
+    if (typeof shot.made !== 'boolean' || !shotZone(shot.zone_id)) {
+      invalid.add(shot.session_id);
+      continue;
+    }
     bySession.get(shot.session_id).push({ made: shot.made, zone_id: shot.zone_id });
   }
+  // Unknown shot outcomes invalidate an entire game's field-goal evidence.
+  const eligible = candidates.filter(game => !invalid.has(game.id));
 
   const gameResults = eligible.map(game => {
     const rows = bySession.get(game.id) || [];
