@@ -1,0 +1,42 @@
+/* These rules are scoped to the public CourtIQ landing page. */
+.courtiq-marketing-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: #FF6B35;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 900;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.courtiq-marketing-cta:focus-visible {
+  outline: 3px solid #FFFFFF;
+  outline-offset: 3px;
+}
+.courtiq-mobile-cta { display: none; }
+@media (max-width: 767px) {
+  .courtiq-home { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .courtiq-mobile-cta {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    z-index: 45;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #11151D;
+    border-top: 1px solid #303644;
+    box-shadow: 0 -8px 26px rgba(0,0,0,.30);
+  }
+  .courtiq-mobile-cta .courtiq-marketing-cta {
+    flex: 1;
+    min-height: 48px;
+    padding-inline: 12px;
+  }
+}
