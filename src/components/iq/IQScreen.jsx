@@ -4,13 +4,14 @@ import { useState } from "react";
 import dynamic from 'next/dynamic';
 import Icon from "@/components/ui/Icons";
 import PlayerInsights from "@/components/dashboard/PlayerInsights";
+import AICoach from "./AICoach";
 import CoachDashboard from "./CoachDashboard";
 import TeamIQScreen from "./TeamIQScreen";
 import { useApp } from "@/context/AppContext";
 const PremiumAnalytics = dynamic(() => import('./PremiumAnalytics'));
 
 export default function IQScreen() {
-  const { loading, isTeamIQ } = useApp();
+  const { loading, isTeamIQ, playerId } = useApp();
   const [tab, setTab] = useState("individual"); // individual | team
 
   if (loading) {
@@ -77,6 +78,7 @@ export default function IQScreen() {
           </div>
 
           <PlayerInsights />
+          {process.env.NEXT_PUBLIC_COURTIQ_AI_COACH_ENABLED === "true" && playerId && <AICoach key={playerId} playerId={playerId} />}
           <CoachDashboard />
         </div>
       )}
