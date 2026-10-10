@@ -48,20 +48,23 @@ export function computeNextMove(sessions = [], ratings = null) {
   }
 
   const recent = sessions.slice(0, 10);
-  const allShots = recent.flatMap((session) => session.shot_logs || []);
+  const allShots = recent.flatMap((session, sessionIndex) => (session.shot_logs || [])
+    .filter(shot => shot && typeof shot.zone_id === 'string' && typeof shot.made === 'boolean')
+    .map(shot => ({ ...shot, sessionIndex })));
 
   const zones = new Map();
   for (const shot of allShots) {
     if (!shot?.zone_id) continue;
-    const current = zones.get(shot.zone_id) || { total: 0, made: 0 };
+    const current = zones.get(shot.zone_id) || { total: 0, made: 0, sessions: new Set() };
+    current.sessions.add(shot.sessionIndex);
     current.total += 1;
     if (shot.made) current.made += 1;
     zones.set(shot.zone_id, current);
   }
 
   const weakZones = [...zones.entries()]
-    .map(([zoneId, stats]) => ({ zoneId, ...stats, percentage: pct(stats.made, stats.total) }))
-    .filter((zone) => zone.total >= 6 && zone.percentage < 40)
+    .map(([zoneId, stats]) => ({ zoneId, ...stats, sessionCount: stats.sessions.size, percentage: pct(stats.made, stats.total) }))
+    .filter((zone) => zone.total >= 20 && zone.sessionCount >= 2 && zone.percentage < 40)
     .sort((a, b) => a.percentage - b.percentage || b.total - a.total);
 
   if (weakZones.length) {
@@ -69,7 +72,7 @@ export function computeNextMove(sessions = [], ratings = null) {
     return {
       priority: 95,
       title: `Own the ${zoneLabel(weak.zoneId)}`,
-      reason: `You are ${weak.made}-for-${weak.total} from this area across your recent sessions. That is enough volume for CourtIQ to flag it as a real weakness, not a one-game swing.`,
+      reason: `You are ${weak.made}-for-${weak.total} from this area across your recent sessions. This may be a useful practice focus, but these recorded attempts are not a verified skill diagnosis.`,
       actionLabel: "Open heat map",
       screen: "heatmap",
       metric: `${weak.percentage}% from ${zoneLabel(weak.zoneId)}`,
