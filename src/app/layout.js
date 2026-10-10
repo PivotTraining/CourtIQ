@@ -1,4 +1,5 @@
 import { Inter } from "next/font/google";
+import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL, SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import "./globals.css";
 import "./web-shell.css";
 
@@ -8,9 +9,28 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "CourtIQ — Basketball Development Intelligence",
-  description:
-    "Track games, analyze performance, train with 162 basketball drills, and turn data into the next development move.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
+  title: {
+    default: "CourtIQ | Basketball Development Intelligence",
+    template: "%s | CourtIQ",
+  },
+  description: DEFAULT_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "CourtIQ | Basketball Development Intelligence",
+    description: DEFAULT_DESCRIPTION,
+    url: "/",
+    siteName: SITE_NAME,
+    type: "website",
+    images: [SOCIAL_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CourtIQ | Basketball Development Intelligence",
+    description: DEFAULT_DESCRIPTION,
+    images: [SOCIAL_IMAGE.url],
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
