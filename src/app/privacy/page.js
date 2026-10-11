@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AnalyticsPreferences from "@/components/marketing/AnalyticsPreferences";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 
 export const metadata = publicPageMetadata({
@@ -12,7 +13,7 @@ export default function PrivacyPage() {
     <div className="max-w-[680px] mx-auto px-6 py-10 min-h-screen bg-bg">
       <Link href="/" className="text-accent text-sm font-bold mb-4 inline-block">&larr; Back</Link>
       <h1 className="text-2xl font-black text-text mb-4">Privacy Policy</h1>
-      <p className="text-xs text-text-sec mb-2">Last updated: October 1, 2026</p>
+      <p className="text-xs text-text-sec mb-2">Last updated: October 10, 2026</p>
       <div className="text-sm text-text-sec leading-relaxed flex flex-col gap-4">
         <p>CourtIQ (&quot;we&quot;, &quot;us&quot;) operates the CourtIQ basketball development service. This policy explains how information is collected, used, and protected.</p>
         <h2 className="text-base font-bold text-text">1. Information We Collect</h2>
@@ -23,6 +24,9 @@ export default function PrivacyPage() {
         <p>We use data to authenticate users, provide player-development features, generate analytics and reports, preserve account history, maintain service security, and improve CourtIQ. We do not sell personal data to advertisers.</p>
         <h2 className="text-base font-bold text-text">3. Data Storage and Access</h2>
         <p>Account and performance data are stored using service providers including Supabase. Access controls are designed to restrict player data to authorized accounts and relationships.</p>
+        <h2 className="text-base font-bold text-text">3a. Optional Analytics Choices</h2>
+        <p>Optional, first-party usage measurements are disabled until you opt in. You can choose essential account storage only, or allow anonymous feature and marketing-button counts. You may change your choice below at any time. These events exclude names, journal entries, actual shot logs and raw video; account sign-in storage is necessary for the service.</p>
+        <AnalyticsPreferences alwaysShow />
         <h2 className="text-base font-bold text-text">4. Data Retention and Deletion</h2>
         <p>Data is retained while an account remains active or as otherwise required for legitimate service, security, or legal purposes. Account-deletion tools are provided in CourtIQ; some deletion requests may require support if an automated deletion cannot complete safely.</p>
         <h2 className="text-base font-bold text-text">5. Children&apos;s Privacy</h2>
