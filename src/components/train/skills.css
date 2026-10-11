@@ -95,3 +95,16 @@
 .skill-motion-example canvas { max-width: 100%; display: block; margin: 0 auto; }
 .skill-motion-example figcaption { margin: 9px 0; font-size: 10px; line-height: 1.5; color: var(--color-text-sec); }
 .skill-motion-example button { min-height: 44px; padding: 8px 14px; font-size: 11px; }
+
+
+/* Mission first, catalog on demand: the open lesson remains fully keyboard reachable. */
+.skill-other-drills{margin-top:17px;border:1px solid var(--color-border);background:var(--color-card);color:var(--color-text);border-radius:16px;padding:0 12px 12px}
+.skill-other-drills>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;font-weight:850;min-height:54px;list-style:none;padding:10px 3px}
+.skill-other-drills>summary::-webkit-details-marker{display:none}
+.skill-other-drills>summary span{color:var(--color-accent)}
+.skill-other-drills>summary:focus-visible{outline:3px solid var(--color-accent);outline-offset:3px}
+.skill-other-drills .skill-grid{margin-top:10px}
+.af-progress-snapshot{border:1px solid var(--color-border);border-radius:15px;padding:14px;background:var(--color-card);color:var(--color-text);margin:12px 0}
+.af-progress-snapshot h4{font-size:14px;font-weight:850;margin:0 0 8px}
+.af-progress-snapshot p{font-size:12px;line-height:1.7;color:var(--color-text-sec);margin:7px 0}
+.af-progress-snapshot small{font-size:10px}
