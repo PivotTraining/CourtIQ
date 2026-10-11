@@ -44,12 +44,18 @@ async function shellFixture(screen = 'home', billingEnabled = false) {
   return { h, app, routes, Gametime, Logger, Overview, Billing };
 }
 
-test('the real sticky shell action opens the existing logger from every app screen, without navigation or persistence', async () => {
+test('sticky Gametime action stays available except on the deliberately focused IQ report', async () => {
   for (const screen of ['home', 'skills', 'iq', 'family', 'billing']) {
     const f = await shellFixture(screen);
     const header = findElement(f.h.output, node => node.type === 'header');
     const action = findElement(header, node => node.type === f.Gametime);
-    assert.ok(action, screen); assert.equal(header.props.style.position, 'sticky');
+    assert.equal(header.props.style.position, 'sticky');
+    if (screen === 'iq') {
+      assert.equal(action, null, 'IQ should not repeat the large Gametime banner');
+      f.h.unmount();
+      continue;
+    }
+    assert.ok(action, screen);
     action.props.onStart(); f.h.flush();
     const logger = findElement(f.h.output, node => node.type === f.Logger);
     assert.ok(logger, screen); assert.deepEqual(f.routes, []);
