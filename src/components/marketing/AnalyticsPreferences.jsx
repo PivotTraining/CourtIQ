@@ -38,7 +38,7 @@ export default function AnalyticsPreferences({ alwaysShow = false }) {
     }
   };
 
-  if (!hydrated || (!alwaysShow && (choice !== null || pathname === "/privacy"))) return null;
+  if (!hydrated || (!alwaysShow && (choice !== null || pathname !== "/"))) return null;
 
   return (
     <section
