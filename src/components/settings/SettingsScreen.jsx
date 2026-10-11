@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import Icon from "@/components/ui/Icons";
 import { signOutUser } from "@/lib/firebase";
+import PasswordAccess from "./PasswordAccess";
 
 function Row({ icon, title, description, action, actionLabel }) {
   return (
@@ -31,6 +32,7 @@ export default function SettingsScreen({ onEditProfile, onManagePlayers, darkMod
         <div style={{ marginTop: 3, fontSize: 11, color: "var(--color-text-sec)" }}>{user?.email || "Signed-in account"}</div>
         <Row icon="user" title="Player profile" description="Name, team, jersey, position and age." action={onEditProfile} actionLabel="Edit" />
         <Row icon="user" title="Players & family" description="Add, remove or switch managed player profiles." action={onManagePlayers} actionLabel="Manage" />
+        <PasswordAccess key={user?.id || "guest"} email={user?.email || ""} emailConfirmed={!!user?.email_confirmed_at} />
       </section>
 
       <section style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 20, padding: "18px 18px 4px", boxShadow: "var(--shadow-card)" }}>
