@@ -2,7 +2,7 @@
 import BrandLogo from '@/components/ui/BrandLogo';
 
 import { useEffect, useRef, useState } from "react";
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, resendConfirmation } from "@/lib/firebase";
 
 const inputStyle = {
   width: "100%", padding: "14px 16px", borderRadius: 14,
@@ -16,7 +16,7 @@ const labelStyle = {
   textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6,
 };
 
-const liveActions = { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword };
+const liveActions = { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword, resendConfirmation };
 
 export default function LoginScreen({ actions = liveActions } = {}) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -26,6 +26,7 @@ export default function LoginScreen({ actions = liveActions } = {}) {
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState("");
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [confirmationResent, setConfirmationResent] = useState(false);
   const inFlight = useRef(false);
   const alive = useRef(false);
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function LoginScreen({ actions = liveActions } = {}) {
   function beginRequest() {
     if (inFlight.current) return false;
     inFlight.current = true;
-    setError(""); setResetSent(""); setConfirmationSent(false); setLoading(true);
+    setError(""); setResetSent(""); setConfirmationResent(false); setLoading(true);
     return true;
   }
   function endRequest() {
@@ -74,6 +75,17 @@ export default function LoginScreen({ actions = liveActions } = {}) {
     } finally {
       endRequest();
     }
+  };
+
+  const handleResend = async () => {
+    if (!confirmationSent || inFlight.current) return;
+    if (!beginRequest()) return;
+    try {
+      await actions.resendConfirmation(email.trim());
+      if (alive.current) { setConfirmationSent(true); setConfirmationResent(true); }
+    } catch (err) {
+      if (alive.current) { setError(err.message || "Could not request another confirmation email."); setConfirmationSent(true); }
+    } finally { endRequest(); }
   };
 
   const handleGoogle = async () => {
@@ -170,6 +182,10 @@ export default function LoginScreen({ actions = liveActions } = {}) {
               </div>
             )}
 
+            {!isSignUp && !confirmationSent && !error && <p style={{ fontSize: 11, lineHeight: 1.55, color: "var(--color-text-sec)", margin: 0 }}>
+              Already registered using Google? Continue with Google. Email/password sign-in requires a password-based account.
+            </p>}
+
             {error && (
               <div role="alert" style={{
                 fontSize: 12, color: "#B91C1C", background: "#FEF2F2",
@@ -182,6 +198,8 @@ export default function LoginScreen({ actions = liveActions } = {}) {
             {confirmationSent && (
               <p role="status" style={{ fontSize: 13, lineHeight: 1.5, color: "var(--color-text-sec)" }}>
                 Check your inbox to confirm your email. Open the link in this same browser, then return to CourtIQ to sign in.
+                {confirmationResent && <span> Another confirmation message has been requested. Check spam as well.</span>}
+                <button type="button" disabled={loading} onClick={handleResend} style={{ display: "block", marginTop: 10, minHeight: 42, color: "#FF8A54", border: "1px solid var(--color-border)", background: "var(--color-card)", padding: "8px 12px", borderRadius: 10, fontSize: 12, fontWeight: 800 }}>Resend confirmation email</button>
               </p>
             )}
 
