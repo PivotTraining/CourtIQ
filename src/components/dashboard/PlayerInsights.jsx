@@ -64,14 +64,14 @@ export default function PlayerInsights() {
       const confirmed = sessions.filter(s => s.type === "game" && s.coverage_confirmed === true &&
         s.tracker_status === "completed" && Array.isArray(s.shot_logs) &&
         s.shot_logs.every(shot => typeof shot?.made === "boolean"));
-      const ratings = computeSkillRatings(confirmed);
+      const ratings = computeSkillRatings(sessions);
       setData({
         memory: computePlayerMemory(sessions),
         trends: computeTrends(sessions),
         ratings,
         season: computeSeasonStats(sessions),
         coachReport: computeCoachReport(sessions, ratings),
-        nextMove: computeNextMove(confirmed, ratings),
+        nextMove: computeNextMove(confirmed, computeSkillRatings(confirmed)),
         gameSessions: sessions,
       });
       setLoading(false);
