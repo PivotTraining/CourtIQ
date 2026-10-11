@@ -43,7 +43,7 @@ export default function IQSpotlight({ ratings, sessions = [], nextMove }) {
       <div className="iq-spotlight-shine" aria-hidden="true" />
       <div className="iq-spotlight-topline">
         <span className="iq-kicker">COURTIQ / PLAYER INTELLIGENCE</span>
-        <span className="iq-count">{readiness.confirmedGames} verified-coverage game{readiness.confirmedGames === 1 ? "" : "s"}</span>
+        <span className="iq-count">{readiness.confirmedGames} coverage-confirmed game{readiness.confirmedGames === 1 ? "" : "s"}</span>
       </div>
       <div className="iq-scoreband">
         <div className="iq-scorebody">
