@@ -71,7 +71,15 @@ export default function LoginScreen({ actions = liveActions } = {}) {
         await actions.signInWithEmail(email.trim(), password);
       }
     } catch (err) {
-      if (alive.current) setError(err.message || "Something went wrong");
+      if (alive.current) {
+        const message = err.message || "Something went wrong";
+        if (/email (?:not confirmed|not verified)/i.test(message)) {
+          setError("Your email is not confirmed. Request another confirmation email below, then open its link in this browser.");
+          setConfirmationSent(true);
+        } else {
+          setError(message);
+        }
+      }
     } finally {
       endRequest();
     }
