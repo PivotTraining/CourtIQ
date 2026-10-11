@@ -1,6 +1,9 @@
 import { Inter } from "next/font/google";
+import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL, SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import "./globals.css";
 import "./web-shell.css";
+import "./marketing.css";
+import AnalyticsPreferences from "@/components/marketing/AnalyticsPreferences";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -8,9 +11,28 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "CourtIQ — Basketball Development Intelligence",
-  description:
-    "Track games, analyze performance, train with 162 basketball drills, and turn data into the next development move.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
+  title: {
+    default: "CourtIQ | Basketball Development Intelligence",
+    template: "%s | CourtIQ",
+  },
+  description: DEFAULT_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "CourtIQ | Basketball Development Intelligence",
+    description: DEFAULT_DESCRIPTION,
+    url: "/",
+    siteName: SITE_NAME,
+    type: "website",
+    images: [SOCIAL_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CourtIQ | Basketball Development Intelligence",
+    description: DEFAULT_DESCRIPTION,
+    images: [SOCIAL_IMAGE.url],
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -35,7 +57,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/png" sizes="48x48" href="/brand/courtiq-v2/icon-48.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${inter.variable} font-sans w-full`}>{children}</body>
+      <body className={`${inter.variable} font-sans w-full`}>{children}<AnalyticsPreferences /></body>
     </html>
   );
 }

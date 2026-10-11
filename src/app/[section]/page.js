@@ -21,6 +21,33 @@ const APP_SECTIONS = new Set([
   "development-profile",
 ]);
 
+const APP_SECTION_LABELS = {
+  dashboard: "Player Dashboard",
+  training: "Workout Tracker",
+  skills: "Basketball Skills Lab",
+  sessions: "Shot and Game Sessions",
+  heatmap: "Shooting Heat Map",
+  journal: "Player Journal",
+  "game-log": "Basketball Game Log",
+  iq: "Player IQ and Analytics",
+  coach: "Coaching Workspace",
+  billing: "Membership",
+  family: "Family Dashboard",
+  settings: "Settings",
+  film: "Film Lab",
+  "development-profile": "Player Development Profile",
+};
+
+export async function generateMetadata({ params }) {
+  const { section } = await params;
+  const label = APP_SECTION_LABELS[section] || "CourtIQ App";
+  return {
+    title: label,
+    description: `${label} in CourtIQ. Sign in to view your own basketball development records.`,
+    robots: { index: false, follow: false, noarchive: true },
+  };
+}
+
 export default async function AppSectionPage({ params }) {
   const { section } = await params;
 

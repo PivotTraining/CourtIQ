@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { practiceGuide } from '@/lib/skillPractice.mjs';
+import DrillAnimation from './DrillAnimation';
 
 export default function DrillWalkthrough({ drill }) {
   const guide = practiceGuide(drill);
@@ -13,6 +14,7 @@ export default function DrillWalkthrough({ drill }) {
   const current = guide.steps[step];
   const ball = ['handles', 'passing'].includes(guide.scene) || ['shooting', 'finishing'].includes(drill.category);
   return <div className="skill-walkthrough">
+    {!guide.scene && <figure className="skill-motion-example"><DrillAnimation category={drill.category} size={180} playing={playing} /><figcaption>General {drill.category.replace(/-/g, " ")} movement illustration. Not a technique-accurate demonstration of this specific drill.</figcaption><button type="button" onClick={() => setPlaying(value => !value)}>{playing ? "Pause movement" : "Play movement"}</button></figure>}
     {guide.scene && <div className={`skill-diagram ${playing ? 'is-playing' : ''}`}>
       <svg viewBox="0 0 320 200" role="img" aria-label={`${drill.name}: ${current[0]}. ${ball ? 'Orange dot is the ball' : 'Blue dot is the player'}. Diagram is not to scale.`}>
         <rect x="20" y="18" width="280" height="164" rx="12" fill="none" stroke="currentColor" opacity=".3" />
@@ -35,6 +37,9 @@ export default function DrillWalkthrough({ drill }) {
     </div>
     <h4>{current?.[0]}</h4><p>{current?.[1]}</p>
     <p className="skill-muted">Setup: {guide.equipment}</p>
+    <p className="skill-cue"><strong>How to count your practice</strong>{['shooting', 'finishing'].includes(drill.category)
+      ? 'Count each shot you actually attempt as made or missed. Keep your spot, hand, and target consistent between assessments.'
+      : 'Mark a rep clean only if you completed the described movement under control. Otherwise select Needs work. This is your own assessment, not camera-verified form scoring.'}</p>
     {drill.videoTip && <p className="skill-cue"><strong>Coaching cue</strong> {drill.videoTip}</p>}
   </div>;
 }

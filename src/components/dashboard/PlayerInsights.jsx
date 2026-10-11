@@ -4,71 +4,13 @@ import { useState, useEffect } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
 import ShareStoryCard from "@/components/ShareStoryCard";
+import GameShotOutlook from "@/components/iq/GameShotOutlook";
 import { fetchSessionHistory } from "@/lib/queries";
 import { computePlayerMemory, computeTrends, computeSkillRatings, computeSeasonStats, computeCoachReport } from "@/lib/intelligence";
 import Icon from "@/components/ui/Icons";
-
-/* --- RADAR CHART (SVG) --- */
-function RadarChart({ ratings }) {
-  const categories = [
-    { key: "shooting", label: "SHOOT", angle: -90 },
-    { key: "playmaking", label: "PLAY", angle: -18 },
-    { key: "efficiency", label: "EFF", angle: 54 },
-    { key: "defense", label: "DEF", angle: 126 },
-    { key: "rebounding", label: "REB", angle: 198 },
-  ];
-  const cx = 100, cy = 100, maxR = 70;
-
-  const getPoint = (angle, pct) => {
-    const rad = (angle * Math.PI) / 180;
-    return { x: cx + Math.cos(rad) * maxR * (pct / 100), y: cy + Math.sin(rad) * maxR * (pct / 100) };
-  };
-
-  const gridLevels = [25, 50, 75, 100];
-  const dataPoints = categories.map((c) => getPoint(c.angle, ratings[c.key] || 0));
-  const pathD = dataPoints.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ") + " Z";
-
-  return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
-      <svg viewBox="0 0 200 200" style={{ width: "100%", maxWidth: 220 }}>
-        {/* Grid */}
-        {gridLevels.map((level) => (
-          <polygon key={level} fill="none" stroke="#E2E4EB" strokeWidth="0.5"
-            points={categories.map((c) => { const p = getPoint(c.angle, level); return `${p.x},${p.y}`; }).join(" ")} />
-        ))}
-        {/* Axes */}
-        {categories.map((c) => {
-          const p = getPoint(c.angle, 100);
-          return <line key={c.key} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#E2E4EB" strokeWidth="0.5" />;
-        })}
-        {/* Data polygon */}
-        <polygon points={dataPoints.map((p) => `${p.x},${p.y}`).join(" ")}
-          fill="rgba(255, 107, 53, 0.12)" stroke="#FF6B35" strokeWidth="2.5" />
-        {/* Data dots + labels */}
-        {categories.map((c, i) => {
-          const dp = dataPoints[i];
-          const lp = getPoint(c.angle, 115);
-          return (
-            <g key={c.key}>
-              <circle cx={dp.x} cy={dp.y} r="3.5" fill="#FF6B35" />
-              <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
-                fill="#6B7194" fontSize="8" fontWeight="800" fontFamily="inherit">
-                {c.label}
-              </text>
-            </g>
-          );
-        })}
-        {/* Center overall */}
-        <text x={cx} y={cy - 6} textAnchor="middle" fill="#1A1D2E" fontSize="22" fontWeight="900" fontFamily="inherit">
-          {ratings.overall}
-        </text>
-        <text x={cx} y={cy + 8} textAnchor="middle" fill="#6B7194" fontSize="7" fontWeight="700" fontFamily="inherit">
-          OVERALL
-        </text>
-      </svg>
-    </div>
-  );
-}
+import IQSpotlight from "@/components/iq/IQSpotlight";
+import { computeNextMove } from "@/lib/nextMove.mjs";
+import "./player-insights.css";
 
 /* --- TREND ARROW --- */
 function TrendArrow({ delta }) {
@@ -119,6 +61,9 @@ export default function PlayerInsights() {
     if (!playerId) return;
     fetchSessionHistory(playerId).then((sessions) => {
       if (sessions.length === 0) { setLoading(false); return; }
+      const confirmed = sessions.filter(s => s.type === "game" && s.coverage_confirmed === true &&
+        s.tracker_status === "completed" && Array.isArray(s.shot_logs) &&
+        s.shot_logs.every(shot => typeof shot?.made === "boolean"));
       const ratings = computeSkillRatings(sessions);
       setData({
         memory: computePlayerMemory(sessions),
@@ -126,6 +71,8 @@ export default function PlayerInsights() {
         ratings,
         season: computeSeasonStats(sessions),
         coachReport: computeCoachReport(sessions, ratings),
+        nextMove: computeNextMove(confirmed, computeSkillRatings(confirmed)),
+        gameSessions: sessions,
       });
       setLoading(false);
     }).catch(() => { setHistoryError(true); setLoading(false); });
@@ -133,67 +80,34 @@ export default function PlayerInsights() {
 
   if (loading) return <div style={{ height: 192, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />;
   if (historyError) return <RecordsUnavailable />;
-  if (!data) return null;
+  if (!data) return <section className="iq-empty">
+    <strong>Your game intelligence starts here.</strong>
+    <p>Record a full game or shooting workout to begin building your personal basketball profile. No stats? No made-up ratings.</p>
+    <button type="button" onClick={() => setScreen("train")}>Record your first session →</button>
+  </section>;
 
-  const { memory, trends, ratings, season, coachReport } = data;
+  const { memory, trends, ratings, season, coachReport, nextMove } = data;
 
   return (
     <div>
-      {/* Tabs */}
-      <div style={{ display: "flex", background: "var(--color-muted)", borderRadius: 12, padding: 3, marginBottom: 16 }}>
-        {[
-          { id: "overview", label: "IQ", icon: "brain" },
-          { id: "season", label: "Season", icon: "barChart" },
-          { id: "trends", label: "Trends", icon: "trending" },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              borderRadius: 10,
-              border: "none",
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
-              minHeight: 44,
-              transition: "all 0.2s",
-              background: tab === t.id ? "var(--color-card)" : "transparent",
-              color: tab === t.id ? "var(--color-accent)" : "var(--color-text-sec)",
-              boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-            }}>
-            <Icon name={t.icon} size={12} /> {t.label}
-          </button>
+      <nav className="iq-insight-tabs" aria-label="Choose IQ view">
+        {[["overview", "Snapshot"], ["season", "Season"], ["trends", "Trends"]].map(([id, label]) => (
+          <button key={id} type="button" aria-pressed={tab === id} aria-selected={tab === id}
+            onClick={() => setTab(id)}>{label}</button>
         ))}
-      </div>
+      </nav>
 
-      {/* -- OVERVIEW TAB -- */}
+            {/* -- OVERVIEW TAB -- */}
       {tab === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Skill Radar */}
-          <div style={cardStyle}>
-            <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)", marginBottom: 8, textAlign: "center" }}>Player Rating</h3>
-            <p className="text-xs text-text-sec text-center mb-3">CourtIQ heuristic from recorded stats—not a validated scouting grade. Review sample size and unlogged stats before comparing players.</p>
-            <RadarChart ratings={ratings} />
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, marginTop: 12 }}>
-              {[
-                { label: "SHOOT", value: ratings.shooting, color: "#FF6B35" },
-                { label: "PLAY", value: ratings.playmaking, color: "#22C55E" },
-                { label: "REB", value: ratings.rebounding, color: "#F59E0B" },
-                { label: "DEF", value: ratings.defense, color: "#6366F1" },
-                { label: "EFF", value: ratings.efficiency, color: "#0EA5E9" },
-              ].map((s) => (
-                <div key={s.label} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: s.color }}>{s.value}</div>
-                  <div style={{ fontSize: 8, color: "var(--color-text-sec)", fontWeight: 700 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          <IQSpotlight ratings={ratings} sessions={data.gameSessions} nextMove={nextMove} />
+          <details className="iq-depth">
+            <summary>Explore your shooting outlook <span aria-hidden="true">↗</span></summary>
+            <div className="iq-depth-body"><GameShotOutlook sessions={data.gameSessions} /></div>
+          </details>
+          <details className="iq-depth">
+            <summary>Coach notes & deeper insights <span aria-hidden="true">↗</span></summary>
+            <div className="iq-depth-body">
           {/* Player Memory Insights */}
           {(memory.insights.length > 0 || memory.tendencies.length > 0) && (
             <div style={cardStyle}>
@@ -287,6 +201,8 @@ export default function PlayerInsights() {
               )}
             </div>
           )}
+            </div>
+          </details>
         </div>
       )}
 

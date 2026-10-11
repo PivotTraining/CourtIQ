@@ -5,6 +5,7 @@ const EVENTS = new Set([
   "film_opened",
   "film_marker_added",
   "development_profile_shared",
+  "marketing_cta_click",
 ]);
 
 function sameOrigin(request) {

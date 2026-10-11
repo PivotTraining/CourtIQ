@@ -62,20 +62,23 @@ export function identifyDevelopmentFocus(sessions = [], ratings = null) {
   }
 
   const recent = sessions.slice(0, 10);
-  const shots = recent.flatMap((session) => session.shot_logs || []);
+  const shots = recent.flatMap((session, sessionIndex) => (session.shot_logs || [])
+    .filter(shot => shot && typeof shot.zone_id === 'string' && typeof shot.made === 'boolean')
+    .map(shot => ({ ...shot, sessionIndex })));
   const zones = new Map();
 
   for (const shot of shots) {
     if (!shot?.zone_id || shot.zone_id === "free-throw") continue;
-    const row = zones.get(shot.zone_id) || { total: 0, made: 0 };
+    const row = zones.get(shot.zone_id) || { total: 0, made: 0, sessions: new Set() };
+    row.sessions.add(shot.sessionIndex);
     row.total += 1;
     if (shot.made) row.made += 1;
     zones.set(shot.zone_id, row);
   }
 
   const weakZone = [...zones.entries()]
-    .map(([zoneId, stats]) => ({ zoneId, ...stats, percentage: pct(stats.made, stats.total) }))
-    .filter((zone) => zone.total >= 6 && zone.percentage < 40)
+    .map(([zoneId, stats]) => ({ zoneId, ...stats, sessionCount: stats.sessions.size, percentage: pct(stats.made, stats.total) }))
+    .filter((zone) => zone.total >= 20 && zone.sessionCount >= 2 && zone.percentage < 40)
     .sort((a, b) => a.percentage - b.percentage || b.total - a.total)[0];
 
   if (weakZone) {
@@ -84,9 +87,9 @@ export function identifyDevelopmentFocus(sessions = [], ratings = null) {
       type: "shooting-zone",
       categories: ["shooting"],
       title: "Attack the " + zoneLabel(weakZone.zoneId),
-      reason: "You are " + weakZone.made + "-for-" + weakZone.total + " from this area across recent sessions. CourtIQ is using that repeated result to prescribe targeted shooting work.",
+      reason: "You are " + weakZone.made + "-for-" + weakZone.total + " from this area across recent sessions. CourtIQ suggests targeted shooting work, but this is not a verified diagnosis of shooting ability.",
       evidence: weakZone.percentage + "% on " + weakZone.total + " attempts",
-      confidence: weakZone.total >= 12 ? "high" : "medium",
+      confidence: weakZone.total >= 40 && weakZone.sessionCount >= 3 ? "medium" : "low",
       tags: [...zoneWords, "shooting", "form"],
     };
   }

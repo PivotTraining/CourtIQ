@@ -1,4 +1,11 @@
 import Link from "next/link";
+import { publicPageMetadata } from "@/lib/siteMetadata";
+
+export const metadata = publicPageMetadata({
+  title: "Terms of Service",
+  description: "Read the terms and conditions for using the CourtIQ basketball development application.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

@@ -67,3 +67,31 @@
 .courtiq-dark .skill-category[aria-pressed=true],.courtiq-dark .skill-primary { box-shadow:0 0 18px rgba(255,107,53,.18); }
 @media (max-width:360px) { .skill-grid { grid-template-columns:1fr; } .skill-lesson-heading { flex-wrap:wrap; } .skill-library-card { align-items:flex-start; } }
 @media (prefers-reduced-motion:reduce) { .skill-route { animation:none!important; transition:none; } }
+
+
+/* Evidence-first practice intelligence: responsive, light/dark system colors. */
+.skill-video-resources { margin: 14px 0; padding: 12px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-muted); }
+.skill-video-resources strong { font-size: 12px; }
+.skill-video-resources p { font-size: 11px; line-height: 1.7; margin: 6px 0 0; color: var(--color-text-sec); }
+.skill-video-resources a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+.skill-video-resources a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.skill-intelligence { margin: 18px 0 22px; border: 1px solid var(--color-border); border-radius: 16px; padding: 16px; background: var(--color-card); }
+.skill-intelligence h4 { margin: 5px 0 8px; font-size: 16px; line-height: 1.4; }
+.skill-intelligence .skill-muted { font-size: 11px; line-height: 1.65; color: var(--color-text-sec); }
+.skill-outlook-select { display: flex; flex-direction: column; gap: 7px; margin: 16px 0; font-size: 12px; font-weight: 700; }
+.skill-outlook-select select { border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); color: var(--color-text); min-height: 44px; padding: 10px; max-width: 100%; }
+.skill-outlook-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.skill-outlook-metrics>div { border-radius: 12px; padding: 12px; background: var(--color-muted); min-width: 0; }
+.skill-outlook-metrics span,.skill-outlook-metrics small { display: block; font-size: 10px; line-height: 1.5; color: var(--color-text-sec); }
+.skill-outlook-metrics strong { display: block; margin: 5px 0; font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.skill-outlook-result { border: 1px solid var(--color-border); border-radius: 12px; padding: 12px; margin: 12px 0; }
+.skill-outlook-label { display: block; font-size: 10px; color: var(--color-text-sec); text-transform: uppercase; font-weight: 800; letter-spacing: .05em; }
+.skill-outlook-result>strong { display: block; font-size: 24px; margin-top: 6px; }
+.skill-outlook-result>p { font-size: 11px; line-height: 1.65; }
+@media(max-width: 360px) { .skill-intelligence { padding: 12px; } .skill-outlook-metrics { grid-template-columns: 1fr; } }
+
+
+.skill-motion-example { margin: 12px 0; padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-muted); text-align: center; }
+.skill-motion-example canvas { max-width: 100%; display: block; margin: 0 auto; }
+.skill-motion-example figcaption { margin: 9px 0; font-size: 10px; line-height: 1.5; color: var(--color-text-sec); }
+.skill-motion-example button { min-height: 44px; padding: 8px 14px; font-size: 11px; }

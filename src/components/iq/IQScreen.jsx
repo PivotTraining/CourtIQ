@@ -1,135 +1,48 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from 'next/dynamic';
-import Icon from "@/components/ui/Icons";
+import dynamic from "next/dynamic";
 import PlayerInsights from "@/components/dashboard/PlayerInsights";
+import AICoach from "./AICoach";
 import CoachDashboard from "./CoachDashboard";
 import TeamIQScreen from "./TeamIQScreen";
 import { useApp } from "@/context/AppContext";
-const PremiumAnalytics = dynamic(() => import('./PremiumAnalytics'));
+
+const PremiumAnalytics = dynamic(() => import("./PremiumAnalytics"));
 
 export default function IQScreen() {
-  const { loading, isTeamIQ } = useApp();
-  const [tab, setTab] = useState("individual"); // individual | team
+  const { loading, isTeamIQ, playerId, player } = useApp();
+  const [panel, setPanel] = useState("player");
+  const premiumEnabled = process.env.NEXT_PUBLIC_COURTIQ_PREMIUM_ANALYTICS_ENABLED === "true";
 
-  if (loading) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ height: 40, background: "var(--color-muted)", borderRadius: 12, animation: "pulse 1.5s ease-in-out infinite" }} />
-        <div style={{ height: 192, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />
-        <div style={{ height: 128, background: "var(--color-muted)", borderRadius: 16, animation: "pulse 1.5s ease-in-out infinite" }} />
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-
-      {/* Individual / Team IQ tabs */}
-      <div style={{ display: "flex", background: "var(--color-muted)", borderRadius: 12, padding: 3 }}>
-        <button onClick={() => setTab("individual")} style={{
-          flex: 1, padding: "10px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 700,
-          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-          minHeight: 44, transition: "all 0.2s",
-          background: tab === "individual" ? "var(--color-card)" : "transparent",
-          color: tab === "individual" ? "var(--color-accent)" : "var(--color-text-sec)",
-          boxShadow: tab === "individual" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-        }}>
-          <Icon name="brain" size={13} /> My IQ
-        </button>
-        <button onClick={() => setTab("team")} style={{
-          flex: 1, padding: "10px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 700,
-          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-          minHeight: 44, transition: "all 0.2s",
-          background: tab === "team" ? "var(--color-card)" : "transparent",
-          color: tab === "team" ? "#8B5CF6" : "var(--color-text-sec)",
-          boxShadow: tab === "team" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-        }}>
-          <Icon name="user" size={13} color={tab === "team" ? "#8B5CF6" : "var(--color-text-sec)"} />
-          Team IQ
-          {!isTeamIQ && (
-            <span style={{ fontSize: 8, fontWeight: 900, color: "#8B5CF6", background: "rgba(139,92,246,0.15)", borderRadius: 5, padding: "1px 5px", marginLeft: 2 }}>SOON</span>
-          )}
-        </button>
-        {process.env.NEXT_PUBLIC_COURTIQ_PREMIUM_ANALYTICS_ENABLED === 'true' && <button onClick={() => setTab('lab')} style={{ flex: 1, minHeight: 44, padding: '10px 6px', borderRadius: 10, border: 0, fontSize: 12, fontWeight: 800, cursor: 'pointer', background: tab === 'lab' ? 'var(--color-card)' : 'transparent', color: tab === 'lab' ? 'var(--color-accent)' : 'var(--color-text-sec)' }}>Performance Lab</button>}
-      </div>
-
-      {tab === 'lab' && process.env.NEXT_PUBLIC_COURTIQ_PREMIUM_ANALYTICS_ENABLED === 'true' && <PremiumAnalytics />}
-
-      {/* ── Individual IQ ── */}
-      {tab === "individual" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Context banner */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10,
-            background: "rgba(139,92,246,0.08)",
-            border: "1px solid rgba(139,92,246,0.2)",
-            borderRadius: 14, padding: "10px 14px",
-          }}>
-            <Icon name="brain" size={18} color="#8B5CF6" />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#8B5CF6" }}>Powered by your Gametime sessions</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-sec)", marginTop: 1 }}>
-                Every shot, assist, and stat you track updates your IQ automatically.
-              </div>
-            </div>
-          </div>
-
-          <PlayerInsights />
-          <CoachDashboard />
-        </div>
-      )}
-
-      {/* ── Team IQ ── */}
-      {tab === "team" && (
-        isTeamIQ ? (
-          <TeamIQScreen />
-        ) : (
-          /* Team collaboration remains hidden until ownership and billing are server-verified. */
-          <div style={{
-            background: "linear-gradient(135deg, #1E0A3C, #2D1060)",
-            borderRadius: 24, padding: "36px 24px",
-            textAlign: "center",
-            border: "1px solid rgba(139,92,246,0.3)",
-          }}>
-            <div style={{ width: 72, height: 72, borderRadius: 36, background: "rgba(139,92,246,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-              <Icon name="user" size={32} color="#8B5CF6" />
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 8 }}>Team IQ</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.6, marginBottom: 24 }}>
-              Secure roster collaboration is still in development. Individual IQ analytics remain available in the My IQ tab.
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
-              {[
-                { icon: "brain", text: "Team Skill Radar — aggregate of all players" },
-                { icon: "fire",  text: "Coach Intelligence — team-level strengths & gaps" },
-                { icon: "user",  text: "Roster Breakdown — compare every player side by side" },
-                { icon: "link",  text: "Permission-controlled roster collaboration" },
-                { icon: "trophy", text: "Team Season Stats — wins, averages, trends" },
-              ].map((f) => (
-                <div key={f.text} style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 9, background: "rgba(139,92,246,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Icon name={f.icon} size={15} color="#8B5CF6" />
-                  </div>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>{f.text}</span>
-                </div>
-              ))}
-            </div>
-            <button disabled aria-disabled="true" style={{
-              width: "100%", padding: "16px 24px", borderRadius: 16,
-              background: "linear-gradient(135deg, #7C3AED, #6D28D9)",
-              color: "white", fontSize: 15, fontWeight: 800, border: "none", cursor: "not-allowed",
-              boxShadow: "0 8px 24px rgba(109,40,217,0.4)", minHeight: 52, opacity: 0.55,
-            }}>
-              Team collaboration coming soon
-            </button>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 10 }}>
-              No purchase is available in this release.
-            </div>
-          </div>
-        )
-      )}
+  if (loading) return (
+    <div role="status" aria-label="Loading player intelligence" style={{ display: "grid", gap: 12 }}>
+      <div style={{ height: 38, width: 160, background: "var(--color-muted)", borderRadius: 12 }} />
+      <div style={{ height: 340, background: "var(--color-muted)", borderRadius: 20 }} />
     </div>
   );
+
+  // Team collaboration coming soon: no promotional tab until it is server-enabled.
+  return <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    {(premiumEnabled || isTeamIQ) && <div className="iq-insight-tabs" role="group" aria-label="Intelligence workspaces">
+      <button type="button" aria-pressed={panel === "player"} aria-selected={panel === "player"} onClick={() => setPanel("player")}>My IQ</button>
+      {premiumEnabled && <button type="button" aria-pressed={panel === "lab"} aria-selected={panel === "lab"} onClick={() => setPanel("lab")}>Performance Lab</button>}
+      {isTeamIQ && <button type="button" aria-pressed={panel === "team"} aria-selected={panel === "team"} onClick={() => setPanel("team")}>Team IQ</button>}
+    </div>}
+
+    {panel === "player" && <>
+      <PlayerInsights />
+      {process.env.NEXT_PUBLIC_COURTIQ_AI_COACH_ENABLED === "true" && playerId && player?.age >= 18 &&
+        <details className="iq-depth">
+          <summary>Ask CourtIQ AI Coach <span aria-hidden="true">↗</span></summary>
+          <div className="iq-depth-body"><AICoach key={playerId} playerId={playerId} /></div>
+        </details>}
+      <details className="iq-depth">
+        <summary>Compare managed players <span aria-hidden="true">↗</span></summary>
+        <div className="iq-depth-body"><CoachDashboard /></div>
+      </details>
+    </>}
+    {panel === "lab" && premiumEnabled && <PremiumAnalytics />}
+    {panel === "team" && isTeamIQ && <TeamIQScreen />}
+  </section>;
 }

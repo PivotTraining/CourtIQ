@@ -9,11 +9,11 @@ test("asks a new player to log a first session", () => {
 });
 
 test("prioritizes a repeated weak shooting zone", () => {
-  const sessions = [{
+  const sessions = Array.from({ length: 2 }, () => ({
     type: "practice",
-    shot_logs: Array.from({ length: 8 }, (_, index) => ({ zone_id: "left-corner-three", made: index < 2 })),
+    shot_logs: Array.from({ length: 16 }, (_, index) => ({ zone_id: "left-corner-three", made: index < 4 })),
     game_stats: {},
-  }];
+  }));
   const move = computeNextMove(sessions, { shooting: 70, playmaking: 70, rebounding: 70, defense: 70, efficiency: 70 });
   assert.equal(move.screen, "heatmap");
   assert.match(move.metric, /25%/);

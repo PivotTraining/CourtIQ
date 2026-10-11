@@ -12,11 +12,11 @@ const drills = [
 ];
 
 test("identifies a repeated weak shooting zone", () => {
-  const sessions = [{
+  const sessions = Array.from({ length: 2 }, () => ({
     type: "practice",
-    shot_logs: Array.from({ length: 8 }, (_, index) => ({ zone_id: "left-corner-three", made: index < 2 })),
+    shot_logs: Array.from({ length: 16 }, (_, index) => ({ zone_id: "left-corner-three", made: index < 4 })),
     game_stats: {},
-  }];
+  }));
   const focus = identifyDevelopmentFocus(sessions, null);
   assert.equal(focus.type, "shooting-zone");
   assert.equal(focus.categories[0], "shooting");
