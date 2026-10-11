@@ -1,4 +1,5 @@
 "use client";
+import { shouldMeasure } from "./analyticsConsent.mjs";
 
 const ALLOWED = new Set([
   "app_open",
@@ -12,6 +13,12 @@ const ALLOWED = new Set([
 
 export async function trackEvent(event, properties = {}) {
   if (!ALLOWED.has(event) || typeof window === "undefined") return;
+  try {
+    if (!shouldMeasure(window.localStorage, {
+      doNotTrack: navigator.doNotTrack,
+      globalPrivacyControl: navigator.globalPrivacyControl,
+    })) return;
+  } catch { return; }
   const clean = {};
   if (typeof properties.screen === "string") clean.screen = properties.screen.slice(0, 40);
   if (typeof properties.source === "string") clean.source = properties.source.slice(0, 40);
