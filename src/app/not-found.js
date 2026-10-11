@@ -1,3 +1,10 @@
+import Link from "next/link";
+
+export const metadata = {
+  title: "Page Not Found",
+  robots: { index: false, follow: false },
+};
+
 export default function NotFound() {
   return (
     <div className="w-full min-h-screen bg-bg flex flex-col items-center justify-center px-8 text-center">
@@ -12,4 +19,3 @@ export default function NotFound() {
     </div>
   );
 }
-import Link from "next/link";

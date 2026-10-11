@@ -1,0 +1,78 @@
+/* These rules are scoped to the public CourtIQ landing page. */
+.courtiq-marketing-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: #FF6B35;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 900;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.courtiq-marketing-cta:focus-visible {
+  outline: 3px solid #FFFFFF;
+  outline-offset: 3px;
+}
+.courtiq-mobile-cta { display: none; }
+@media (max-width: 767px) {
+  .courtiq-home { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .courtiq-mobile-cta {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    z-index: 45;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: #11151D;
+    border-top: 1px solid #303644;
+    box-shadow: 0 -8px 26px rgba(0,0,0,.30);
+  }
+  .courtiq-mobile-cta .courtiq-marketing-cta {
+    flex: 1;
+    min-height: 48px;
+    padding-inline: 12px;
+  }
+}
+
+/* Privacy panel is an explicit preference, not a forced opt-in. */
+.courtiq-analytics-banner {
+  position: fixed;
+  z-index: 250;
+  left: max(12px, env(safe-area-inset-left, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  max-width: 760px;
+  margin-inline: auto;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  border: 1px solid #414652;
+  border-radius: 18px;
+  background: #171C26;
+  color: #F9FAFB;
+  box-shadow: 0 16px 42px rgba(0,0,0,.45);
+}
+.courtiq-analytics-content { flex: 1; min-width: 0; }
+.courtiq-analytics-content strong { display: block; font-size: 15px; font-weight: 850; }
+.courtiq-analytics-content p { margin: 8px 0 4px; font-size: 12px; line-height: 1.65; color: #D1D5DB; }
+.courtiq-analytics-content a { display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 700; text-decoration: underline; color: #FFA17F; }
+.courtiq-analytics-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.courtiq-analytics-actions button { min-height: 44px; min-width: 135px; border-radius: 10px; border: 1px solid #697386; padding: 10px 13px; font-size: 12px; font-weight: 800; cursor: pointer; }
+.courtiq-analytics-secondary { color: #F9FAFB; background: #202633; }
+.courtiq-analytics-primary { color: #FFFFFF; background: #E85A2A; border-color: #E85A2A !important; }
+.courtiq-analytics-actions button:focus-visible, .courtiq-analytics-content a:focus-visible { outline: 3px solid #FF9D7C; outline-offset: 3px; }
+.courtiq-analytics-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 18px; padding: 18px; background: #171C26; border: 1px solid #414652; border-radius: 16px; color: #F9FAFB; }
+@media (max-width: 620px) {
+  .courtiq-analytics-banner { flex-direction: column; align-items: stretch; gap: 12px; max-height: min(84dvh, 460px); overflow-y: auto; }
+  .courtiq-analytics-settings { flex-direction: column; align-items: stretch; }
+  .courtiq-analytics-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .courtiq-analytics-actions button { min-width: 0; }
+}
