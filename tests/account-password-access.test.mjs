@@ -27,7 +27,7 @@ test('authenticated verified user can add password without creating a new accoun
  f.type('account-password','secure-passphrase-123');
  f.type('account-password-confirm','secure-passphrase-123');
  await f.submit();await f.h.settle();
- assert.deepEqual(f.calls,[{password:'secure-passphrase-123'}]);
+ assert.deepEqual(structuredClone(f.calls),[{password:'secure-passphrase-123'}]);
  assert.match(JSON.stringify(f.h.output),/Password saved/);
  assert.equal(click(f.h.output,'Set password').props['aria-expanded'],false);
  f.h.unmount();
