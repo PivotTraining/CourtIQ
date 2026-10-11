@@ -4,8 +4,10 @@ export const SITE_NAME = "CourtIQ";
 export const DEFAULT_DESCRIPTION =
   "Track basketball games, review shooting and performance trends, and use structured skill training to decide what to work on next.";
 export const SOCIAL_IMAGE = {
-  url: "/product-desktop.jpg",
-  alt: "CourtIQ basketball performance tracking application preview",
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: "CourtIQ basketball development intelligence: track the game, know your next move",
 };
 
 export function publicPageMetadata({ title, description, path = "/" }) {
