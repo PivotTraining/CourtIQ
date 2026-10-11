@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   ANALYTICS_CHOICE_EVENT, getAnalyticsChoice, setAnalyticsChoice,
 } from "@/lib/analyticsConsent.mjs";
 
+function availableStorage() {
+  try { return window.localStorage; } catch { return null; }
+}
+
 export default function AnalyticsPreferences({ alwaysShow = false }) {
+  const pathname = usePathname();
   const [hydrated, setHydrated] = useState(false);
   const [choice, setChoice] = useState(null);
 
   useEffect(() => {
-    const refresh = () => setChoice(getAnalyticsChoice(window.localStorage));
+    const refresh = () => setChoice(getAnalyticsChoice(availableStorage()));
     refresh();
     setHydrated(true);
     window.addEventListener("storage", refresh);
@@ -23,7 +29,7 @@ export default function AnalyticsPreferences({ alwaysShow = false }) {
   }, []);
 
   const decide = value => {
-    if (setAnalyticsChoice(window.localStorage, value)) {
+    if (setAnalyticsChoice(availableStorage(), value)) {
       setChoice(value);
       window.dispatchEvent(new Event(ANALYTICS_CHOICE_EVENT));
     } else {
@@ -32,7 +38,7 @@ export default function AnalyticsPreferences({ alwaysShow = false }) {
     }
   };
 
-  if (!hydrated || (!alwaysShow && choice !== null)) return null;
+  if (!hydrated || (!alwaysShow && (choice !== null || pathname === "/privacy"))) return null;
 
   return (
     <section
