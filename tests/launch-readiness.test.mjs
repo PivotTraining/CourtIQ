@@ -63,7 +63,7 @@ test('SEO assets and distinctly scoped metadata render from repository',async()=
   assert.match(root,/MarketingCTA/);
   assert.match(social,/1200, height: 630/);
   assert.match(legal,/Optional Analytics Choices/);
-  assert.match(legal,/analytics-preferences/);
+  assert.match(legal,/AnalyticsPreferences alwaysShow/);
 });
 
 test('first-party conversion events honor consent and cannot upload player stats',async()=>{
