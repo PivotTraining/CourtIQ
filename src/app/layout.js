@@ -2,6 +2,8 @@ import { Inter } from "next/font/google";
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_URL, SOCIAL_IMAGE } from "@/lib/siteMetadata";
 import "./globals.css";
 import "./web-shell.css";
+import "./marketing.css";
+import AnalyticsPreferences from "@/components/marketing/AnalyticsPreferences";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,7 +57,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/png" sizes="48x48" href="/brand/courtiq-v2/icon-48.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className={`${inter.variable} font-sans w-full`}>{children}</body>
+      <body className={`${inter.variable} font-sans w-full`}>{children}<AnalyticsPreferences /></body>
     </html>
   );
 }
