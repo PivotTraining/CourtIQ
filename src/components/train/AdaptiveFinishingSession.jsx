@@ -108,7 +108,7 @@ export default function AdaptiveFinishingSession({ onSave, onClose, canSave, pre
       </> : <>
         <div className="af-heading"><span className="af-kicker">STAGE {stageIndex + 1} OF 4</span><h2>{stage.title}</h2><p>{stage.instruction}</p></div>
         <CourtMap stage={stage} nextIndex={outcomes.length} />
-        <div className="af-stage-cue"><strong>Coach's cue</strong><p>{stage.cue}</p>{stage.reason && <small>{stage.reason}</small>}</div>
+        <div className="af-stage-cue"><strong>Coach’s cue</strong><p>{stage.cue}</p>{stage.reason && <small>{stage.reason}</small>}</div>
         {paused && <div className="af-rest" role="status"><strong>Rest and reset.</strong><p>Take the time you need. Your timer and shot inputs are paused.</p><button type="button" onClick={() => setPaused(false)}>Continue this stage →</button></div>}
         <div className="af-reps"><div><span>Recorded finishes</span><strong aria-live="polite">{outcomes.length}<small>/{FINISHING_TARGET}</small></strong></div><div><span>Made</span><strong>{outcomes.filter(Boolean).length}</strong></div></div>
         <progress value={outcomes.length} max={FINISHING_TARGET} aria-label="Finishes recorded in this stage" />
