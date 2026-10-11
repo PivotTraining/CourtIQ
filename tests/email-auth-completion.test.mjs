@@ -21,8 +21,9 @@ test('email signup can request another confirmation without exposing credentials
   h.render(Login,{actions});h.flush();
   const input=id=>findElement(h.output,n=>n.type==='input'&&n.props.id===id);
   input('login-email').props.onChange({target:{value:'player@example.test'}});h.flush();
-  input('login-password').props.onChange({target:{value:'123456789'}});h.flush();
   button(h.output,'Sign Up').props.onClick();h.flush();
+  // The real login component clears a previous password when switching modes.
+  input('login-password').props.onChange({target:{value:'123456789'}});h.flush();
   await findElement(h.output,n=>n.type==='form').props.onSubmit(submit);await h.settle();
   assert.ok(button(h.output,'Resend confirmation email'));
   await button(h.output,'Resend confirmation email').props.onClick();await h.settle();
