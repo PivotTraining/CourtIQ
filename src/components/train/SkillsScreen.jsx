@@ -8,6 +8,8 @@ import Icon from '@/components/ui/Icons';
 import DrillWalkthrough from './DrillWalkthrough';
 import SkillPracticeSession from './SkillPracticeSession';
 import PracticeOutlook from './PracticeOutlook';
+import FinishingLab from './FinishingLab';
+import { finishingHistory } from '@/lib/adaptiveFinishing.mjs';
 import './skills.css';
 const FEATURED = FEATURED_IDS.map(id => DRILL_BANK.find(drill => drill.id === id));
 const EMPTY_HISTORY = { entries: [], categories: {} };
@@ -48,7 +50,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     if (!saved?.id || saved.id !== result.id || saved.player_id !== playerId) throw new Error('Practice storage did not confirm this player and result.');
     if (mounted.current) {
       setRecords(rows => [saved, ...rows.filter(row => row.id !== saved.id)]);
-      setNotice(`Saved ${result.drills[0].name}. Your practice result is in Progress.`);
+      setNotice(`Saved ${result.drills[0].practice_version === 'adaptive-finishing-v1' ? 'Finishing Lab mission' : result.drills[0].name}. Your practice result is in Progress.`);
     }
   };
   const selectDrill = drill => { setSelected(drill); setTab('train'); setNotice(''); };
@@ -60,6 +62,10 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     {notice && <p className="skill-cue" role="status">{notice}</p>}
     {status === 'error' && <div className="skill-record-error" role="alert">Your practice history could not be loaded. It has not been cleared. <button onClick={() => setReload(value => value + 1)}>Retry history</button></div>}
     {tab === 'train' && <>
+      <FinishingLab playerId={playerId} records={records} status={status}
+        canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} />
+      <details className="skill-other-drills">
+        <summary>Explore other skills and individual drills <span aria-hidden="true">↓</span></summary>
       <div className="skill-grid">{FEATURED.map(drill => {
         const cat = DRILL_CATEGORIES.find(item => item.id === drill.category);
         return <button key={drill.id} aria-pressed={selected.id === drill.id} className="skill-category" onClick={() => selectDrill(drill)}><Icon name={cat.iconName === 'forward' ? 'target' : cat.iconName} size={20} color={cat.color} /><strong>{cat.label}</strong><span>{status === 'ready' ? `${history.categories[cat.id]?.sessions || 0} saved workouts` : 'History unavailable'}</span></button>;
@@ -75,6 +81,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
         <button ref={startButton} className="skill-primary" disabled={!playerId} onClick={() => { setNotice(''); setActiveDrill(selected); }}>Start practice</button>
         <p className="skill-muted">{persistenceEnabled ? 'Finish, then explicitly save your result. No camera or microphone is required.' : 'Practice is available, but saving is not activated in this environment.'}</p>
       </article>
+      </details>
     </>}
     {tab === 'library' && <>
       <label className="skill-search">Find your drill<input value={search} onChange={event => { setSearch(event.target.value); setVisibleCount(24); }} placeholder="Search by move, skill, or coaching cue" type="search" /></label>
@@ -87,6 +94,9 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     {tab === 'progress' && <section className="skill-progress"><h3>Your practice, backed by records</h3><p className="skill-muted">Volume is saved work. Accuracy is self-recorded. Neither proves improvement in competitive games.</p>
       {status === 'loading' ? <p role="status">Loading your practice history…</p> : status !== 'ready' ? <p>Progress is unavailable until your saved history can be loaded. No zero score or ranking is being assigned.</p> : <>
         <div className="skill-volume">{DRILL_CATEGORIES.map(cat => <div key={cat.id}><strong>{cat.label}</strong><span>{history.categories[cat.id]?.reps || 0} reps · {history.categories[cat.id]?.sessions || 0} workouts</span></div>)}</div>
+        <div className="af-progress-snapshot"><h4>Finishing Lab missions</h4>
+          {finishingHistory(records).length === 0 ? <p>No completed adaptive finishing mission saved yet. Finish all four stages to compare baseline and retest.</p> : finishingHistory(records).slice(0,4).map(item => <p key={item.id}>{new Date(item.at).toLocaleDateString()} · Baseline {item.baseline}/8 → Retest {item.retest}/8 · {item.deltaMakes > 0 ? '+' : ''}{item.deltaMakes} makes <small>(single session only)</small></p>)}
+        </div>
         <PracticeOutlook entries={history.entries} />
         <h4>Recent measured practices</h4>
         {!history.entries.length && <p>No measured result yet. Older timer workouts contribute to volume, but do not invent accuracy scores. Start a drill, record each attempt, and save to establish a baseline.</p>}
