@@ -247,7 +247,7 @@ export default function Shell() {
               </div>
             </div>
           </div>
-          <div className="courtiq-header-gametime"><GametimeAction onStart={() => setShowLogger(true)} /></div>
+          {screen !== "iq" && <div className="courtiq-header-gametime"><GametimeAction onStart={() => setShowLogger(true)} /></div>}
         </header>
 
         <main ref={scrollRef} className="courtiq-shell-content" style={{
