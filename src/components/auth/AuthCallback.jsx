@@ -24,7 +24,10 @@ export default function AuthCallback() {
 
     async function finishSignIn() {
       const params = new URLSearchParams(window.location.search);
-      const oauthError = params.get("error_description") || params.get("error");
+      // Supabase can return provider errors in a URL fragment. Do not expose tokens.
+      const fragment = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
+      const oauthError = params.get("error_description") || params.get("error") ||
+        fragment.get("error_description") || fragment.get("error");
       if (oauthError) {
         clearTimeout(slowTimer);
         if (active) setMessage(`Sign in was not completed: ${oauthError}`);
@@ -32,14 +35,20 @@ export default function AuthCallback() {
       }
 
       const code = params.get("code");
-      if (!code) {
+      const hash = params.get("token_hash");
+      const type = params.get("type");
+      // PKCE OAuth / default Supabase confirmation links use ?code.
+      // Custom email templates may instead use ?token_hash&type=signup|recovery.
+      const allowedEmailTypes = new Set(["signup", "email", "recovery", "magiclink", "invite", "email_change"]);
+      if (!code && (!hash || !allowedEmailTypes.has(type))) {
         clearTimeout(slowTimer);
-        if (active) setMessage("This sign-in link is incomplete. Return to CourtIQ and try again.");
+        if (active) setMessage("This sign-in link is incomplete or unsupported. Request a new email link from CourtIQ.");
         return;
       }
 
-      // Reuse the exchange when React remounts effects in development: codes are single-use.
-      exchange.current ||= supabase.auth.exchangeCodeForSession(code);
+      // Reuse a single-use exchange when React remounts effects in development.
+      exchange.current ||= code ? supabase.auth.exchangeCodeForSession(code) :
+        supabase.auth.verifyOtp({ token_hash: hash, type });
       const { data, error } = await exchange.current;
       clearTimeout(slowTimer);
       if (!active) return;
@@ -54,7 +63,7 @@ export default function AuthCallback() {
         return;
       }
 
-      if (params.get("mode") === "reset") {
+      if (params.get("mode") === "reset" || type === "recovery") {
         setRecoveryReady(true);
         setMessage("Choose a new password for CourtIQ.");
         return;
