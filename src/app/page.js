@@ -167,7 +167,7 @@ export default function Home() {
         </div>
       </footer>
       <aside className="courtiq-mobile-cta" aria-label="Open CourtIQ on mobile">
-        <MarketingCTA placement="mobile-sticky" label="Open CourtIQ free" className="courtiq-marketing-cta" />
+        <MarketingCTA placement="mobile-sticky" label="Open CourtIQ" className="courtiq-marketing-cta" />
       </aside>
     </main>
   );
