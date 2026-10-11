@@ -28,6 +28,7 @@ export default function IQSpotlight({ ratings, sessions = [], nextMove }) {
     ...s, value: Number.isFinite(ratings?.[s.key]) ? Math.min(99, Math.max(0, Math.round(ratings[s.key]))) : null,
   }));
   const visible = readiness.sufficient;
+  const hasSnapshot = sessions.length > 0 && Number.isFinite(ratings?.overall);
   const move = visible && nextMove ? nextMove : {
     title: readiness.confirmedGames < 3 ? "Build your game sample" : "Track more shots",
     reason: readiness.confirmedGames < 3
@@ -36,7 +37,7 @@ export default function IQSpotlight({ ratings, sessions = [], nextMove }) {
     actionLabel: "Record a game", screen: "train",
   };
   // This deliberately labels ratings as a heuristic and does not claim a calibrated scout grade.
-  const best = visible ? [...breakdown].filter(s => s.value !== null).sort((a,b)=>b.value-a.value)[0] : null;
+  const best = hasSnapshot ? [...breakdown].filter(s => s.value !== null).sort((a,b)=>b.value-a.value)[0] : null;
 
   return (
     <section className="iq-spotlight" aria-label="Player IQ snapshot">
@@ -47,9 +48,9 @@ export default function IQSpotlight({ ratings, sessions = [], nextMove }) {
       </div>
       <div className="iq-scoreband">
         <div className="iq-scorebody">
-          <span className="iq-smalltitle">{visible ? "Recorded-data IQ" : "YOUR IQ IS BUILDING"}</span>
-          <div className="iq-bigscore">{visible ? ratings.overall : "—"}{visible && <span className="iq-scoremax">/99</span>}</div>
-          <p className="iq-scorecaption">{visible ? "A developing picture from the stats you have logged." : "More complete game data brings your progress into focus."}</p>
+          <span className="iq-smalltitle">{visible ? "Recorded-data IQ" : hasSnapshot ? "EARLY IQ · LIMITED SAMPLE" : "YOUR IQ IS BUILDING"}</span>
+          <div className="iq-bigscore">{hasSnapshot ? ratings.overall : "—"}{hasSnapshot && <span className="iq-scoremax">/99</span>}</div>
+          <p className="iq-scorecaption">{visible ? "An estimate based on the stats you logged." : hasSnapshot ? "Provisional indicator. Log complete games for a stronger picture." : "More complete game data brings your progress into focus."}</p>
         </div>
         <div className="iq-orbit" aria-hidden="true">
           <div className="iq-orbit-outer"><div className="iq-orbit-middle"><div className="iq-orbit-inner">IQ</div></div></div>
@@ -64,11 +65,11 @@ export default function IQSpotlight({ ratings, sessions = [], nextMove }) {
           {move.screen === "iq" ? "Open Skills Lab" : move.actionLabel || "Start training"} <span aria-hidden="true">→</span>
         </button>
       </div>
-      {visible && (
+      {hasSnapshot && (
         <div className="iq-snapshot">
           <div className="iq-snapshot-heading">
             <h3>Game profile</h3>
-            <span>{best ? `Leading indicator: ${best.label}` : "Recorded skills"}</span>
+            <span>{visible && best ? `Leading indicator: ${best.label}` : "Provisional · not a scout grade"}</span>
           </div>
           <div className="iq-skillbars">
             {breakdown.map(s => <div className="iq-skillitem" key={s.key}>
