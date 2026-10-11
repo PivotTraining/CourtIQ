@@ -90,38 +90,14 @@ export default function PlayerInsights() {
 
   return (
     <div>
-      {/* Tabs */}
-      <div style={{ display: "flex", background: "var(--color-muted)", borderRadius: 12, padding: 3, marginBottom: 16 }}>
-        {[
-          { id: "overview", label: "IQ", icon: "brain" },
-          { id: "season", label: "Season", icon: "barChart" },
-          { id: "trends", label: "Trends", icon: "trending" },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              borderRadius: 10,
-              border: "none",
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
-              minHeight: 44,
-              transition: "all 0.2s",
-              background: tab === t.id ? "var(--color-card)" : "transparent",
-              color: tab === t.id ? "var(--color-accent)" : "var(--color-text-sec)",
-              boxShadow: tab === t.id ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-            }}>
-            <Icon name={t.icon} size={12} /> {t.label}
-          </button>
+      <nav className="iq-insight-tabs" aria-label="Choose IQ view">
+        {[["overview", "Snapshot"], ["season", "Season"], ["trends", "Trends"]].map(([id, label]) => (
+          <button key={id} type="button" aria-pressed={tab === id} aria-selected={tab === id}
+            onClick={() => setTab(id)}>{label}</button>
         ))}
-      </div>
+      </nav>
 
-      {/* -- OVERVIEW TAB -- */}
+            {/* -- OVERVIEW TAB -- */}
       {tab === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <IQSpotlight ratings={ratings} sessions={data.gameSessions} nextMove={nextMove} />
