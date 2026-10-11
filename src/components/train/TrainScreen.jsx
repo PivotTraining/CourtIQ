@@ -209,7 +209,7 @@ function getDifficultyForAge(age) {
 }
 
 export default function TrainScreen() {
-  const { playerId, player } = useApp();
+  const { playerId, player, setScreen } = useApp();
   const { playerProfile } = useAuth();
   const [tab, setTab] = useState("plan"); // plan | drills
   const [category, setCategory] = useState("all");
@@ -256,6 +256,12 @@ export default function TrainScreen() {
 
   return (
     <div>
+      <section style={{ borderRadius: 17, padding: 18, background: 'linear-gradient(130deg,#2B1C2B,#171922)', border: '1px solid rgba(255,118,68,.35)', marginBottom: 16, color: '#F9FAFB' }} aria-label="Adaptive training mission">
+        <span style={{ display: 'block', fontSize: 10, fontWeight: 900, letterSpacing: 1.3, color: '#FFAB87' }}>NEW / ADAPTIVE TRAINING IQ</span>
+        <h2 style={{ fontSize: 23, fontWeight: 900, letterSpacing: -0.6, lineHeight: 1.2, margin: '9px 0' }}>Train with a plan that responds.</h2>
+        <p style={{ fontSize: 12, color: '#DFDCE5', lineHeight: 1.7, marginBottom: 13 }}>Start Finishing Lab: assess, build, adapt and retest across four measurable stages.</p>
+        <button type="button" onClick={() => setScreen('skills')} style={{ width: '100%', minHeight: 48, border: 0, borderRadius: 12, background: '#EF6235', fontSize: 13, color: '#FFFFFF', fontWeight: 900, cursor: 'pointer' }}>Open Finishing Lab →</button>
+      </section>
       {developmentEnabled && <section className="bg-card rounded-2xl p-4 mb-4 border border-border">
         <h3 className="font-bold text-sm">Saved development work</h3>
         {workoutError && <p role="alert">{workoutError}</p>}
