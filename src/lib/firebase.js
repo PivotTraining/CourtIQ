@@ -90,6 +90,20 @@ export async function signUpWithEmail(email, password) {
   return data;
 }
 
+// Supabase sends confirmation mail via its configured Auth SMTP provider.
+// This will fail for public users if only restricted built-in delivery is enabled.
+export async function resendConfirmation(email) {
+  const origin = browserOrigin();
+  if (!origin) throw new Error("Email confirmation is only available in the browser.");
+  await requireAuthBackend();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.trim(),
+    options: { emailRedirectTo: `${origin}/auth/callback?next=%2Fdashboard` },
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function resetPassword(email) {
   const origin = browserOrigin();
   if (!origin) throw new Error("Password reset is only available in the browser.");
