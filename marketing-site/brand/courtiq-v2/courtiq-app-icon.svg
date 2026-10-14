@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="courtiq-title"><title id="courtiq-title">CourtIQ home-screen icon</title><rect width="512" height="512" rx="112" fill="#161B24"/><g transform="translate(64 69) scale(3)">
+  
+  <defs>
+    <clipPath id="courtiq-ball-interior"><circle cx="58" cy="56" r="32"/></clipPath>
+  </defs>
+  <path fill="#FF6B35" fill-rule="evenodd" d="M58 8a48 48 0 1 1 0 96a48 48 0 1 1 0-96Zm0 16a32 32 0 1 0 0 64a32 32 0 1 0 0-64Z"/>
+  <g clip-path="url(#courtiq-ball-interior)" fill="none" stroke="#FF6B35" stroke-width="6" stroke-linecap="round">
+    <path d="M46 17C28 44 36 77 77 97"/>
+    <path d="M19 81C44 57 70 46 98 54"/>
+  </g>
+  <path fill="#FF6B35" d="M66 71h21l34 40H99Z"/>
+</g></svg>
