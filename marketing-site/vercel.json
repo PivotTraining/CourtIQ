@@ -1,0 +1,16 @@
+{
+  "framework": null,
+  "redirects": [
+    { "source": "/privacy", "destination": "https://app.getcourtiq.com/privacy", "permanent": false },
+    { "source": "/privacy.html", "destination": "https://app.getcourtiq.com/privacy", "permanent": false },
+    { "source": "/terms", "destination": "https://app.getcourtiq.com/terms", "permanent": false },
+    { "source": "/terms.html", "destination": "https://app.getcourtiq.com/terms", "permanent": false }
+  ],
+  "headers": [
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Content-Type-Options", "value": "nosniff" },
+      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+      { "key": "X-Frame-Options", "value": "DENY" }
+    ] }
+  ]
+}
