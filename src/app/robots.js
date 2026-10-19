@@ -4,7 +4,7 @@ export default function robots() {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/privacy", "/terms"],
+      allow: ["/", "/support", "/privacy", "/terms"],
       // Index only public marketing/legal documents, not player records or auth flows.
       disallow: [
         "/api/", "/auth/", "/dev/",
