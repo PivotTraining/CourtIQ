@@ -5,8 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 import { getSupabase } from "@/lib/supabase";
 import { signOutUser } from "@/lib/firebase";
-import { clearAccountRecovery, hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
-import { createDeviceVideoStore } from '@/lib/deviceVideo.mjs';
+import { hasPendingRecovery } from '@/lib/sessionRecovery.mjs';
 import Icon from "@/components/ui/Icons";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
@@ -45,6 +44,7 @@ export default function ProfileEditor({ onClose }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleSave = async (e) => {
@@ -252,9 +252,22 @@ export default function ProfileEditor({ onClose }) {
           Sign Out
         </button>
 
-        {/* Delete Account Trigger */}
+        {notice && (
+          <div style={{
+            marginTop: 16,
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: "#166534",
+            background: "#F0FDF4",
+            padding: "12px 14px",
+            borderRadius: 12,
+            border: "1px solid #BBF7D0",
+          }}>{notice}</div>
+        )}
+
+        {/* Account deletion request */}
         <button
-          onClick={() => setShowDeleteConfirm(true)}
+          onClick={() => { setError(""); setNotice(""); setShowDeleteConfirm(true); }}
           disabled={saving}
           style={{
             width: "100%",
@@ -263,19 +276,18 @@ export default function ProfileEditor({ onClose }) {
             borderRadius: 16,
             border: "none",
             background: "transparent",
-            color: "rgba(220,38,38,0.5)",
+            color: "rgba(220,38,38,0.65)",
             fontWeight: 600,
             fontSize: 13,
             cursor: "pointer",
             minHeight: 44,
             opacity: saving ? 0.5 : 1,
           }}
-          aria-label="Delete account and all data"
+          aria-label="Request account deletion"
         >
-          Delete Account & All Data
+          Request Account Deletion
         </button>
 
-        {/* Destructive Confirmation Sheet */}
         {showDeleteConfirm && (
           <div style={{
             position: "fixed",
@@ -297,28 +309,37 @@ export default function ProfileEditor({ onClose }) {
               <div style={{ width: 40, height: 4, background: "var(--color-muted)", borderRadius: 2, margin: "0 auto 16px" }} />
               <div style={{ textAlign: "center", marginBottom: 16 }}>
                 <div style={{ marginBottom: 8 }}><Icon name="alert" size={32} color="#F59E0B" /></div>
-                <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Delete Your Account?</h3>
-                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>This will permanently remove this account, every player profile it manages, their sessions, shots, journals and stats, and device clips on this browser. Downloads, original files and copies on other devices are not removed automatically. This cannot be undone.</p>
+                <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Request Account Deletion?</h3>
+                <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: 0 }}>
+                  During the public beta, deletion requests are reviewed and processed manually. Submitting this request does not immediately remove your account. CourtIQ will remove the account and its server-side player data after the request is processed. Device clips, downloaded files, and copies outside CourtIQ are not removed automatically.
+                </p>
               </div>
               <button
                 onClick={async () => {
                   setSaving(true);
+                  setError("");
+                  setNotice("");
                   try {
-                    const { data, error: deleteError } = await getSupabase().functions.invoke("delete-account", { body: { confirmation: "DELETE" } });
-                    if (deleteError) throw deleteError;
-                    if (data?.deleted !== true) throw new Error("Account deletion was not confirmed.");
-                    try {
-                      clearAccountRecovery(window.localStorage, user?.id);
-                      await createDeviceVideoStore().clearAccount(user?.id);
-                    } catch {
-                      window.alert('Your account was deleted, but this browser could not confirm local-data cleanup. Clear CourtIQ site data in your browser settings to remove any remaining device clips and tracker recovery.');
+                    if (!user?.id) throw new Error("Authentication required.");
+                    const { data: existing, error: lookupError } = await getSupabase()
+                      .from("account_deletion_requests")
+                      .select("status,requested_at")
+                      .eq("user_id", user.id)
+                      .maybeSingle();
+                    if (lookupError) throw lookupError;
+                    if (!existing) {
+                      const { error: requestError } = await getSupabase()
+                        .from("account_deletion_requests")
+                        .insert({ user_id: user.id });
+                      if (requestError && requestError.code !== "23505") throw requestError;
                     }
-                    await signOutUser().catch(() => {});
-                    window.location.assign("/");
-                  } catch (err) {
-                    setError("Failed to delete. Please contact CourtIQ support through getcourtiq.com");
-                    setSaving(false);
+                    setNotice("Your deletion request is queued. Your account stays active until the request is processed. You may sign out now and return later if needed.");
                     setShowDeleteConfirm(false);
+                  } catch {
+                    setError("We could not queue the deletion request. Please try again or visit the CourtIQ support page.");
+                    setShowDeleteConfirm(false);
+                  } finally {
+                    setSaving(false);
                   }
                 }}
                 disabled={saving}
@@ -337,7 +358,7 @@ export default function ProfileEditor({ onClose }) {
                   marginBottom: 8,
                 }}
               >
-                {saving ? "Deleting..." : "Delete Account Permanently"}
+                {saving ? "Submitting..." : "Submit Deletion Request"}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
@@ -358,6 +379,7 @@ export default function ProfileEditor({ onClose }) {
               </button>
             </div>
           </div>
+        )}
         )}
       </div>
     </div>
