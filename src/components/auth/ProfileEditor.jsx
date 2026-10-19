@@ -380,7 +380,6 @@ export default function ProfileEditor({ onClose }) {
             </div>
           </div>
         )}
-        )}
       </div>
     </div>
   );
