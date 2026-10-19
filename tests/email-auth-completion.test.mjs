@@ -6,6 +6,65 @@ const submit = { preventDefault() {} };
 const button = (tree, text) => findElement(tree, node => node.type === 'button' &&
   JSON.stringify(node.props.children).includes(text));
 
+
+test('successful email/password login leaves the login form and reloads the dashboard session', async () => {
+  const h = reactHarness();
+  const redirects = [];
+  const actions = {
+    signInWithEmail: async (email, password) => ({
+      session: { user: { id: 'email-owner', email } },
+      user: { id: 'email-owner', email },
+    }),
+    signUpWithEmail: async () => ({ session: null }),
+    resetPassword: async () => {},
+    signInWithGoogle: async () => {},
+    resendConfirmation: async () => {},
+  };
+  const { default: Login } = await loadComponent(
+    new URL('../src/components/auth/LoginScreen.jsx', import.meta.url),
+    { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true } },
+    { window: { location: { replace: path => redirects.push(path) } } },
+  );
+
+  h.render(Login, { actions }); h.flush();
+  const input = id => findElement(h.output, n => n.type === 'input' && n.props.id === id);
+  input('login-email').props.onChange({ target: { value: 'PLAYER@EXAMPLE.TEST' } }); h.flush();
+  input('login-password').props.onChange({ target: { value: 'strong-password' } }); h.flush();
+
+  await findElement(h.output, n => n.type === 'form').props.onSubmit(submit);
+  await h.settle();
+
+  assert.deepEqual(redirects, ['/dashboard']);
+  h.unmount();
+});
+
+test('invalid password guidance offers email recovery for OAuth-first accounts', async () => {
+  const h = reactHarness();
+  const actions = {
+    signInWithEmail: async () => { throw new Error('Invalid login credentials'); },
+    signUpWithEmail: async () => ({ session: null }),
+    resetPassword: async () => {},
+    signInWithGoogle: async () => {},
+    resendConfirmation: async () => {},
+  };
+  const { default: Login } = await loadComponent(
+    new URL('../src/components/auth/LoginScreen.jsx', import.meta.url),
+    { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true } },
+  );
+  h.render(Login, { actions }); h.flush();
+  const input = id => findElement(h.output, n => n.type === 'input' && n.props.id === id);
+  input('login-email').props.onChange({ target: { value: 'player@example.test' } }); h.flush();
+  input('login-password').props.onChange({ target: { value: 'wrong-password' } }); h.flush();
+
+  await findElement(h.output, n => n.type === 'form').props.onSubmit(submit);
+  await h.settle();
+
+  const rendered = JSON.stringify(h.output);
+  assert.match(rendered, /Email or password is not recognized/);
+  assert.match(rendered, /Set \/ reset password/);
+  h.unmount();
+});
+
 test('email signup can request another confirmation without exposing credentials', async () => {
   const h = reactHarness();
   const sent = [];

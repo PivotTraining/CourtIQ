@@ -75,9 +75,23 @@ async function requireAuthBackend() {
 
 export async function signInWithEmail(email, password) {
   await requireAuthBackend();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const normalizedEmail = email.trim().toLowerCase();
+  const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
   if (error) throw new Error(error.message);
-  return data;
+
+  // A successful password response must include a persisted session. Treat any
+  // partial provider response as a failed login instead of leaving the form stuck.
+  let session = data?.session ?? null;
+  if (!session) {
+    const { data: current, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw new Error(sessionError.message);
+    session = current?.session ?? null;
+  }
+  if (!session?.user) {
+    throw new Error("Sign in completed without a usable session. Please try again.");
+  }
+
+  return { ...data, session };
 }
 
 export async function signUpWithEmail(email, password) {

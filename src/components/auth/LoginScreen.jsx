@@ -68,7 +68,17 @@ export default function LoginScreen({ actions = liveActions } = {}) {
         const data = await actions.signUpWithEmail(email.trim(), password);
         if (alive.current && !data?.session) setConfirmationSent(true);
       } else {
-        await actions.signInWithEmail(email.trim(), password);
+        const data = await actions.signInWithEmail(email.trim(), password);
+        if (!data?.session?.user) {
+          throw new Error("Sign in completed without a usable session. Please try again.");
+        }
+        if (typeof window !== "undefined") {
+          // Password auth should always leave the login screen immediately.
+          // Reloading /dashboard lets the AuthProvider bootstrap from the persisted session
+          // even if an auth-state event was missed or delayed in this render.
+          window.location.replace("/dashboard");
+          return;
+        }
       }
     } catch (err) {
       if (alive.current) {
@@ -76,6 +86,8 @@ export default function LoginScreen({ actions = liveActions } = {}) {
         if (/email (?:not confirmed|not verified)/i.test(message)) {
           setError("Your email is not confirmed. Request another confirmation email below, then open its link in this browser.");
           setConfirmationSent(true);
+        } else if (/invalid login credentials/i.test(message)) {
+          setError("Email or password is not recognized. If you originally joined with Google, use Google or choose Set / reset password to add a password for this email.");
         } else {
           setError(message);
         }
@@ -176,7 +188,7 @@ export default function LoginScreen({ actions = liveActions } = {}) {
                   fontSize: 12, color: "#FF6B35", fontWeight: 600,
                   background: "none", border: "none", cursor: "pointer", padding: "4px 0",
                 }}>
-                  Forgot Password?
+                  Set / reset password
                 </button>
               </div>
             )}
