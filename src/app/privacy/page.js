@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <div className="max-w-[680px] mx-auto px-6 py-10 min-h-screen bg-bg">
       <Link href="/" className="text-accent text-sm font-bold mb-4 inline-block">&larr; Back</Link>
       <h1 className="text-2xl font-black text-text mb-4">Privacy Policy</h1>
-      <p className="text-xs text-text-sec mb-2">Last updated: October 10, 2026</p>
+      <p className="text-xs text-text-sec mb-2">Last updated: October 19, 2026</p>
       <div className="text-sm text-text-sec leading-relaxed flex flex-col gap-4">
         <p>CourtIQ (&quot;we&quot;, &quot;us&quot;) operates the CourtIQ basketball development service. This policy explains how information is collected, used, and protected.</p>
         <h2 className="text-base font-bold text-text">1. Information We Collect</h2>
