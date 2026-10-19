@@ -4,7 +4,9 @@
     { "source": "/privacy", "destination": "https://app.getcourtiq.com/privacy", "permanent": false },
     { "source": "/privacy.html", "destination": "https://app.getcourtiq.com/privacy", "permanent": false },
     { "source": "/terms", "destination": "https://app.getcourtiq.com/terms", "permanent": false },
-    { "source": "/terms.html", "destination": "https://app.getcourtiq.com/terms", "permanent": false }
+    { "source": "/terms.html", "destination": "https://app.getcourtiq.com/terms", "permanent": false },
+    { "source": "/support", "destination": "https://app.getcourtiq.com/support", "permanent": false },
+    { "source": "/support.html", "destination": "https://app.getcourtiq.com/support", "permanent": false }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [
