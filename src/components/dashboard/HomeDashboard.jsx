@@ -289,6 +289,7 @@ export default function HomeDashboard() {
             { id: "iq", icon: "brain", label: "My IQ", caption: "Ratings & trends", bg: "#F3F0FF", color: "#8B5CF6" },
             { id: "gamelog", icon: "trophy", label: "Game Log", caption: "Performance history", bg: "#FEF3C7", color: "#D97706" },
             { id: "heatmap", icon: "fire", label: "Heat Map", caption: "Where shots fall", bg: "#ECFDF5", color: "#10B981" },
+            { id: "film", icon: "play", label: "Record Video", caption: "Film Lab & clip review", bg: "#EFF6FF", color: "#2563EB" },
           ].map((action) => (
             <button key={action.id} type="button" onClick={() => setScreen(action.id)} style={{ minHeight: 118, background: action.bg, border: "none", borderRadius: 17, padding: "18px 16px", cursor: "pointer", textAlign: "left" }}>
               <Icon name={action.icon} size={25} color={action.color} />
