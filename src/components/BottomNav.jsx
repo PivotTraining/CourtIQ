@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { id: "home", icon: "home", label: "Home" },
   { id: "train", icon: "dumbbell", label: "Drills" },
   { id: "skills", icon: "skills", label: "Skills" },
+  { id: "film", icon: "play", label: "Video" },
   { id: "iq", icon: "brain", label: "My IQ" },
   { id: "gamelog", icon: "trophy", label: "Game Log" },
 ];
@@ -62,9 +63,9 @@ export default function BottomNav() {
                 border: "none",
                 cursor: "pointer",
                 gap: 2,
-                minWidth: 48,
+                minWidth: 44,
                 minHeight: 48,
-                padding: "4px 8px",
+                padding: "4px 5px",
               }}
             >
               <Icon
