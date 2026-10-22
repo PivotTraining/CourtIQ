@@ -12,6 +12,8 @@ function clock(seconds = 0) {
 
 export default function FilmLab() {
   const player = useRef(null);
+  const cameraInput = useRef(null);
+  const libraryInput = useRef(null);
   const [url, setUrl] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState(TYPES[0]);
@@ -54,18 +56,28 @@ export default function FilmLab() {
       </section>
 
       {!url ? (
-        <label style={{ display: "grid", placeItems: "center", minHeight: 240, border: "2px dashed var(--color-border)", borderRadius: 22, background: "var(--color-card)", cursor: "pointer", textAlign: "center", padding: 28 }}>
-          <input type="file" accept="video/*" onChange={(event) => openVideo(event.target.files?.[0])} style={{ display: "none" }} />
-          <div>
-            <div style={{ fontSize: 34 }}>▶</div>
-            <div style={{ marginTop: 10, fontSize: 16, fontWeight: 900, color: "var(--color-text)" }}>Choose game film</div>
-            <div style={{ marginTop: 5, fontSize: 11, color: "var(--color-text-sec)" }}>Use a video file already on this device.</div>
+        <section style={{ display: "grid", gap: 12, minHeight: 240, border: "2px dashed var(--color-border)", borderRadius: 22, background: "var(--color-card)", textAlign: "center", padding: 28, alignContent: "center" }}>
+          <input ref={cameraInput} type="file" accept="video/*" capture="environment" onChange={(event) => { openVideo(event.target.files?.[0]); event.target.value = ""; }} style={{ display: "none" }} />
+          <input ref={libraryInput} type="file" accept="video/*" onChange={(event) => { openVideo(event.target.files?.[0]); event.target.value = ""; }} style={{ display: "none" }} />
+          <div style={{ fontSize: 34 }}>●</div>
+          <div style={{ fontSize: 16, fontWeight: 900, color: "var(--color-text)" }}>Bring video into Film Lab</div>
+          <div style={{ fontSize: 11, color: "var(--color-text-sec)", lineHeight: 1.5 }}>On a phone, Record video opens the device camera. You can also choose a clip you already recorded.</div>
+          <div style={{ display: "grid", gap: 10, width: "100%", maxWidth: 360, margin: "8px auto 0" }}>
+            <button type="button" onClick={() => cameraInput.current?.click()} style={{ minHeight: 50, border: 0, borderRadius: 14, background: "#FF6B35", color: "white", fontWeight: 900, cursor: "pointer" }}>Record video</button>
+            <button type="button" onClick={() => libraryInput.current?.click()} style={{ minHeight: 48, border: "1px solid var(--color-border)", borderRadius: 14, background: "var(--color-muted)", color: "var(--color-text)", fontWeight: 850, cursor: "pointer" }}>Choose existing video</button>
           </div>
-        </label>
+          <div style={{ fontSize: 10, color: "var(--color-text-sec)", lineHeight: 1.45 }}>Recording behavior is controlled by the phone/browser. CourtIQ does not upload this film automatically.</div>
+        </section>
       ) : (
         <>
           <section style={{ background: "#000", borderRadius: 20, overflow: "hidden" }}>
             <video ref={player} src={url} controls playsInline style={{ width: "100%", maxHeight: "68vh", display: "block" }} />
+          </section>
+          <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+            <input ref={cameraInput} type="file" accept="video/*" capture="environment" onChange={(event) => { openVideo(event.target.files?.[0]); event.target.value = ""; }} style={{ display: "none" }} />
+            <input ref={libraryInput} type="file" accept="video/*" onChange={(event) => { openVideo(event.target.files?.[0]); event.target.value = ""; }} style={{ display: "none" }} />
+            <button type="button" onClick={() => cameraInput.current?.click()} style={{ minHeight: 46, border: 0, borderRadius: 12, background: "#FF6B35", color: "white", fontWeight: 850, cursor: "pointer" }}>Record new video</button>
+            <button type="button" onClick={() => libraryInput.current?.click()} style={{ minHeight: 46, border: "1px solid var(--color-border)", borderRadius: 12, background: "var(--color-card)", color: "var(--color-text)", fontWeight: 850, cursor: "pointer" }}>Choose another clip</button>
           </section>
 
           <section style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 20, padding: 18 }}>

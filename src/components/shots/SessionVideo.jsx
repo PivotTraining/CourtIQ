@@ -14,7 +14,7 @@ export function DeviceSessionVideo({accountId,sessionId}) {
   const store=useMemo(()=>createDeviceVideoStore(),[]);
   const [record,setRecord]=useState(null),[url,setUrl]=useState(''),[consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
-  const alive=useRef(false);
+  const alive=useRef(false),cameraInput=useRef(null),libraryInput=useRef(null);
   useEffect(()=>{
     alive.current=true;let current=true;setBusy(true);setRecord(null);setError('');setConsent(false);
     store.get(accountId,sessionId).then(value=>{if(current)setRecord(value);}).catch(err=>{if(current)setError(err.message);}).finally(()=>{if(current)setBusy(false);});
@@ -55,7 +55,10 @@ export function DeviceSessionVideo({accountId,sessionId}) {
     <p className="report-media-note">Device-only · no cloud upload. One MP4, WebM or MOV clip per session, up to 100 MB; 250 MB per account on this device. This is not full-game recording or AI video analysis.</p>
     <p className="report-media-note">Browser storage can be cleared or evicted and is not encrypted by CourtIQ. Avoid shared devices and download a backup. The clip will not appear on another phone or computer.</p>
     <label className="report-checkbox"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)}/>I have permission to store this footage, including people shown.</label>
-    <label>{record?'Replace device clip':'Choose a video clip'}<input aria-label="Choose session video" type="file" accept="video/mp4,video/webm,video/quicktime" disabled={!consent||busy} onChange={save}/></label>
+    <input ref={cameraInput} aria-label="Record session video" type="file" accept="video/*" capture="environment" disabled={!consent||busy} onChange={save} style={{display:'none'}}/>
+    <input ref={libraryInput} aria-label="Choose session video" type="file" accept="video/mp4,video/webm,video/quicktime" disabled={!consent||busy} onChange={save} style={{display:'none'}}/>
+    <div className="report-media-controls"><button type="button" disabled={!consent||busy} onClick={()=>cameraInput.current?.click()}>{record?'Record replacement clip':'Record a clip'}</button><button type="button" disabled={!consent||busy} onClick={()=>libraryInput.current?.click()}>{record?'Choose replacement file':'Choose existing video'}</button></div>
+    <p className="report-media-note">On a phone, Record a clip opens the device camera. The resulting clip is still subject to the 100 MB per-session device limit.</p>
     {url&&<><video controls playsInline preload="metadata" src={url} onError={()=>setError('This clip cannot play in this browser. Download it and try another compatible player.')}/><p className="report-media-note">Saved locally · {(record.blob.size/1024/1024).toFixed(1)} MB</p><div className="report-media-controls"><button disabled={busy} onClick={()=>{try{downloadBlob(record.blob,`courtiq-session-video.${extension}`);}catch{setError('Video download did not start. Please try again.');}}}>Download video</button><button disabled={busy} onClick={remove}>Delete device copy</button></div></>}
     {busy&&<p role="status">Checking device video storage…</p>}{message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
   </section>;
