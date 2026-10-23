@@ -20,3 +20,19 @@
 .report-card-panel {width:100%;max-width:640px;margin:auto;}
 .social-card-preview {display:block;width:100%;max-width:430px;height:auto;margin:20px auto;border-radius:16px;border:1px solid var(--color-border);}
 .social-card-preview.story {max-width:290px;}
+
+/* Social card studio: compact controls on phones, clear primary actions. */
+.report-card-eyebrow {margin:0 0 4px;color:var(--color-accent);font-size:11px;font-weight:900;letter-spacing:1.8px;}
+.report-card-panel .report-media-heading {align-items:flex-start;margin-bottom:16px;}
+.report-card-panel .report-media-heading h3 {font-size:clamp(19px,4vw,25px);letter-spacing:-.4px;margin:0;line-height:1.2;}
+.report-card-options {padding:14px 16px;background:var(--color-card);border:1px solid var(--color-border);border-radius:16px;}
+.report-card-options .report-media-controls {gap:12px;margin:0 0 12px;}
+.report-card-options .report-media-controls:last-child {margin-bottom:0;}
+.report-card-options .report-media-controls > label:not(.report-checkbox) {flex:1;min-width:180px;}
+.report-card-options select {width:100%;min-height:48px;}
+.report-card-options .report-checkbox {flex:0 1 auto;}
+.social-card-preview {box-shadow:0 12px 38px rgba(0,0,0,.18);background:#101827;}
+.report-card-actions {justify-content:center;gap:12px;}
+.report-card-actions > button,.report-card-actions > a {flex:1;justify-content:center;max-width:260px;font-weight:800;}
+.report-card-actions .report-card-download {color:#fff;background:var(--color-accent);border-color:var(--color-accent);}
+@media(max-width:480px) {.report-card-options .report-media-controls > label:not(.report-checkbox) {min-width:130px;} .report-card-actions {flex-wrap:nowrap;} .report-card-actions > button,.report-card-actions > a {padding:10px 8px;font-size:13px;}}
