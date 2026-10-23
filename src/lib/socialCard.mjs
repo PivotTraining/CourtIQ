@@ -31,7 +31,7 @@ export function socialCardSvg(report, {
   const headline = resolveCardEnergy(report, { type, choice: energy, kind });
   const mainTitle = short(title, 30);
   const when = date ? short(date, 22) : 'Date not recorded';
-  const matchup = opponent ? short(`VS ${opponent}`, 30) : '';
+  const matchup = opponent ? short(`VS ${opponent}`, 22) : '';
   const metrics = [['REB', report.box.reb], ['AST', report.box.ast], ['STL', report.box.stl], ['BLK', report.box.blk]];
   const badgeY = 365 + shift, ptsLabelY = 471 + shift, ptsY = 646 + shift, secondaryY = 515 + shift;
   const statY = 750 + shift, footerY = height - 88;
@@ -62,7 +62,7 @@ export function socialCardSvg(report, {
     ${tx(804, secondaryY + 155, `FT  ${report.ftm}/${report.fta}`, 25, palette.muted, 700)}
     ${panels}
     ${story ? `<path d="M66 1400H1014" stroke="${palette.outline}" stroke-width="2"/>${tx(66, 1485, 'THE WORK SPEAKS.', 59, palette.text, 900, 1)}${tx(66, 1547, 'ONE SESSION. REAL NUMBERS.', 30, palette.accent, 800, 2)}` : ''}
-    ${matchup ? tx(66, footerY - 104, matchup, 24, palette.muted, 700, 1) : ''}
+    ${matchup ? tx(670, 263 + shift, matchup, 22, palette.muted, 700, 1) : ''}
     ${tx(66, footerY - 52, short(scope, 57), 21, palette.muted, 600)}
     ${tx(66, footerY - 13, 'Recorded events only. Not an official box score.', 20, palette.muted, 500)}
     <path d="M66 ${footerY + 14}H1014" stroke="${palette.outline}" stroke-width="2"/>
