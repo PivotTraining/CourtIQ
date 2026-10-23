@@ -262,7 +262,7 @@ export default function Shell() {
 
       <BottomNav />
 
-      {showLogger && <ShotLogger onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
+      {showLogger && <ShotLogger quickStart onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
       {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} onSwitch={() => refreshData()} />}
     </div>
