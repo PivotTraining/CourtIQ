@@ -97,7 +97,7 @@ export default function SocialReportCard({
         {kind === 'player' && <div className="report-media-controls">
           <label>Headline
             <select aria-label="Card energy" value={energy} onChange={event => setEnergy(event.target.value)}>
-              <option value="auto">Choose from this game's stats</option>
+              <option value="auto">Choose from this game&apos;s stats</option>
               {CARD_ENERGY_PHRASES.map(phrase => <option key={phrase} value={phrase}>{phrase}</option>)}
               <option value="none">None · just the numbers</option>
             </select>
