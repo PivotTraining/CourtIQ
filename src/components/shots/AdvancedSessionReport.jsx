@@ -8,7 +8,7 @@ import SocialReportCard from './SocialReportCard';
 import SessionVideo from './SessionVideo';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 
-export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrows, sessionType = 'game', date = '', playerName = '', accountId, sessionId }) {
+export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrows, sessionType = 'game', date = '', opponent = '', playerName = '', accountId, sessionId }) {
   const report = buildSessionReport(shots, gameStats, COURT_ZONES, freeThrows);
   const [exportError, setExportError] = useState('');
   const [showCard, setShowCard] = useState(false);
@@ -50,7 +50,7 @@ export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrow
       {report.unknownShots > 0 && <p role="status" className="report-note">{report.unknownShots} unknown-zone shot(s) excluded. Review the source records.</p>}
       {exportError && <p role="alert">{exportError}</p>}
       {accountId&&sessionId&&<SessionVideo key={`${accountId}:${sessionId}`} accountId={accountId} sessionId={sessionId}/>}
-      {showCard&&<SocialReportCard report={report} playerName={playerName} date={date} sessionType={sessionType} onClose={()=>setShowCard(false)}/>}
+      {showCard&&<SocialReportCard report={report} playerName={playerName} date={date} opponent={opponent} sessionType={sessionType} onClose={()=>setShowCard(false)}/>}
     </section>
   );
 }
