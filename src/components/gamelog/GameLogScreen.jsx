@@ -9,6 +9,7 @@ import HistoryFilters from '@/components/shots/HistoryFilters';
 import { COURT_ZONES } from "@/lib/constants";
 import { calcPct } from "@/lib/utils";
 import Icon from "@/components/ui/Icons";
+import DeleteGameButton from "@/components/shots/DeleteGameButton";
 import AdvancedSessionReport from '@/components/shots/AdvancedSessionReport';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 
@@ -34,7 +35,7 @@ function StatPill({ label, value, color }) {
   );
 }
 
-function GameCard({ session,playerName,accountId }) {
+function GameCard({ session, playerName, accountId, playerId, onDeleted }) {
   const [expanded, setExpanded] = useState(false);
   const stats = session.game_stats || {};
   const shots = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES).fieldGoals;
@@ -126,7 +127,7 @@ function GameCard({ session,playerName,accountId }) {
       {/* Expanded Details */}
       {expanded && (
         <div style={{ borderTop: "1px solid var(--color-border)", padding: 16 }}>
-          <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType="game" date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session.id} />
+          <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType="game" date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} opponent={session.tracker_context?.opponent || ""} playerName={playerName} accountId={accountId} sessionId={session.id} />
 
           {/* Full Stat Grid */}
           {(stats.ast > 0 || stats.reb > 0 || stats.stl > 0 || stats.blk > 0 || stats.to > 0 || stats.pf > 0 || stats.min > 0) && (
@@ -189,6 +190,7 @@ function GameCard({ session,playerName,accountId }) {
           )}
         </div>
       )}
+      {expanded && <div style={{ padding: "0 16px 16px" }}><DeleteGameButton session={session} playerId={playerId} accountId={accountId} onDeleted={onDeleted} /></div>}
     </div>
   );
 }
@@ -200,6 +202,8 @@ export default function GameLogScreen() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("individual"); // individual | team
   const [historyError, setHistoryError] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState("");
+  const onDeleted = (id, warning) => { setSessions(previous => previous.filter(s => s.id !== id)); setDeleteNotice(warning || "Game deleted. Its shots and stats no longer count toward your totals."); };
   const [dateFilter, setDateFilter] = useState({ season: '', from: '', to: '' });
 
   useEffect(() => {
@@ -243,6 +247,7 @@ export default function GameLogScreen() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
+      {deleteNotice && <p role="status" style={{ padding: 12, borderRadius: 10, background: "var(--color-muted)", color: "var(--color-text)" }}>{deleteNotice}</p>}
       <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
 
       {/* Individual / Team Tabs */}
@@ -310,7 +315,7 @@ export default function GameLogScreen() {
       {filteredSessions.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filteredSessions.map((s) => (
-            <GameCard key={s.id} session={s} playerName={player?.name} accountId={user?.id} />
+            <GameCard key={s.id} session={s} playerName={player?.name} accountId={user?.id} playerId={playerId} onDeleted={onDeleted} />
           ))}
         </div>
       ) : (

@@ -8,6 +8,7 @@ import { fetchSessionHistory } from "@/lib/queries";
 import { calcPct } from "@/lib/utils";
 import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
+import DeleteGameButton from "./DeleteGameButton";
 import AdvancedSessionReport from './AdvancedSessionReport';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 import { filterSessionRecords, recordedGameResult } from '@/lib/sessionRecovery.mjs';
@@ -52,7 +53,7 @@ function StatCell({ value, label, color }) {
   );
 }
 
-function SessionCard({ session,playerName,accountId }) {
+function SessionCard({ session, playerName, accountId, playerId, onDeleted }) {
   const [showReport, setShowReport] = useState(false);
   const stats = session.game_stats || {};
   const report = buildSessionReport(session.shot_logs || [], stats, COURT_ZONES);
@@ -193,7 +194,8 @@ function SessionCard({ session,playerName,accountId }) {
         style={{ marginTop: 12, width: '100%', minHeight: 44, border: '1px solid var(--color-border)', borderRadius: 10, background: 'var(--color-muted)', color: 'var(--color-text)', fontWeight: 700, fontSize: 12 }}>
         {showReport ? 'Hide performance report' : 'View performance report'}
       </button>
-      {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session.id} />}
+      {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session.id} opponent={session.tracker_context?.opponent || ""} />}
+      {showReport && session.type === "game" && <DeleteGameButton session={session} playerId={playerId} accountId={accountId} onDeleted={onDeleted} />}
     </div>
   );
 }
@@ -205,6 +207,8 @@ export default function SessionHistory() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, game, practice
   const [historyError, setHistoryError] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState("");
+  const onDeleted = (id, warning) => { setSessions(previous => previous.filter(s => s.id !== id)); setDeleteNotice(warning || "Game deleted. Tracking and season totals will exclude it."); };
   const [dateFilter, setDateFilter] = useState({ season: '', from: '', to: '' });
 
   useEffect(() => {
@@ -276,7 +280,8 @@ export default function SessionHistory() {
         </span>
       </div>
 
-      <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
+      {deleteNotice && <p role="status" style={{ padding: 12, background: "var(--color-muted)", borderRadius: 10 }}>{deleteNotice}</p>}
+       <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
       {/* Filter */}
       <div
         style={{
@@ -351,7 +356,7 @@ export default function SessionHistory() {
           }}
         >
           {filtered.map((s) => (
-            <SessionCard key={s.id} session={s} playerName={player?.name} accountId={user?.id} />
+            <SessionCard key={s.id} session={s} playerName={player?.name} accountId={user?.id} playerId={playerId} onDeleted={onDeleted} />
           ))}
         </div>
       )}
