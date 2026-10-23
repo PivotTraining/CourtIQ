@@ -213,6 +213,18 @@ export async function insertJournalEntry(playerId, entry) {
   };
 }
 
+// Delete only a completed/legacy individual game belonging to the current player.
+// The database's ON DELETE CASCADE removes its shots and tracker commands atomically,
+// so every stats query will stop counting this game. Team games must be managed
+// separately because deleting a shared roster session affects other participants.
+export async function deleteGameSession(sessionId, playerId) {
+  if (!sessionId || !playerId) throw new Error("Choose a saved game for the current player.");
+  return requireSavedRow(await getSupabase().from("sessions").delete()
+    .eq("id", sessionId).eq("player_id", playerId).eq("type", "game")
+    .eq("mode", "individual").in("tracker_status", ["legacy", "completed"])
+    .select("id").single(), "Game deletion");
+}
+
 // ─── SESSIONS + SHOTS ───
 
 // 6-char join code: no I, O, 0, 1 to avoid visual confusion
