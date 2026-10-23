@@ -25,5 +25,5 @@ test('device video persists blobs by account and session, rejects unsafe input a
 test('base-layer reset cannot override utility padding and modal privacy starts with names hidden',async()=>{
   const css=await readFile(new URL('../src/app/globals.css',import.meta.url),'utf8');
   assert.match(css,/@layer base\s*\{\s*\*, \*::before, \*::after \{[^}]*margin: 0; padding: 0;/);
-  const source=await readFile(new URL('../src/components/shots/SocialReportCard.jsx',import.meta.url),'utf8');assert.match(source,/\[includeName,setIncludeName\]=useState\(false\)/);
+  const source=await readFile(new URL('../src/components/shots/SocialReportCard.jsx',import.meta.url),'utf8');assert.match(source,/\\[includeName,\\s*setIncludeName\\]\\s*=\\s*useState\\(false\\)/);
 });
