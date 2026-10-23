@@ -4,25 +4,70 @@ import { COURTIQ_DARK_LOGO_PATHS } from './brandArtwork.mjs';
 
 const escapeXml = value => String(value).replace(/[<>&"']/g, char => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[char]));
 const short = (value, length) => { const chars=Array.from(String(value || '')); return chars.length>length?chars.slice(0,length-1).join('')+'…':chars.join(''); };
+export const SOCIAL_CARD_THEMES = Object.freeze([
+  { id: 'midnight', label: 'Midnight' },
+  { id: 'hardwood', label: 'Court lights' },
+  { id: 'light', label: 'Clean white' },
+]);
+const PALETTES = Object.freeze({
+  midnight: { bg: '#080E1D', bg2: '#1C2A43', surface: '#18263B', outline: '#384960', text: '#F8FAFC', muted: '#C0CADD', accent: '#FF8C4C', glow: '#6CE5C1' },
+  hardwood: { bg: '#131714', bg2: '#283C2E', surface: '#263227', outline: '#526A56', text: '#FFF9E8', muted: '#D7DECE', accent: '#FFC870', glow: '#A2F4B7' },
+  light: { bg: '#F5F2EC', bg2: '#E3E9EA', surface: '#FFFFFF', outline: '#B9C2CD', text: '#142034', muted: '#3F5366', accent: '#CF4C18', glow: '#075D50' },
+});
 
-// Export only report-derived stats; never invent percentages for zero attempts.
-export function socialCardSvg(report, { format='square', title='Player recap', date='', type='game', scope='Recorded player stats', energy='auto', kind='player' }={}) {
-  if(!['square','story'].includes(format))throw new Error('Unsupported card format.');
-  const height=format==='story'?1920:1080, offset=format==='story'?290:0;
-  const text=(x,y,value,size,color='#F0F1F5',weight=700)=>`<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="${size}" font-weight="${weight}" fill="${color}">${escapeXml(value)}</text>`;
-  const metrics=[['REB',report.box.reb],['AST',report.box.ast],['STL',report.box.stl],['BLK',report.box.blk]];
-  const headline=resolveCardEnergy(report,{type,choice:energy,kind});
-  const body=offset+(headline?60:0);
+// Static, self-contained vector card. No external font, photo, resource, script or user-provided SVG.
+// Numbers come only from the recorded session. A percentage with zero attempts stays undefined.
+export function socialCardSvg(report, {
+  format = 'square', title = 'Player recap', date = '', type = 'game',
+  scope = 'Recorded player stats', energy = 'auto', kind = 'player', theme = 'midnight', opponent = ''
+} = {}) {
+  if (!['square', 'story'].includes(format)) throw new Error('Unsupported card format.');
+  const palette = PALETTES[theme];
+  if (!palette) throw new Error('Unsupported social card theme.');
+  const story = format === 'story', height = story ? 1920 : 1080, shift = story ? 280 : 0;
+  const tx = (x, y, value, size, color = palette.text, weight = 700, spacing = 0) =>
+    `<text x="${x}" y="${y}" font-family="Arial,Helvetica,sans-serif" font-size="${size}" font-weight="${weight}" letter-spacing="${spacing}" fill="${color}">${escapeXml(value)}</text>`;
+  const subtitle = type === 'practice' ? 'PRACTICE RECAP' : 'GAME DAY RECAP';
+  const headline = resolveCardEnergy(report, { type, choice: energy, kind });
+  const mainTitle = short(title, 30);
+  const when = date ? short(date, 22) : 'Date not recorded';
+  const matchup = opponent ? short(`VS ${opponent}`, 30) : '';
+  const metrics = [['REB', report.box.reb], ['AST', report.box.ast], ['STL', report.box.stl], ['BLK', report.box.blk]];
+  const badgeY = 365 + shift, ptsLabelY = 471 + shift, ptsY = 646 + shift, secondaryY = 515 + shift;
+  const statY = 750 + shift, footerY = height - 88;
+  const panels = metrics.map(([label, value], i) => {
+    const x = 66 + i * 240;
+    return `<rect x="${x}" y="${statY}" width="222" height="151" rx="20" fill="${palette.surface}" stroke="${palette.outline}" stroke-width="1.5"/>${tx(x + 27, statY + 77, value, 62, palette.text, 900)}${tx(x + 27, statY + 122, label, 22, palette.muted, 700, 2)}`;
+  }).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="${height}" viewBox="0 0 1080 ${height}" role="img" aria-label="CourtIQ recorded stats card">
-    <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#151A2B"/><stop offset="1" stop-color="#080D16"/></linearGradient></defs>
-    <rect width="1080" height="${height}" fill="url(#bg)"/><path d="M790 0L1080 0L1080 ${height}L650 ${height}" fill="#FF6B35" opacity=".05"/>
-    <g transform="translate(64 56) scale(.62)">${COURTIQ_DARK_LOGO_PATHS}</g>
-    ${text(64,180+offset,type==='practice'?'PRACTICE RECAP':'GAME RECAP',24,'#98A4BE')}${text(64,250+offset,short(title,28),48)}${text(64,295+offset,short(date || 'Date not recorded',40),24,'#98A4BE')}
-    ${headline?`<rect x="64" y="${318+offset}" width="952" height="60" rx="12" fill="#68E5C1" fill-opacity=".10"/><path d="M84 ${333+offset}L92 ${333+offset}L88 ${345+offset}L97 ${345+offset}L82 ${365+offset}L87 ${350+offset}L79 ${350+offset}Z" fill="#68E5C1"/>${text(112,360+offset,headline.phrase,40,'#68E5C1',900)}`:''}
-    ${text(64,490+body,report.pts,170,'#FF895D',900)}${text(64,540+body,'RECORDED POINTS',26,'#CBD5E1')}
-    ${text(550,395+body,`FG  ${report.fgm}/${report.fga}`,36)}${text(550,448+body,percent(report.fgPct),48,'#68E5C1')}${text(550,505+body,`3PT  ${report.threeMade}/${report.threeAttempts}`,28,'#CBD5E1')}${text(550,551+body,`FT  ${report.ftm}/${report.fta}`,28,'#CBD5E1')}
-    ${metrics.map(([label,value],i)=>`<rect x="${64+i*242}" y="${615+body}" width="218" height="154" rx="20" fill="#FFFFFF" fill-opacity=".05"/>${text(90+i*242,680+body,value,46)}${text(90+i*242,725+body,label,23,'#98A4BE')}`).join('')}
-    ${text(64,836+body,short(scope,57),25,'#CBD5E1')}${text(64,880+body,'Based only on recorded events. Not an official box score.',23,'#98A4BE')}${text(64,height-70,'YOUR WORK. YOUR PROGRESS.',23,'#98A4BE')}</svg>`;
+    <defs><linearGradient id="courtiq-card-bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="${palette.bg2}"/><stop offset="1" stop-color="${palette.bg}"/></linearGradient></defs>
+    <rect width="1080" height="${height}" fill="url(#courtiq-card-bg)"/>
+    <circle cx="1050" cy="${story ? 1100 : 610}" r="375" fill="none" stroke="${palette.outline}" opacity=".44" stroke-width="3"/>
+    <circle cx="1050" cy="${story ? 1100 : 610}" r="160" fill="none" stroke="${palette.outline}" opacity=".35" stroke-width="3"/>
+    <path d="M700 0L1080 0L1080 ${height}L870 ${height}Z" fill="${palette.accent}" opacity=".035"/>
+    <rect x="60" y="${story ? 99 : 49}" width="958" height="100" rx="20" fill="#0C1220"/>
+    <g transform="translate(82 ${story ? 120 : 70}) scale(.48)">${COURTIQ_DARK_LOGO_PATHS}</g>
+    <rect x="66" y="${202 + shift}" width="70" height="6" rx="3" fill="${palette.accent}"/>
+    ${tx(66, 262 + shift, subtitle, 25, palette.accent, 800, 4)}
+    ${tx(66, 329 + shift, mainTitle, 54, palette.text, 900)}
+    ${tx(795, 328 + shift, when, 22, palette.muted, 600)}
+    ${headline ? `<rect x="66" y="${badgeY}" width="948" height="65" rx="16" fill="${palette.surface}" stroke="${palette.outline}"/><rect x="66" y="${badgeY}" width="9" height="65" rx="4" fill="${palette.glow}"/>${tx(97, badgeY + 45, short(headline.phrase, 27), 35, palette.glow, 900)}` : `<path d="M66 ${badgeY + 34}H1014" stroke="${palette.outline}" stroke-width="2"/>`}
+    ${tx(66, ptsLabelY, 'POINTS', 24, palette.muted, 800, 3)}
+    ${tx(66, ptsY, report.pts, 180, palette.accent, 900)}
+    <rect x="552" y="${secondaryY - 67}" width="462" height="254" rx="24" fill="${palette.surface}" stroke="${palette.outline}" stroke-width="1.5"/>
+    ${tx(584, secondaryY - 18, 'FIELD GOALS', 21, palette.muted, 800, 2)}
+    ${tx(584, secondaryY + 52, percent(report.fgPct), 76, palette.glow, 900)}
+    ${tx(584, secondaryY + 105, `FG  ${report.fgm}/${report.fga}`, 28, palette.text, 700)}
+    ${tx(584, secondaryY + 155, `3PT  ${report.threeMade}/${report.threeAttempts}`, 25, palette.muted, 700)}
+    ${tx(804, secondaryY + 155, `FT  ${report.ftm}/${report.fta}`, 25, palette.muted, 700)}
+    ${panels}
+    ${story ? `<path d="M66 1400H1014" stroke="${palette.outline}" stroke-width="2"/>${tx(66, 1485, 'THE WORK SPEAKS.', 59, palette.text, 900, 1)}${tx(66, 1547, 'ONE SESSION. REAL NUMBERS.', 30, palette.accent, 800, 2)}` : ''}
+    ${matchup ? tx(66, footerY - 104, matchup, 24, palette.muted, 700, 1) : ''}
+    ${tx(66, footerY - 52, short(scope, 57), 21, palette.muted, 600)}
+    ${tx(66, footerY - 13, 'Recorded events only. Not an official box score.', 20, palette.muted, 500)}
+    <path d="M66 ${footerY + 14}H1014" stroke="${palette.outline}" stroke-width="2"/>
+    ${tx(66, height - 31, 'YOUR WORK. YOUR PROGRESS.', 20, palette.accent, 900, 2)}
+    </svg>`;
 }
 
 export async function cardPng(svg, browser = globalThis) {
