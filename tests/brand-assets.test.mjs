@@ -79,7 +79,7 @@ test('social cards embed the same outlined logo without external fetches or alte
   const report = buildSessionReport([], { reb: 7, ast: 4 });
   for (const format of ['square', 'story']) {
     const svg = socialCardSvg(report, { format, energy: 'none' });
-    assert.match(svg, /translate\\(82 (?:70|120)\\) scale\\(\\.48\\)/);
+    assert.match(svg, /translate\(82 (?:70|120)\) scale\(\.48\)/);
     assert.doesNotMatch(svg, /href=|<image\b/);
     assert.match(svg, /POINTS/);
     const raster = await sharp(Buffer.from(svg)).png().toBuffer();
