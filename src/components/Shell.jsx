@@ -25,6 +25,7 @@ import RosterCoachWorkspace from './team/CoachWorkspace';
 import BillingScreen from './billing/BillingScreen';
 import MembershipOverview from './billing/MembershipOverview';
 import GametimeAction from './GametimeAction';
+import GymArrivalMonitor from './GymArrivalMonitor';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
 import { useThemePreference } from "@/lib/useThemePreference";
@@ -261,6 +262,7 @@ export default function Shell() {
       </div>
 
       <BottomNav />
+      <GymArrivalMonitor onStartGame={() => setShowLogger(true)} onOpenFilm={() => navTo('film')} />
 
       {showLogger && <ShotLogger quickStart onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
