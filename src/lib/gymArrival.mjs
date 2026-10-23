@@ -9,7 +9,7 @@ export const gymStateKey = accountId => `courtiq:gym-arrival-state:${accountId}`
 // Only data about boundaries is retained locally. Never persist a user's GPS trail.
 export function gymArrivalTransition(previous = {}, campuses = [], position, now = Date.now()) {
   const state = { insideId: previous.insideId || null, notifiedAt: { ...(previous.notifiedAt || {}) } };
-  if (!Number.isFinite(Number(position?.lat)) || !Number.isFinite(Number(position?.lon))) return { state, arrival: null };
+  if (position?.lat == null || position?.lon == null || !Number.isFinite(Number(position.lat)) || !Number.isFinite(Number(position.lon))) return { state, arrival: null };
   // Boundary hysteresis avoids repeated ENTER alerts caused by GPS drift.
   if (state.insideId) {
     const earlier = campuses.find(campus => String(campus.id) === String(state.insideId));
@@ -19,7 +19,7 @@ export function gymArrivalTransition(previous = {}, campuses = [], position, now
     state.insideId = null;
   }
   const inside = campuses
-    .filter(campus => campus && campus.id && campus.name && Number.isFinite(Number(campus.lat)) && Number.isFinite(Number(campus.lon)))
+    .filter(campus => campus && campus.id && campus.name && campus.lat != null && campus.lon != null && Number.isFinite(Number(campus.lat)) && Number.isFinite(Number(campus.lon)))
     .map(campus => ({ campus, meters: distanceMeters(position, campus) }))
     .filter(row => row.meters <= (Number(row.campus.radius) || DEFAULT_GYM_RADIUS_METERS))
     .sort((a, b) => a.meters - b.meters)[0];
@@ -37,7 +37,7 @@ export function safeCustomGyms(raw) {
   if (!Array.isArray(raw)) return [];
   return raw.slice(0, 25).filter(gym => typeof gym?.name === 'string' && gym.name.trim().length > 0 &&
     typeof gym?.id === 'string' && gym.id.startsWith('custom-') &&
-    Number.isFinite(Number(gym.lat)) && Math.abs(Number(gym.lat)) <= 90 &&
-    Number.isFinite(Number(gym.lon)) && Math.abs(Number(gym.lon)) <= 180)
+    gym.lat != null && Number.isFinite(Number(gym.lat)) && Math.abs(Number(gym.lat)) <= 90 &&
+    gym.lon != null && Number.isFinite(Number(gym.lon)) && Math.abs(Number(gym.lon)) <= 180)
     .map(gym => ({ id: gym.id, name: gym.name.slice(0, 80), city: '', lat: Number(gym.lat), lon: Number(gym.lon), radius: 250 }));
 }
