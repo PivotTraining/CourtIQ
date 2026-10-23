@@ -12,16 +12,16 @@ import SessionTimeline from './SessionTimeline';
 import GameContextForm from './GameContextForm';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 
-export default function ReliableTracker({ onClose, darkMode, onToggleTheme }) {
+export default function ReliableTracker({ onClose, darkMode, onToggleTheme, quickStart = false }) {
   const { playerId, player, refreshData } = useApp();
   const { user } = useAuth();
   return <ReliableTrackerWorkspace key={`${user.id}:${playerId}`} accountId={user.id} playerId={playerId} playerName={player?.name} refreshData={refreshData}
-    onClose={onClose} darkMode={darkMode} onToggleTheme={onToggleTheme} />;
+    onClose={onClose} darkMode={darkMode} onToggleTheme={onToggleTheme} quickStart={quickStart} />;
 }
 
 const DEFAULT_BACKEND = { fetchActiveSessions, fetchTrackerSession, createTrackerSession, applySessionCommand };
 
-export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', refreshData, onClose, darkMode, onToggleTheme, backend = DEFAULT_BACKEND, gameSessionId, teamControls }) {
+export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', refreshData, onClose, darkMode, onToggleTheme, backend = DEFAULT_BACKEND, gameSessionId, teamControls, quickStart = false }) {
   const [value, setValue] = useState(null);
   const valueRef = useRef(null);
   const identity = useRef(`${accountId}:${playerId}`);
@@ -75,6 +75,27 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
         const games = await backend.fetchActiveSessions(playerId);
         if (!alive) return;
         setActive(games);
+        if (quickStart) {
+          // Never overwrite an active or unsynced device recording. Resume it first.
+          if (local && (local.pending.length > 0 || local.snapshot.session.tracker_status === 'active')) {
+            setReady(true);
+            return;
+          }
+          // Reopen the most recent active game. Avoid creating a duplicate every tap.
+          const previous = games.find(game => game.type === 'game');
+          const snapshot = previous ? await backend.fetchTrackerSession(previous.id, playerId)
+            : { session: await backend.createTrackerSession(playerId, 'game', {
+                date: new Date().toLocaleDateString('en-CA'), opponent: '', season: '', competition: '',
+                location: 'home', format: 'quarters', team_score: '', opponent_score: '',
+              }), shots: [], events: [] };
+          if (!alive) return;
+          const next = { accountId, playerId, snapshot, pending: [] };
+          saveRecovery(window.localStorage, accountId, playerId, next);
+          valueRef.current = next; setValue(next);
+          setStatus(previous ? 'Resumed your active game' : 'Game started — stats save to your account');
+          setReady(true);
+          return;
+        }
         setReady(true);
         if (local && !local.pending.length) {
           const recovered = await backend.fetchTrackerSession(local.snapshot.session.id, playerId);
@@ -89,7 +110,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     }
     load();
     return () => { alive = false; identity.current = null; };
-  }, [accountId, playerId, backend, gameSessionId]);
+  }, [accountId, playerId, backend, gameSessionId, quickStart]);
 
   useEffect(() => {
     const warn = event => { if (valueRef.current?.pending.length) { event.preventDefault(); event.returnValue = ''; } };
@@ -191,9 +212,9 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       {error && <p role="alert">{error}</p>}
       {active.map(session => <button key={session.id} disabled={busy} onClick={() => resume(session)} style={{ ...inputStyle, display: 'block', width: '100%', marginBottom: 12 }}>Resume {session.type} · {session.date}{session.tracker_context?.opponent ? ` vs ${session.tracker_context.opponent}` : ''}</button>)}
       <label>Session type <select style={inputStyle} value={sessionType} onChange={event => setSessionType(event.target.value)}><option value="game">Game</option><option value="practice">Practice</option></select></label>
-      <GameContextForm value={context} onChange={setContext} />
-      <p className="text-sm text-text-sec">One player per session. Shared roster recording is not activated yet.</p>
-      {!gameSessionId && <button style={{ ...inputStyle, width: '100%', marginTop: 16 }} disabled={!ready || busy} onClick={start}>{busy ? 'Starting…' : 'Start new session'}</button>}
+      <details className="my-3"><summary style={{ cursor: 'pointer', minHeight: 44 }}>Add game details (optional)</summary><GameContextForm value={context} onChange={setContext} /></details>
+      <p className="text-sm text-text-sec">One player per session. Opponent and scores can be added during the game.</p>
+      {!gameSessionId && <button style={{ ...inputStyle, width: '100%', marginTop: 16 }} disabled={!ready || busy} onClick={start}>{busy ? 'Starting…' : 'Start tracking'}</button>}
     </div></div>;
 
   if (snapshot.session.tracker_status === 'completed' && !value.pending.length) return <div className="fixed inset-0 z-[200] overflow-y-auto bg-bg p-6"><div className="max-w-lg mx-auto">

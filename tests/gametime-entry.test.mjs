@@ -31,6 +31,7 @@ async function shellFixture(screen = 'home', billingEnabled = false) {
     '@/lib/useThemePreference': { useThemePreference: () => [false, () => {}] },
     '@/lib/firebase': { signOutUser: async () => {} }, '@/lib/utils': { getGreeting: () => 'Hello' },
     './ui/Icons': Empty, './GametimeAction': Gametime, './shots/ShotLogger': Logger,
+    './GymArrivalMonitor': Empty,
     './billing/MembershipOverview': Overview, './billing/BillingScreen': Billing };
   for (const name of ['BottomNav', 'DesktopNav', 'dashboard/HomeDashboard', 'shots/ShotTracking', 'heatmap/HeatMapScreen',
     'journal/JournalScreen', 'train/TrainScreen', 'train/SkillsScreen', 'iq/IQScreen', 'auth/ProfileEditor', 'PlayerSwitcher',
@@ -58,7 +59,7 @@ test('sticky Gametime action stays available except on the deliberately focused 
     assert.ok(action, screen);
     action.props.onStart(); f.h.flush();
     const logger = findElement(f.h.output, node => node.type === f.Logger);
-    assert.ok(logger, screen); assert.deepEqual(f.routes, []);
+    assert.ok(logger, screen); assert.equal(logger.props.quickStart, true); assert.deepEqual(f.routes, []);
     logger.props.onClose(); f.h.flush();
     assert.equal(findElement(f.h.output, node => node.type === f.Logger), null);
     f.h.unmount();

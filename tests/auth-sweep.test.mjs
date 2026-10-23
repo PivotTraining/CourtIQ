@@ -57,7 +57,7 @@ test('failed login restores controls and exposes an accessible error', async () 
   const f = await loginFixture();
   const request = action(f.h.output, 'form').props.onSubmit(submit);
   f.pending.reject(new Error('Invalid login credentials')); await request; await f.h.settle();
-  assert.equal(action(f.h.output, 'div', p => p.role === 'alert').props.children, 'Invalid login credentials');
+  assert.match(action(f.h.output, 'div', p => p.role === 'alert').props.children, /Email or password is not recognized/);
   assert.equal(action(f.h.output, 'button', p => p.type === 'submit').props.disabled, false);
 });
 

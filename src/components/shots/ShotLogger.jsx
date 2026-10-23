@@ -523,11 +523,11 @@ function SessionSummary({ shots, freeThrows, gameStats, sessionType, mode, focus
 /* ══════════════════════════════════════════════════════
    MAIN GAME TRACKER
    ══════════════════════════════════════════════════════ */
-function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
+function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false }) {
   const { playerId, player, refreshData } = useApp();
   const { user } = useAuth();
   const [step, setStep] = useState("setup"); // setup | logging | summary
-  const [sessionType, setSessionType] = useState("practice");
+  const [sessionType, setSessionType] = useState(quickStart ? "game" : "practice");
   const [mode, setMode] = useState("individual");
   const [session, setSession] = useState(null);
   const [shots, setShots] = useState([]);       // court shots (2PT/3PT with zone)
@@ -544,6 +544,8 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
   const [ripple, setRipple] = useState(null); // { zoneId, type: "made"|"missed" }
   const [ending, setEnding] = useState(false);
   const [joinMode, setJoinMode] = useState(false); // joining someone else's session
+  const [quickMode, setQuickMode] = useState(quickStart);
+  const quickAttempted = useRef(false);
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [joinError, setJoinError] = useState("");
   const [joiningSession, setJoiningSession] = useState(false);
@@ -589,7 +591,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
     setUndoStack((prev) => [...prev, { type: "stat", key, delta }]);
   };
 
-  const startSession = async () => {
+  const startSession = useCallback(async (selectedType = sessionType) => {
     if (pendingWrite.current) return;
     if (!playerId) {
       setSaveError("No player profile found. Please restart the app.");
@@ -599,7 +601,8 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
     pendingWrite.current = true;
     setSaveError(null);
     try {
-      const s = await createSession(playerId, sessionType, mode);
+      const s = await createSession(playerId, selectedType, mode);
+      setSessionType(selectedType);
       setSession(s);
       setStep("logging");
     } catch (err) {
@@ -609,7 +612,13 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
       pendingWrite.current = false;
       setSaving(false);
     }
-  };
+  }, [playerId, sessionType, mode]);
+
+  useEffect(() => {
+    if (!quickStart || quickAttempted.current || !playerId) return;
+    quickAttempted.current = true;
+    startSession('game');
+  }, [quickStart, playerId, startSession]);
 
   const joinSession = async () => {
     if (!joinCodeInput.trim()) { setJoinError("Enter a 6-character game code."); return; }
@@ -731,6 +740,16 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme }) {
 
   /* ── SETUP SCREEN — Flowing multi-step conversation ── */
   const [setupStep, setSetupStep] = useState(0); // 0: mode, 1: type, 2: focus
+
+  if (step === "setup" && quickMode) return <div role="dialog" aria-modal="true" aria-label="Opening Gametime" style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'var(--color-bg)', display: 'grid', placeItems: 'center', padding: 24 }}>
+    <div style={{ width: '100%', maxWidth: 360, textAlign: 'center', color: 'var(--color-text)' }}>
+      <h2 style={{ fontSize: 24, fontWeight: 900 }}>Gametime</h2>
+      <p role="status" style={{ margin: '12px 0 24px', color: 'var(--color-text-sec)' }}>{saving ? 'Opening your game…' : saveError || (!playerId ? 'Select a player before starting a game.' : 'Ready to track.')}</p>
+      {saveError && <button type="button" onClick={() => startSession('game')} disabled={saving} style={{ minHeight: 52, width: '100%', borderRadius: 12, color: '#fff', background: '#FF6B35', border: 0, fontWeight: 800 }}>Retry starting game</button>}
+      <button type="button" onClick={() => setQuickMode(false)} style={{ display: 'block', minHeight: 44, margin: '12px auto', color: 'var(--color-text)', background: 'transparent', border: 0 }}>Other tracking options</button>
+      <button type="button" onClick={onClose} style={{ minHeight: 44, color: 'var(--color-text-sec)', background: 'transparent', border: 0 }}>Cancel</button>
+    </div>
+  </div>;
 
   if (step === "setup") {
     const steps = [

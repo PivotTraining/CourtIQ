@@ -4,7 +4,7 @@ const PAGE_SIZE = 2000;
 function queryUrl(offset) {
   const params = new URLSearchParams({
     where: "LSTATE LIKE 'GA%' AND STATUS='1' AND VIRTUAL='Not Virtual' AND SCHOOL_TYPE_TEXT='Regular School'",
-    outFields: "NCESSCH,SCH_NAME,LCITY,LSTATE,GSLO,GSHI,SCHOOL_LEVEL,G09,G10,G11,G12",
+    outFields: "NCESSCH,SCH_NAME,LCITY,LSTATE,GSLO,GSHI,SCHOOL_LEVEL,G06,G07,G08,G09,G10,G11,G12",
     returnGeometry: "true",
     outSR: "4326",
     f: "json",
@@ -14,8 +14,9 @@ function queryUrl(offset) {
   return `${NCES_LAYER}?${params.toString()}`;
 }
 
-function servesHighSchool(attributes = {}) {
-  return ["G09", "G10", "G11", "G12"].some((key) => Number(attributes[key]) >= 0);
+function servesBasketballGrades(attributes = {}) {
+  return ["G06", "G07", "G08", "G09", "G10", "G11", "G12"].some((key) =>
+    attributes[key] !== null && attributes[key] !== undefined && Number(attributes[key]) >= 0);
 }
 
 export async function GET() {
@@ -32,7 +33,7 @@ export async function GET() {
     }
 
     const campuses = features
-      .filter((feature) => servesHighSchool(feature?.attributes) && feature?.geometry)
+      .filter((feature) => servesBasketballGrades(feature?.attributes) && feature?.geometry)
       .map((feature) => ({
         id: String(feature.attributes.NCESSCH),
         name: feature.attributes.SCH_NAME,
@@ -56,6 +57,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[gym-campuses]", error);
-    return Response.json({ error: "Georgia high-school campus data is temporarily unavailable." }, { status: 502 });
+    return Response.json({ error: "Georgia school-campus data is temporarily unavailable." }, { status: 502 });
   }
 }

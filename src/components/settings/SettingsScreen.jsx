@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import Icon from "@/components/ui/Icons";
 import { signOutUser } from "@/lib/firebase";
 import PasswordAccess from "./PasswordAccess";
+import GymArrivalSettings from "./GymArrivalSettings";
 
 function Row({ icon, title, description, action, actionLabel }) {
   return (
@@ -40,6 +41,8 @@ export default function SettingsScreen({ onEditProfile, onManagePlayers, darkMod
         <Row icon={darkMode ? "moon" : "sun"} title="Appearance" description={darkMode ? "Dark mode is on." : "Light mode is on."} action={onToggleTheme} actionLabel={darkMode ? "Use light" : "Use dark"} />
         <Row icon="shield" title="Youth privacy" description="CourtIQ currently uses an age-13+ account posture. Under-13 guardian consent is not yet offered." />
       </section>
+
+      <GymArrivalSettings />
 
       <section style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 20, padding: 18, boxShadow: "var(--shadow-card)" }}>
         <div style={{ fontSize: 10, fontWeight: 900, color: "#3B82F6", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Privacy & legal</div>
