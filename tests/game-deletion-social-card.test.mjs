@@ -24,7 +24,7 @@ test('game deletion is scoped to player, type, individual mode and non-active se
     './dataSafety.mjs': { checked: x => x, readAll: async () => [], requireSavedRow: async x => (await x).data },
   });
   assert.deepEqual(await deleteGameSession(id, playerId), {id});
-  assert.deepEqual(calls, [
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
     ['from','sessions'], ['delete'], ['eq','id',id], ['eq','player_id',playerId],
     ['eq','type','game'], ['eq','mode','individual'], ['in','tracker_status',['legacy','completed']],
     ['select','id'], ['single'],
