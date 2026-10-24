@@ -78,7 +78,7 @@ export default function SkillPracticeSession({ drill, previous, canSave, onSave,
       <div className="skill-studio-intro">
         <p className="skill-eyebrow">{recap ? 'SESSION COMPLETE' : 'LIVE PRACTICE'} · {drill.category.replaceAll('-', ' ')}</p>
         <h2>{recap ? 'Solid work.' : drill.name}</h2>
-        <p>{recap ? `${drill.name} · ${complete ? 'Target completed' : 'Partial session'}` : `Target: ${target} ${guide.unit} · ${drill.level}`}</p>
+        <p>{recap ? `${good} of ${outcomes.length} ${isShooting ? 'shots made' : 'clean reps'} · ${drill.name} · ${complete ? 'Target completed' : 'Partial session'}` : `Target: ${target} ${guide.unit} · ${drill.level}`}</p>
         {!recap && <p className="skill-cue">{drill.videoTip || guide.steps[0]?.[1]}</p>}
       </div>
 
