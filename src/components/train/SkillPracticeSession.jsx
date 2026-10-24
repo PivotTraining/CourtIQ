@@ -92,7 +92,7 @@ export default function SkillPracticeSession({ drill, previous, canSave, onSave,
       {!recap && <>
         <div className="skill-studio-count"><strong aria-live="polite">{outcomes.length}<small> / {target}</small></strong><span>{isShooting ? 'Shots logged' : 'Reps logged'}</span></div>
         <progress value={outcomes.length} max={target} aria-label="Recorded practice attempts"/>
-        <p className="skill-studio-status" aria-live="polite">{good} {isShooting ? 'made' : 'clean'} · {missed} {isShooting ? 'missed' : 'need work'}{rate !== null ? ` · ${rate}%` : ''}{currentStreak > 1 ? ` · ${currentStreak} straight` : ''}</p>
+        <p className="skill-studio-status" aria-live="polite">{good} of {outcomes.length} {isShooting ? 'made' : 'clean'} · {good} {isShooting ? 'made' : 'clean'} · {missed} {isShooting ? 'missed' : 'need work'}{rate !== null ? ` · ${rate}%` : ''}{currentStreak > 1 ? ` · ${currentStreak} straight` : ''}</p>
         <div className="skill-log-buttons skill-studio-log-buttons">
           <button className="skill-primary" type="button" disabled={paused || busy || outcomes.length >= target} onClick={() => recordAttempt(true)}>+ {metric.good}</button>
           <button type="button" disabled={paused || busy || outcomes.length >= target} onClick={() => recordAttempt(false)}>+ {metric.other}</button>
