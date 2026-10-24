@@ -292,7 +292,7 @@ export default function Shell() {
       <BottomNav />
       <GymArrivalMonitor onStartGame={() => setShowLogger(true)} onOpenFilm={() => navTo('film')} />
 
-      {showLogger && <ShotLogger key={playerId || "no-player"} quickStart onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
+      {showLogger && <ShotLogger quickStart key={playerId || "no-player"} onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
       {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} />}
     </div>
