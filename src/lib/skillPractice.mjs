@@ -60,16 +60,24 @@ export function practiceMetric(drill) {
     : { kind: 'clean-reps', good: 'Clean rep', other: 'Needs work', label: 'Clean-rep rate' };
 }
 
-export function skillResult({ drill, outcomes, elapsedSeconds, id }) {
+export function skillResult({ drill, outcomes, elapsedSeconds, id, attemptSeconds }) {
   const target = Math.max(1, Math.floor(Number(drill.reps) || 1));
   if (!id || !Array.isArray(outcomes) || !outcomes.length || outcomes.length > target || outcomes.some(value => typeof value !== 'boolean'))
     throw new Error('Record valid attempts before finishing this practice.');
   if (!Number.isFinite(elapsedSeconds) || elapsedSeconds < 0 || elapsedSeconds > 86400) throw new Error('Practice time is unavailable.');
+  // Compact scalar fields survive JSONB reordering and same-ID save retries.
+  // This is manually entered attempt data, not video/AI shot detection.
+  if (attemptSeconds !== undefined && (!Array.isArray(attemptSeconds) || attemptSeconds.length !== outcomes.length
+    || attemptSeconds.some((value, index) => !Number.isInteger(value) || value < 0 || value > Math.ceil(elapsedSeconds)
+      || (index > 0 && value < attemptSeconds[index - 1]))))
+    throw new Error('Attempt timestamps must correspond to recorded reps.');
   return { id, elapsed_seconds: Math.floor(elapsedSeconds), drills: [{
     drill_id: drill.id, name: drill.name, target_reps: target, reps_completed: outcomes.length,
     skipped: outcomes.length < target, practice_version: PRACTICE_VERSION,
     category: drill.category, outcome_kind: practiceMetric(drill).kind,
     successful_reps: outcomes.filter(Boolean).length,
+    outcome_sequence: outcomes.map(value => value ? '1' : '0').join(''),
+    ...(attemptSeconds !== undefined ? { attempt_seconds: attemptSeconds.join(',') } : {}),
   }] };
 }
 
@@ -79,6 +87,39 @@ export function recordedPractice(row) {
     || !Number.isInteger(count) || count < 1 || !Number.isInteger(good) || good < 0 || good > count
     || !Number.isInteger(target) || target < count || typeof row.drill_id !== 'string') return null;
   return { ...row, rate: Math.round(good / count * 100) };
+}
+
+// Reconstruct only explicitly logged attempts. Older workouts deliberately have no
+// shot-by-shot list; do not infer a sequence from aggregate makes and misses.
+export function practiceAttemptTimeline(record) {
+  const count = record?.reps_completed, sequence = record?.outcome_sequence;
+  if (!Number.isInteger(count) || count < 1 || count > 2000 || typeof sequence !== 'string'
+    || sequence.length !== count || /[^01]/.test(sequence)) return null;
+  const seconds = record.attempt_seconds;
+  let times = null;
+  if (seconds !== undefined) {
+    if (typeof seconds !== 'string') return null;
+    const parts = seconds.split(',');
+    if (parts.length !== count || parts.some((part, index) => !/^(0|[1-9]\\d*)$/.test(part)
+      || !Number.isSafeInteger(Number(part)) || (index > 0 && Number(part) < Number(parts[index - 1])))) return null;
+    times = parts.map(Number);
+  }
+  const timeline = Array.from(sequence, (char, index) => ({
+    number: index + 1, good: char === '1', second: times?.[index] ?? null,
+  }));
+  if (timeline.filter(item => item.good).length !== record.successful_reps) return null;
+  return timeline;
+}
+
+export function practiceBestStreak(outcomes) {
+  let run = 0, best = 0;
+  for (const good of outcomes) { run = good ? run + 1 : 0; best = Math.max(best, run); }
+  return best;
+}
+
+export function formatPracticeClock(seconds) {
+  const total = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
 export function practiceHistory(rows, drills) {
