@@ -543,6 +543,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false
   const [focus, setFocus] = useState(""); // pre-session focus
   const [ripple, setRipple] = useState(null); // { zoneId, type: "made"|"missed" }
   const [ending, setEnding] = useState(false);
+  const [videoBusy, setVideoBusy] = useState(false);
   const [joinMode, setJoinMode] = useState(false); // joining someone else's session
   const [quickMode, setQuickMode] = useState(quickStart);
   const quickAttempted = useRef(false);
@@ -708,6 +709,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false
   };
 
   const endSession = async () => {
+    if (videoBusy) { setSaveError('Stop and save your video before ending the session. Stats tracking is still active.'); return; }
     if (pendingWrite.current || saving || ending) return;
     pendingWrite.current = true;
     playWhistle();
@@ -915,6 +917,7 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false
     tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
     courtTheme={courtTheme} setCourtTheme={setCourtTheme}
     undoCount={undoStack.length} undoLast={undoLast} endSession={endSession}
+    videoSession={session?.id && user?.id ? { accountId: user.id, sessionId: session.id } : null} videoBusy={videoBusy} onVideoBusyChange={setVideoBusy}
     logShot={logShot} logFreeThrow={logFreeThrow}
     ticker={<LiveStatBar shots={shots} gameStats={gameStats} freeThrows={freeThrows} />}
   />;
