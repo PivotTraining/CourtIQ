@@ -55,7 +55,7 @@ async function workspace(loadResults = async () => [], saveResult = async (playe
   const h = reactHarness();
   const dependencies = { react: h.react, '@/context/AppContext': { useApp: () => ({ playerId: 'alice' }) },
     '@/lib/drillBank': { DRILL_BANK, DRILL_CATEGORIES, SKILL_LEVELS: [{ id: 'beginner', label: 'Beginner' }] }, '@/lib/skillPractice.mjs': policy,
-    '@/lib/queries': {}, '@/components/ui/Icons': () => null, './DrillWalkthrough': () => null, './PracticeOutlook': () => null, './SkillPracticeSession': () => null,
+    '@/lib/queries': {}, '@/components/ui/Icons': () => null, './DrillWalkthrough': () => null, './PracticeOutlook': () => null, './SkillPracticeSession': () => null, './PracticeReplay': () => null,
     './FinishingLab': () => null, '@/lib/adaptiveFinishing.mjs': await import('../src/lib/adaptiveFinishing.mjs') };
   const loaded = await loadComponent(sourceUrl, dependencies, { process: { env: {} }, AbortController, setTimeout: () => 1, clearTimeout() {} });
   h.render(loaded.SkillsWorkspace, { playerId: 'alice', preview: true, loadResults, saveResult });
@@ -142,4 +142,36 @@ test('local skill preview cannot become a production auth bypass', async () => {
   assert.throws(page, /404/);
   const css = await readFile(new URL('../src/components/train/skills.css', import.meta.url), 'utf8');
   assert.match(css, /prefers-reduced-motion:reduce/);
+});
+
+
+test('training studio preserves accurate shot sequence, best streak and timestamps for saved replays', () => {
+  const input = [true, true, false, true, true, true, false];
+  const record = policy.skillResult({ drill: shooting, outcomes: input, attemptSeconds: [2, 4, 5, 8, 9, 13, 18], elapsedSeconds: 24, id: 'timelined' });
+  const result = record.drills[0];
+  assert.equal(result.outcome_sequence, '1101110');
+  assert.equal(result.attempt_seconds, '2,4,5,8,9,13,18');
+  assert.equal(policy.practiceBestStreak(input), 3);
+  const timeline = policy.practiceAttemptTimeline(result);
+  assert.deepEqual(timeline.map(item => [item.number, item.good, item.second]), [
+    [1,true,2],[2,true,4],[3,false,5],[4,true,8],[5,true,9],[6,true,13],[7,false,18],
+  ]);
+  assert.equal(policy.formatPracticeClock(125.8),'02:05');
+  const saved = { ...record, completed_at: '2026-10-23T14:00:00Z' };
+  const history = policy.practiceHistory([saved], DRILL_BANK);
+  assert.equal(history.entries[0].elapsed_seconds, 24);
+  assert.equal(history.entries[0].outcome_sequence,'1101110');
+});
+
+test('training replay refuses fabricated per-shot timelines without changing recorded totals', () => {
+  const row = { reps_completed: 3, successful_reps: 2, outcome_sequence: '101', attempt_seconds: '2,7,15' };
+  assert.equal(policy.practiceAttemptTimeline(row).length,3);
+  for (const corrupt of [
+    {...row,outcome_sequence:'111'}, {...row,outcome_sequence:'10'}, {...row,outcome_sequence:'x01'},
+    {...row,attempt_seconds:'2,1,15'}, {...row,attempt_seconds:'2,seven,15'},
+    {...row,attempt_seconds:'2,7'}, {...row,attempt_seconds:[2,7,15]},
+  ]) assert.equal(policy.practiceAttemptTimeline(corrupt),null);
+  assert.equal(policy.practiceAttemptTimeline({reps_completed:3,successful_reps:2}),null,'no invented timeline for older workouts');
+  assert.throws(() => policy.skillResult({drill:shooting,outcomes:[true,false],attemptSeconds:[1],elapsedSeconds:5,id:'invalid'}),/timestamps/);
+  assert.throws(() => policy.skillResult({drill:shooting,outcomes:[true,false],attemptSeconds:[2,1],elapsedSeconds:5,id:'invalid'}),/timestamps/);
 });
