@@ -126,10 +126,12 @@ export default function LiveSessionRecorder({ accountId, sessionId, onBusyChange
       return;
     }
     setStatus("starting");
+    let requestedStream;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 720 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 24 } },
       });
+      requestedStream = stream;
       if (!mounted.current) { stream.getTracks().forEach(track => track.stop()); return; }
       const active = { stream, mime, chunks: [], bytes: 0, recorder: null, closing: false };
       const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 700000 });
@@ -161,7 +163,7 @@ export default function LiveSessionRecorder({ accountId, sessionId, onBusyChange
       setStatus("recording");
       setMessage("Camera recording on this device. Keep CourtIQ open and use the stat buttons below.");
     } catch (err) {
-      releaseCamera(activeRef.current);
+      releaseCamera(activeRef.current || (requestedStream ? { stream: requestedStream } : null));
       activeRef.current = null;
       setError(messageForCamera(err));
       setStatus("idle");
