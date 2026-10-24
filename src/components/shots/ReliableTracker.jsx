@@ -230,7 +230,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
 
   const tools = <section className="tracker-recovery-tools">
     {teamControls && <div className="tracker-tool-row">
-      <label>Recording player <select style={{ ...inputStyle, maxWidth: '100%' }} value={playerId} disabled={busy} onChange={event => teamControls.onPlayerChange(event.target.value)}>
+      <label>Recording player <select style={{ ...inputStyle, maxWidth: '100%' }} value={playerId} disabled={busy || videoBusy} title={videoBusy ? "Stop and save your video before switching the recording player" : undefined} onChange={event => teamControls.onPlayerChange(event.target.value)}>
         {teamControls.roster.map(player => <option key={player.id} value={player.id}>#{player.jersey_number ?? '—'} {player.name}</option>)}
       </select></label>
       <span>Period {teamControls.period} · {teamControls.clock}</span>
