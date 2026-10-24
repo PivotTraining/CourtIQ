@@ -1,6 +1,7 @@
 "use client";
 
 import BrandLogo from "@/components/ui/BrandLogo";
+import GoogleIdentityButton from "./GoogleIdentityButton";
 import { useEffect, useRef, useState } from "react";
 import { signInWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
 
@@ -12,6 +13,7 @@ const inputStyle = {
 };
 
 export default function LoginScreen({ actions = liveActions } = {}) {
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
   const [showExistingEmail, setShowExistingEmail] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -97,6 +99,14 @@ export default function LoginScreen({ actions = liveActions } = {}) {
         <h1 style={{ fontSize: 25, fontWeight: 900, margin: "0 0 10px", color: "var(--color-text)", lineHeight: 1.2 }}>Welcome to CourtIQ</h1>
         <p style={{ margin: "0 0 22px", fontSize: 14, lineHeight: 1.6, color: "var(--color-text-sec)" }}>Parents can track multiple players with one account. Get started free with your Google account.</p>
 
+        {googleClientId ? <>
+          <GoogleIdentityButton clientId={googleClientId} onError={setError}
+            onSuccess={() => window.location.replace("/dashboard")} />
+          <button type="button" onClick={handleGoogle} disabled={loading}
+            style={{ display: "block", margin: "10px auto 0", background: "none", color: "var(--color-text-sec)", fontSize: 12, border: "none", cursor: "pointer", textDecoration: "underline", padding: 10 }}>
+            Trouble with the Google button? Use the alternative login
+          </button>
+        </> : <>
         <button type="button" onClick={handleGoogle} disabled={loading} aria-label="Continue with Google" style={{
           width: "100%", minHeight: 56, background: "var(--color-text)", border: "1px solid var(--color-border)",
           color: "var(--color-bg)", borderRadius: 15, display: "flex", gap: 12,
@@ -111,6 +121,7 @@ export default function LoginScreen({ actions = liveActions } = {}) {
           </svg>
           {loading ? "Connecting securely…" : "Continue with Google"}
         </button>
+        </>}
         <p style={{ color: "var(--color-text-sec)", fontSize: 12, lineHeight: 1.6, textAlign: "center", margin: "15px 0 4px" }}>
           Google handles your sign-in. CourtIQ never sees your Google password.
           You may briefly see Google&apos;s secure sign-in screen before returning to CourtIQ.
