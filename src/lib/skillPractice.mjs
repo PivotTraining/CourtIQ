@@ -100,7 +100,7 @@ export function practiceAttemptTimeline(record) {
   if (seconds !== undefined) {
     if (typeof seconds !== 'string') return null;
     const parts = seconds.split(',');
-    if (parts.length !== count || parts.some((part, index) => !/^(0|[1-9]\\d*)$/.test(part)
+    if (parts.length !== count || parts.some((part, index) => !/^(0|[1-9]\d*)$/.test(part)
       || !Number.isSafeInteger(Number(part)) || (index > 0 && Number(part) < Number(parts[index - 1])))) return null;
     times = parts.map(Number);
   }
