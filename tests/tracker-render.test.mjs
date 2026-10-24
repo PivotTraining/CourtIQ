@@ -27,6 +27,7 @@ const Icon = ({ name }) => React.createElement('span', { 'aria-hidden': true }, 
 const Tracker = (await loadComponent('../src/components/shots/CourtTrackerView.jsx', {
   '@/components/ui/Icons': { __esModule: true, default: Icon }, '@/lib/constants': constants,
   '@/lib/utils': { getHeatColor: () => '#22c55e' },
+  './LiveSessionRecorder': { __esModule: true, default: () => React.createElement('div', { 'data-test-recorder': true }, 'Record video') },
 })).default;
 const Report = (await loadComponent('../src/components/shots/AdvancedSessionReport.jsx', {
   '@/lib/constants': constants, '@/lib/sessionReport.mjs': reports,
