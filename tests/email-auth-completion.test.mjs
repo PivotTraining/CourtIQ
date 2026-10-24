@@ -6,111 +6,73 @@ const submit = { preventDefault() {} };
 const button = (tree, text) => findElement(tree, node => node.type === 'button' &&
   JSON.stringify(node.props.children).includes(text));
 
-
-test('successful email/password login leaves the login form and reloads the dashboard session', async () => {
-  const h = reactHarness();
-  const redirects = [];
-  const actions = {
-    signInWithEmail: async (email, password) => ({
-      session: { user: { id: 'email-owner', email } },
-      user: { id: 'email-owner', email },
-    }),
-    signUpWithEmail: async () => ({ session: null }),
-    resetPassword: async () => {},
+async function loginFixture(actions = {}) {
+  const h = reactHarness(), redirects = [];
+  const defaults = {
+    signInWithEmail: async (email) => ({session:{user:{id:'existing-email',email}}}),
     signInWithGoogle: async () => {},
-    resendConfirmation: async () => {},
+    resetPassword: async () => {},
   };
   const { default: Login } = await loadComponent(
     new URL('../src/components/auth/LoginScreen.jsx', import.meta.url),
     { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true } },
     { window: { location: { replace: path => redirects.push(path) } } },
   );
+  h.render(Login, { actions: { ...defaults, ...actions } }); h.flush();
+  const input = id => findElement(h.output, node => node.type === 'input' && node.props.id === id);
+  const openEmail = () => { findElement(h.output, n => n.type==='button' && n.props?.['aria-controls']==='existing-email-signin').props.onClick(); h.flush(); };
+  return { h, redirects, input, openEmail };
+}
 
-  h.render(Login, { actions }); h.flush();
-  const input = id => findElement(h.output, n => n.type === 'input' && n.props.id === id);
-  input('login-email').props.onChange({ target: { value: 'PLAYER@EXAMPLE.TEST' } }); h.flush();
-  input('login-password').props.onChange({ target: { value: 'strong-password' } }); h.flush();
-
-  await findElement(h.output, n => n.type === 'form').props.onSubmit(submit);
-  await h.settle();
-
-  assert.deepEqual(redirects, ['/dashboard']);
-  h.unmount();
+test('Google is the public sign-up path, with no dead-end email registration', async () => {
+  let googleCalls=0, emailCalls=0;
+  const f=await loginFixture({signInWithGoogle:async()=>{googleCalls++;},signInWithEmail:async()=>{emailCalls++;}});
+  assert.ok(button(f.h.output,'Continue with Google'));
+  assert.equal(findElement(f.h.output,n=>n.type==='form'),null,'email signup/signin is not public by default');
+  assert.doesNotMatch(JSON.stringify(f.h.output),/Create Account|Sign Up|Resend confirmation email/);
+  assert.match(JSON.stringify(f.h.output),/Google never sees|CourtIQ never sees your Google password/);
+  await button(f.h.output,'Continue with Google').props.onClick();
+  await f.h.settle();
+  assert.equal(googleCalls,1);
+  assert.equal(emailCalls,0);
+  f.openEmail();
+  assert.ok(findElement(f.h.output,n=>n.type==='form'));
+  assert.doesNotMatch(JSON.stringify(f.h.output),/Create Account|Resend confirmation email|Sign Up/);
+  f.h.unmount();
 });
 
-test('invalid password guidance offers email recovery for OAuth-first accounts', async () => {
-  const h = reactHarness();
-  const actions = {
-    signInWithEmail: async () => { throw new Error('Invalid login credentials'); },
-    signUpWithEmail: async () => ({ session: null }),
-    resetPassword: async () => {},
-    signInWithGoogle: async () => {},
-    resendConfirmation: async () => {},
-  };
-  const { default: Login } = await loadComponent(
-    new URL('../src/components/auth/LoginScreen.jsx', import.meta.url),
-    { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true } },
-  );
-  h.render(Login, { actions }); h.flush();
-  const input = id => findElement(h.output, n => n.type === 'input' && n.props.id === id);
-  input('login-email').props.onChange({ target: { value: 'player@example.test' } }); h.flush();
-  input('login-password').props.onChange({ target: { value: 'wrong-password' } }); h.flush();
-
-  await findElement(h.output, n => n.type === 'form').props.onSubmit(submit);
-  await h.settle();
-
-  const rendered = JSON.stringify(h.output);
-  assert.match(rendered, /Email or password is not recognized/);
-  assert.match(rendered, /Set \/ reset password/);
-  h.unmount();
+test('existing email/password customers can still sign in and redirect to dashboard', async () => {
+  const f=await loginFixture();
+  f.openEmail();
+  f.input('login-email').props.onChange({target:{value:'PLAYER@EXAMPLE.TEST'}});f.h.flush();
+  f.input('login-password').props.onChange({target:{value:'strong-password'}});f.h.flush();
+  await findElement(f.h.output,n=>n.type==='form').props.onSubmit(submit);
+  await f.h.settle();
+  assert.deepEqual(f.redirects,['/dashboard']);
+  f.h.unmount();
 });
 
-test('email signup can request another confirmation without exposing credentials', async () => {
-  const h = reactHarness();
-  const sent = [];
-  const actions = {
-    signUpWithEmail: async (...args) => { sent.push(['signup', ...args]); return { user: { id: 'sample' }, session: null }; },
-    signInWithEmail: async () => {},
-    resetPassword: async () => {},
-    signInWithGoogle: async () => {},
-    resendConfirmation: async email => { sent.push(['resend', email]); },
-  };
-  const { default: Login } = await loadComponent(new URL('../src/components/auth/LoginScreen.jsx',import.meta.url),
-    { react:h.react, '@/lib/firebase':{}, '@/components/ui/BrandLogo': {default:()=>null, __esModule:true} });
-  h.render(Login,{actions});h.flush();
-  const input=id=>findElement(h.output,n=>n.type==='input'&&n.props.id===id);
-  input('login-email').props.onChange({target:{value:'player@example.test'}});h.flush();
-  button(h.output,'Sign Up').props.onClick();h.flush();
-  // The real login component clears a previous password when switching modes.
-  input('login-password').props.onChange({target:{value:'123456789'}});h.flush();
-  await findElement(h.output,n=>n.type==='form').props.onSubmit(submit);await h.settle();
-  assert.ok(button(h.output,'Resend confirmation email'));
-  await button(h.output,'Resend confirmation email').props.onClick();await h.settle();
-  assert.deepEqual(sent,[['signup','player@example.test','123456789'],['resend','player@example.test']]);
-  assert.match(JSON.stringify(h.output),/Another confirmation message/);
-  h.unmount();
+test('invalid old email passwords show useful guidance without offering broken signup', async () => {
+  const f=await loginFixture({signInWithEmail:async()=>{throw new Error('Invalid login credentials');}});
+  f.openEmail();
+  f.input('login-email').props.onChange({target:{value:'old@example.test'}});f.h.flush();
+  f.input('login-password').props.onChange({target:{value:'wrong-password'}});f.h.flush();
+  await findElement(f.h.output,n=>n.type==='form').props.onSubmit(submit);await f.h.settle();
+  assert.match(JSON.stringify(f.h.output),/Existing email\/password accounts|existing email\/password accounts/);
+  assert.match(JSON.stringify(f.h.output),/New users should use Google/);
+  assert.doesNotMatch(JSON.stringify(f.h.output),/Create Account|Sign Up/);
+  f.h.unmount();
 });
 
-test('email not-confirmed login offers recovery instead of a false logged-in state', async () => {
-  const h=reactHarness();const sent=[];
-  const actions={
-    signInWithEmail: async()=>{throw new Error('Email not confirmed');},
-    signUpWithEmail: async()=>({session:null}),
-    resetPassword:async()=>{},signInWithGoogle:async()=>{},
-    resendConfirmation:async mail=>sent.push(mail),
-  };
-  const { default: Login }=await loadComponent(new URL('../src/components/auth/LoginScreen.jsx',import.meta.url),{
-    react:h.react, '@/lib/firebase':{}, '@/components/ui/BrandLogo':{default:()=>null,__esModule:true}
-  });
-  h.render(Login,{actions});h.flush();
-  const input=id=>findElement(h.output,n=>n.type==='input'&&n.props.id===id);
-  input('login-email').props.onChange({target:{value:'player@example.test'}});h.flush();
-  input('login-password').props.onChange({target:{value:'123456789'}});h.flush();
-  await findElement(h.output,n=>n.type==='form').props.onSubmit(submit);await h.settle();
-  assert.match(JSON.stringify(h.output),/Your email is not confirmed/);
-  await button(h.output,'Resend confirmation email').props.onClick();await h.settle();
-  assert.deepEqual(sent,['player@example.test']);
-  h.unmount();
+test('existing user password reset makes no false email-delivery promise', async () => {
+  let requested='';
+  const f=await loginFixture({resetPassword:async email=>{requested=email;}});
+  f.openEmail();
+  f.input('login-email').props.onChange({target:{value:'existing@example.test'}});f.h.flush();
+  await button(f.h.output,'Reset password').props.onClick();await f.h.settle();
+  assert.equal(requested,'existing@example.test');
+  assert.match(JSON.stringify(f.h.output),/Delivery is not guaranteed/);
+  f.h.unmount();
 });
 
 async function callbackFixture(query) {

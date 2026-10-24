@@ -15,6 +15,7 @@ async function loginFixture(overrides = {}) {
     '@/components/ui/BrandLogo': { default: () => null, __esModule: true },
   });
   h.render(Login); h.flush();
+  action(h.output,'button',p=>p['aria-controls']==='existing-email-signin').props.onClick(); h.flush();
   const change = (id, value) => { action(h.output, 'input', p => p.id === id).props.onChange({ target: { value } }); h.flush(); };
   change('login-email', 'player@example.test'); change('login-password', 'not-a-real-password');
   return { h, calls, pending, change };
@@ -33,12 +34,12 @@ test('email submit and Google cannot overlap before the next render', async () =
   assert.equal(action(f.h.output, 'button', p => p.type === 'submit').props.disabled, false);
 });
 
-test('pending login freezes credentials and the sign-up toggle', async () => {
+test('pending existing email login freezes credentials and email-panel toggle', async () => {
   const f = await loginFixture();
   const request = action(f.h.output, 'form').props.onSubmit(submit); f.h.flush();
   assert.equal(action(f.h.output, 'input', p => p.id === 'login-email').props.disabled, true);
   assert.equal(action(f.h.output, 'input', p => p.id === 'login-password').props.disabled, true);
-  assert.equal(action(f.h.output, 'button', p => p.children === 'Sign Up').props.disabled, true);
+  assert.equal(action(f.h.output, 'button', p => p['aria-controls'] === 'existing-email-signin').props.disabled, true);
   f.pending.resolve({}); await request;
 });
 
@@ -46,18 +47,18 @@ test('reset feedback belongs to the requested email, not later edits', async () 
   const f = await loginFixture();
   const forgot = action(f.h.output, 'button', p => p.onClick?.name === 'handleForgotPassword');
   const request = forgot.props.onClick(); f.pending.resolve({}); await request; await f.h.settle();
-  const feedback = action(f.h.output, 'div', p => p.role === 'status');
+  const feedback = action(f.h.output, 'p', p => p.role === 'status');
   assert.ok(feedback);
   assert.ok(JSON.stringify(feedback.props.children).includes('player@example.test'));
   f.change('login-email', 'other@example.test');
-  assert.equal(action(f.h.output, 'div', p => p.role === 'status'), null);
+  assert.equal(action(f.h.output, 'p', p => p.role === 'status'), null);
 });
 
 test('failed login restores controls and exposes an accessible error', async () => {
   const f = await loginFixture();
   const request = action(f.h.output, 'form').props.onSubmit(submit);
   f.pending.reject(new Error('Invalid login credentials')); await request; await f.h.settle();
-  assert.match(action(f.h.output, 'div', p => p.role === 'alert').props.children, /Email or password is not recognized/);
+  assert.match(action(f.h.output, 'p', p => p.role === 'alert').props.children, /Email or password is not recognized/);
   assert.equal(action(f.h.output, 'button', p => p.type === 'submit').props.disabled, false);
 });
 
