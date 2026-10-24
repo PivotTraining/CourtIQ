@@ -7,6 +7,7 @@ import { fetchWorkoutResults, saveWorkoutResult } from '@/lib/queries';
 import Icon from '@/components/ui/Icons';
 import DrillWalkthrough from './DrillWalkthrough';
 import SkillPracticeSession from './SkillPracticeSession';
+import PracticeReplay from './PracticeReplay';
 import PracticeOutlook from './PracticeOutlook';
 import FinishingLab from './FinishingLab';
 import { finishingHistory } from '@/lib/adaptiveFinishing.mjs';
@@ -23,6 +24,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
   const [tab, setTab] = useState('train'), [category, setCategory] = useState('all'), [level, setLevel] = useState('all'), [search, setSearch] = useState('');
   const [selected, setSelected] = useState(FEATURED[0]), [activeDrill, setActiveDrill] = useState(null);
   const [visibleCount, setVisibleCount] = useState(24);
+  const [selectedReplayId, setSelectedReplayId] = useState(null);
   const [records, setRecords] = useState([]), [status, setStatus] = useState('loading'), [reload, setReload] = useState(0), [notice, setNotice] = useState('');
   const mounted = useRef(false), startButton = useRef(null);
   const persistenceEnabled = preview || process.env.NEXT_PUBLIC_TRACKER_RECOVERY_ENABLED === 'true';
@@ -103,7 +105,13 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
         {history.entries.slice(0, 12).map((entry, index) => {
           const previous = history.entries.slice(index + 1).find(item => item.drill_id === entry.drill_id && item.target_reps === entry.target_reps && item.reps_completed === entry.target_reps && !item.skipped);
           const complete = entry.reps_completed === entry.target_reps && !entry.skipped;
-          return <article className="skill-history-card" key={`${entry.workoutId}:${entry.drill_id}:${index}`}><div><h4>{entry.name}</h4><p>{new Date(entry.completed_at).toLocaleDateString()} · {entry.reps_completed}/{entry.target_reps} reps · {complete ? 'target completed' : 'partial practice'}</p><p>{entry.successful_reps} {entry.outcome_kind === 'makes' ? 'made' : 'clean'} · {entry.rate}% {entry.outcome_kind === 'makes' ? 'accuracy' : 'clean-rep rate'}</p></div><span>{complete && previous ? `${entry.rate - previous.rate > 0 ? '+' : ''}${entry.rate - previous.rate} pp` : complete ? 'Baseline' : 'Partial'}<small>{complete && previous ? 'vs last same target' : complete ? 'same drill + target' : 'no comparison'}</small></span></article>;
+          const replayId = `${entry.workoutId}:${entry.drill_id}`;
+          return <div key={`${replayId}:${index}`}>
+            <article className="skill-history-card"><div><h4>{entry.name}</h4><p>{new Date(entry.completed_at).toLocaleDateString()} · {entry.reps_completed}/{entry.target_reps} reps · {complete ? 'target completed' : 'partial practice'}</p><p>{entry.successful_reps} {entry.outcome_kind === 'makes' ? 'made' : 'clean'} · {entry.rate}% {entry.outcome_kind === 'makes' ? 'accuracy' : 'clean-rep rate'}</p>
+              <button type="button" aria-expanded={selectedReplayId === replayId} onClick={() => setSelectedReplayId(value => value === replayId ? null : replayId)}>{selectedReplayId === replayId ? 'Close recap' : 'View training recap & replay'}</button>
+            </div><span>{complete && previous ? `${entry.rate - previous.rate > 0 ? '+' : ''}${entry.rate - previous.rate} pp` : complete ? 'Baseline' : 'Partial'}<small>{complete && previous ? 'vs last same target' : complete ? 'same drill + target' : 'no comparison'}</small></span></article>
+            {selectedReplayId === replayId && <PracticeReplay entry={entry} playerId={playerId} />}
+          </div>;
         })}
       </>}
     </section>}
