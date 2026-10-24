@@ -108,3 +108,15 @@ test('season and monthly per-game averages exclude practice and do not double-co
   assert.equal(month.totalPts, 3);
   assert.equal(intelligence.computeCoachReport(sessions, {}).length, 0);
 });
+
+
+test('camera recording controls live alongside usable make/miss and box-score inputs', () => {
+  const streaming = render(Tracker, { ...props, videoSession: { accountId: 'parent', sessionId: 'game' },
+    videoBusy: true, onVideoBusyChange: noop });
+  assert.match(streaming, /Record video/);
+  assert.match(streaming, /Stop and save your video before ending/);
+  assert.match(streaming, /class="tracker-end"[^>]*disabled=""/);
+  assert.match(streaming, />Made FT</);
+  assert.match(streaming, /Add assist, current count 0/);
+  assert.doesNotMatch(streaming, /class="tracker-result" data-tone="green" disabled=""/);
+});
