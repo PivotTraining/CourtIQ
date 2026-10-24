@@ -20,12 +20,28 @@ export function AuthProvider({ children }) {
   const profileRef = useRef(null);
   const requestVersion = useRef(0);
   const inFlight = useRef(null);
+  const switchRevision = useRef(0);
 
   const setPlayerProfile = useCallback((profile) => {
     profileRef.current = profile;
     updatePlayerProfile(profile);
     if (profile && identity.current) rememberPlayer(identity.current, profile.id);
   }, []);
+
+  // Family switching is a server-verified ownership operation, not a blind
+  // assignment of a player ID from a button or browser preference.
+  const switchToManagedPlayer = useCallback(async (targetId) => {
+    const accountId = identity.current;
+    if (!accountId || !targetId) throw new Error("Sign in and select a player.");
+    const revision = ++switchRevision.current;
+    const players = await authRead(fetchManagedPlayers(accountId));
+    if (identity.current !== accountId || revision !== switchRevision.current)
+      throw new Error("The account changed. Open the player picker again.");
+    const selected = players.find(player => player.id === targetId);
+    if (!selected) throw new Error("That player is not available to this parent account.");
+    setPlayerProfile(selected);
+    return selected;
+  }, [setPlayerProfile]);
 
   const loadProfile = useCallback(async (supabaseUser) => {
     const version = ++requestVersion.current;
@@ -56,6 +72,7 @@ export function AuthProvider({ children }) {
       if (!session?.user) {
         identity.current = null;
         requestVersion.current += 1;
+        switchRevision.current += 1;
         inFlight.current = null;
         setUser(null);
         setPlayerProfile(null);
@@ -71,6 +88,7 @@ export function AuthProvider({ children }) {
       }
       if (identity.current !== nextUser.id) {
         requestVersion.current += 1;
+        switchRevision.current += 1;
         profileRef.current = null;
         updatePlayerProfile(null);
       }
@@ -136,6 +154,7 @@ export function AuthProvider({ children }) {
         user,
         playerProfile,
         setPlayerProfile,
+        switchToManagedPlayer,
         loading,
         needsProfile,
         setNeedsProfile,
