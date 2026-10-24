@@ -113,10 +113,15 @@ test('parent picker visibly keeps new under-13 profile creation blocked pending 
   };
   collect(h.output);
   const name=inputs.find(input=>input.props?.placeholder==='Child or player name');
-  const age=inputs.find(input=>input.props?.placeholder==='Age');
   name.props.onChange({target:{value:'Young child'}});
   h.flush();
-  age.props.onChange({target:{value:'10'}});
+  const refreshedInputs=[];
+  const collectAgain=node=>{if(!node || typeof node!=='object')return;
+    if(node.type==='input')refreshedInputs.push(node);
+    for(const part of [node.props?.children].flat(Infinity))collectAgain(part);
+  };
+  collectAgain(h.output);
+  refreshedInputs.find(input=>input.props?.placeholder==='Age').props.onChange({target:{value:'10'}});
   h.flush();
   findElement(h.output,node=>node.type==='button'&&hasText(node,'Add Player')).props.onClick();
   h.flush();
