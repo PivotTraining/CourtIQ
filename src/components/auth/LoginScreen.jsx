@@ -13,7 +13,7 @@ const inputStyle = {
 };
 
 export default function LoginScreen({ actions = liveActions } = {}) {
-  const googleClientId = typeof process === "undefined" ? "" : process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
   const [showExistingEmail, setShowExistingEmail] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
