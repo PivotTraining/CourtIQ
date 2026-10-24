@@ -14,7 +14,7 @@ async function loginFixture(overrides = {}) {
     react: h.react, '@/lib/firebase': { ...provider, ...overrides }, '@/components/ui/Icons': { default: () => null, __esModule: true },
     '@/components/ui/BrandLogo': { default: () => null, __esModule: true },
     './GoogleIdentityButton': { default: () => null, __esModule: true },
-  });
+  }, { process: { env: {} } });
   h.render(Login); h.flush();
   action(h.output,'button',p=>p['aria-controls']==='existing-email-signin').props.onClick(); h.flush();
   const change = (id, value) => { action(h.output, 'input', p => p.id === id).props.onChange({ target: { value } }); h.flush(); };
