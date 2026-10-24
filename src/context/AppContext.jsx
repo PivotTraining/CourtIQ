@@ -58,6 +58,7 @@ export function AppProvider({ children }) {
   const isTeamIQ = false;
 
   const [player, setPlayer] = useState(null);
+  const [loadedPlayerId, setLoadedPlayerId] = useState(null);
   const [shotData, setShotData] = useState({ game: EMPTY_SHOTS, practice: EMPTY_SHOTS });
   const [weeklyTrend, setWeeklyTrend] = useState([]);
   const [heatZones, setHeatZones] = useState([]);
@@ -99,6 +100,7 @@ export function AppProvider({ children }) {
         avatar: null,
         streak,
       });
+      setLoadedPlayerId(playerId);
       return true;
     } catch (err) {
       console.error("Failed to load data:", err);
@@ -122,27 +124,32 @@ export function AppProvider({ children }) {
     return newEntry;
   };
 
+  // A rapid child switch must never render the previous child’s statistics,
+  // even for one React render before the new requests resolve.
+  const currentPlayerLoaded = !!playerId && loadedPlayerId === playerId;
+  const scopedPlayer = currentPlayerLoaded ? player : null;
+
   return (
     <AppContext.Provider
       value={{
         screen,
         setScreen: navigateTo,
         previousScreen,
-        player,
-        shotData,
-        weeklyTrend,
-        heatZones,
-        journalEntries,
+        player: scopedPlayer,
+        shotData: currentPlayerLoaded ? shotData : { game: EMPTY_SHOTS, practice: EMPTY_SHOTS },
+        weeklyTrend: currentPlayerLoaded ? weeklyTrend : [],
+        heatZones: currentPlayerLoaded ? heatZones : [],
+        journalEntries: currentPlayerLoaded ? journalEntries : [],
         addJournalEntry,
-        teamData,
-        teamInfo,
-        loading,
+        teamData: currentPlayerLoaded ? teamData : [],
+        teamInfo: currentPlayerLoaded ? teamInfo : { name: "", season: "", record: "0-0", ppg: "0", fgPct: "0", apg: "0" },
+        loading: loading || !currentPlayerLoaded,
         refreshData,
         playerId,
         isTeamIQ,
       }}
     >
-      {dataError && !player ? (
+      {dataError && !scopedPlayer ? (
         <main style={{ minHeight: "100dvh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
           <div style={{ maxWidth: 360 }}>
             <h1 style={{ fontSize: 22, marginBottom: 8 }}>Records unavailable</h1>

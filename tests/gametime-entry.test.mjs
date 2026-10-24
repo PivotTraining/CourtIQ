@@ -25,8 +25,8 @@ test('Gametime is an accessible large labeled action, not an unlabeled plus or a
 
 async function shellFixture(screen = 'home', billingEnabled = false) {
   const h = reactHarness(), routes = [];
-  const app = { screen, setScreen: route => routes.push(route), player: { name: 'Sample Player' }, refreshData: async () => {}, isTeamIQ: false };
-  const Gametime = () => null, Logger = () => null, Overview = () => null, Billing = () => null;
+  const app = { screen, playerId: 'child-one', setScreen: route => routes.push(route), player: { name: 'Sample Player' }, refreshData: async () => {}, isTeamIQ: false };
+  const Gametime = () => null, Logger = () => null, Overview = () => null, Billing = () => null, Picker = () => null;
   const deps = { react: h.react, '@/context/AppContext': { useApp: () => app },
     '@/lib/useThemePreference': { useThemePreference: () => [false, () => {}] },
     '@/lib/firebase': { signOutUser: async () => {} }, '@/lib/utils': { getGreeting: () => 'Hello' },
@@ -37,12 +37,13 @@ async function shellFixture(screen = 'home', billingEnabled = false) {
     'journal/JournalScreen', 'train/TrainScreen', 'train/SkillsScreen', 'iq/IQScreen', 'auth/ProfileEditor', 'PlayerSwitcher',
     'gamelog/GameLogScreen', 'family/FamilyDashboard', 'settings/SettingsScreen', 'film/FilmLab', 'profile/DevelopmentProfile',
     'coach/CoachWorkspace', 'team/CoachWorkspace']) deps[`./${name}`] = Empty;
+  deps['./PlayerSwitcher'] = Picker;
   const { default: Shell } = await loadComponent(new URL('Shell.jsx', base), deps, {
     process: { env: { NEXT_PUBLIC_COURTIQ_BILLING_ENABLED: billingEnabled ? 'true' : 'false' } },
     document: { addEventListener() {}, removeEventListener() {} }, setTimeout, clearTimeout,
   });
   h.render(Shell); h.flush();
-  return { h, app, routes, Gametime, Logger, Overview, Billing };
+  return { h, app, routes, Gametime, Logger, Overview, Billing, Picker };
 }
 
 test('sticky Gametime action stays available except on the deliberately focused IQ report', async () => {
@@ -104,4 +105,27 @@ test('desktop GAMETIME appears before scrolling links and VIP is available indep
   findElement(tree, node => node.type === Action).props.onStart(); assert.equal(launches, 1);
   const vip = findElement(tree, node => node.type === 'button' && renderToStaticMarkup(node).includes('VIP &amp; membership'));
   assert.ok(vip); vip.props.onClick(); assert.deepEqual(routes, ['billing']);
+});
+
+test('active child selector is visible across screens and switching child closes old-player tracker', async () => {
+  for (const screen of ['home', 'skills', 'shots', 'gamelog']) {
+    const f=await shellFixture(screen);
+    const selector=findElement(f.h.output, node=>node.type==='button' && String(node.props?.['aria-label'] || '').startsWith('Switch player'));
+    assert.ok(selector, screen);
+    assert.match(JSON.stringify(selector.props.children),/Recording for/);
+    selector.props.onClick();f.h.flush();
+    assert.ok(findElement(f.h.output,node=>node.type===f.Picker));
+    const picker=findElement(f.h.output,node=>node.type===f.Picker);
+    picker.props.onClose();f.h.flush();
+    const header=findElement(f.h.output,node=>node.type==='header');
+    const gametime=findElement(header,node=>node.type===f.Gametime);
+    if(gametime) {
+      gametime.props.onStart();f.h.flush();
+      assert.ok(findElement(f.h.output,node=>node.type===f.Logger));
+      f.app.playerId='child-two';f.app.player={name:'Second Child'};
+      f.h.render();f.h.flush();
+      assert.equal(findElement(f.h.output,node=>node.type===f.Logger),null,'child switch must close any old logger');
+    }
+    f.h.unmount();
+  }
 });

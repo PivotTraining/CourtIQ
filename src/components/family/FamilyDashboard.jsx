@@ -10,11 +10,13 @@ import Icon from "@/components/ui/Icons";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 
 export default function FamilyDashboard({ onManagePlayers }) {
-  const { user, playerProfile, setPlayerProfile } = useAuth();
+  const { user, playerProfile, switchToManagedPlayer } = useAuth();
   const { setScreen } = useApp();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [switchError, setSwitchError] = useState("");
+  const [switchingId, setSwitchingId] = useState(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -39,9 +41,18 @@ export default function FamilyDashboard({ onManagePlayers }) {
     return () => { active = false; };
   }, [user?.id]);
 
-  const openPlayer = (player) => {
-    setPlayerProfile(player);
-    setScreen("home");
+  const openPlayer = async player => {
+    if (switchingId) return;
+    setSwitchingId(player.id);
+    setSwitchError("");
+    try {
+      await switchToManagedPlayer(player.id);
+      setScreen("home");
+    } catch {
+      setSwitchError("Could not verify this player. The currently selected profile is unchanged.");
+    } finally {
+      setSwitchingId(null);
+    }
   };
 
   if (error) return <RecordsUnavailable />;
@@ -66,6 +77,7 @@ export default function FamilyDashboard({ onManagePlayers }) {
         </button>
       </section>
 
+      {switchError && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{switchError}</p>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
         {players.map((player) => {
           const active = playerProfile?.id === player.id;
@@ -105,8 +117,8 @@ export default function FamilyDashboard({ onManagePlayers }) {
               </div>
 
               {!active && (
-                <button type="button" onClick={() => openPlayer(player)} style={{ width: "100%", marginTop: 14, minHeight: 44, border: 0, borderRadius: 12, background: "#FF6B35", color: "white", fontWeight: 900, cursor: "pointer" }}>
-                  Open {player.name.split(" ")[0]}&apos;s dashboard
+                <button type="button" onClick={() => openPlayer(player)} disabled={!!switchingId} style={{ width: "100%", marginTop: 14, minHeight: 44, border: 0, borderRadius: 12, background: "#FF6B35", color: "white", fontWeight: 900, cursor: "pointer" }}>
+                  {switchingId === player.id ? "Switching…" : <>Use {player.name.split(" ")[0]}&apos;s profile</>}
                 </button>
               )}
             </article>

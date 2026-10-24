@@ -29,7 +29,7 @@ const inputStyle = {
 export default function ProfileSetup() {
   const { user, setPlayerProfile, setNeedsProfile } = useAuth();
   const [form, setForm] = useState({
-    name: user?.displayName || "",
+    name: "",
     team_name: "",
     position: "PG",
     jersey_number: "",
@@ -100,8 +100,8 @@ export default function ProfileSetup() {
     }}>
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ marginBottom: 8 }}><Icon name="hand" size={40} color="#FF6B35" /></div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-text)", margin: 0 }}>Set Up Your Profile</h1>
-        <p style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 6 }}>Let&apos;s get your player card ready</p>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-text)", margin: 0 }}>Who are you tracking?</h1>
+        <p style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 6 }}>Parents: create your child&apos;s player profile first. Add more athletes from Family Mode anytime.</p>
       </div>
 
       <div style={{
@@ -114,9 +114,9 @@ export default function ProfileSetup() {
       }}>
         <form id="profile-setup-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
-            <label htmlFor="profile-name" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Name</label>
+            <label htmlFor="profile-name" style={{ fontSize: 11, fontWeight: 700, color: "var(--color-text-sec)", textTransform: "uppercase", letterSpacing: 0.5, display: "block", marginBottom: 6 }}>Player name</label>
             <input id="profile-name" value={form.name} onChange={(e) => update("name", e.target.value)}
-              placeholder="Your name" required maxLength={100} disabled={loading} style={inputStyle} />
+              placeholder="Player name, not parent name" required maxLength={100} disabled={loading} style={inputStyle} />
           </div>
 
           <div>
@@ -195,8 +195,9 @@ export default function ProfileSetup() {
         boxShadow: "0 4px 16px rgba(255,107,53,0.3)",
         boxSizing: "border-box",
       }}>
-        {loading ? "Creating..." : <><span>Let&apos;s Go</span> <Icon name="basketball" size={18} color="white" /></>}
+        {loading ? "Creating..." : <><span>Create player profile</span> <Icon name="basketball" size={18} color="white" /></>}
       </button>
+      <p style={{ fontSize: 11, maxWidth: 400, lineHeight: 1.6, textAlign: "center", color: "var(--color-text-sec)", marginTop: 10 }}>New player profiles under 13 are unavailable until CourtIQ adds verified parental consent. Do not enter an inaccurate age.</p>
       {!loading && <SignOutButton />}
     </div>
   );
