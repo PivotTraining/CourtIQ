@@ -20,12 +20,13 @@ const inputStyle = {
 };
 
 export default function PlayerSwitcher({ onClose, onSwitch }) {
-  const { user, playerProfile, setPlayerProfile } = useAuth();
+  const { user, playerProfile, switchToManagedPlayer } = useAuth();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: "", position: "PG", jersey_number: "", age: "", team_name: "" });
   const [saving, setSaving] = useState(false);
+  const [switchingId, setSwitchingId] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -62,25 +63,34 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
     }
   };
 
-  const handleSwitch = (player) => {
-    setPlayerProfile(player);
-    if (onSwitch) onSwitch(player);
-    onClose();
+  const handleSwitch = async player => {
+    if (switchingId || saving || !switchToManagedPlayer) return;
+    setSwitchingId(player.id);
+    setError("");
+    try {
+      const verified = await switchToManagedPlayer(player.id);
+      onSwitch?.(verified);
+      onClose();
+    } catch {
+      setError("Could not verify this player under your parent account. Your current player has not changed. Try again.");
+    } finally {
+      setSwitchingId(null);
+    }
   };
 
   const handleDelete = async (playerId) => {
-    if (saving) return;
-    if (!window.confirm("Delete this player and all their data?")) return;
+    if (saving || switchingId) return;
+    if (playerProfile?.id === playerId) {
+      setError("Switch to a different player before removing this profile.");
+      return;
+    }
+    if (!window.confirm("Permanently delete this player and all their games, shots, training results and other records? This cannot be undone.")) return;
     setSaving(true);
     setError("");
     try {
       await deleteManagedPlayer(playerId);
       setPlayers((prev) => prev.filter((p) => p.id !== playerId));
-      // If deleted the active player, switch to first remaining
-      if (playerProfile?.id === playerId && players.length > 1) {
-        const remaining = players.find((p) => p.id !== playerId);
-        if (remaining) handleSwitch(remaining);
-      }
+
     } catch (err) {
       console.error("Failed to delete:", err);
       setError("Player wasn't deleted. Your records have not been cleared. Please try again.");
@@ -90,7 +100,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   };
 
   return (
-    <div style={{
+    <div role="presentation" style={{
       position: "fixed",
       inset: 0,
       zIndex: 250,
@@ -108,10 +118,10 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
         paddingBottom: 32,
         maxHeight: "85vh",
         overflowY: "auto",
-      }} onClick={(e) => e.stopPropagation()}>
+      }} role="dialog" aria-modal="true" aria-label="Choose a family player" onClick={(e) => e.stopPropagation()}>
         <div style={{ width: 40, height: 4, background: "var(--color-muted)", borderRadius: 2, margin: "0 auto 16px" }} />
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Players</h2>
-        <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>Switch between players or add a new one</p>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Who is playing?</h2>
+        <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>One parent account. Separate game stats and training history for each player.</p>
         {error && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{error}</p>}
 
         {loading ? (
@@ -153,7 +163,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {!isActive && (
-                      <button onClick={() => handleSwitch(p)}
+                      <button onClick={() => handleSwitch(p)} disabled={!!switchingId || saving}
                         style={{
                           padding: "8px 16px",
                           borderRadius: 12,
@@ -165,14 +175,14 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                           cursor: "pointer",
                           minHeight: 44,
                         }}>
-                        Switch
+                        {switchingId === p.id ? "Switching…" : "Use profile"}
                       </button>
                     )}
                     {isActive && (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-accent)" }}>Active</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-accent)" }}>Selected</span>
                     )}
-                    {players.length > 1 && p.firebase_uid !== user?.id && (
-                      <button onClick={() => handleDelete(p.id)} disabled={saving} aria-label={`Delete ${p.name}`}
+                    {players.length > 1 && !isActive && p.firebase_uid !== user?.id && (
+                      <button onClick={() => handleDelete(p.id)} disabled={saving || !!switchingId} aria-label={`Permanently delete ${p.name} and all records`}
                         style={{
                           width: 32,
                           height: 32,
@@ -205,10 +215,10 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
             padding: 16,
             border: "1px solid var(--color-border)",
           }}>
-            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 12px" }}>Add Player</h3>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 12px" }}>Add a player profile</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input value={newPlayer.name} onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                placeholder="Player name" required style={inputStyle} />
+                placeholder="Child or player name" required style={inputStyle} />
               <div style={{ display: "flex", gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <select value={newPlayer.position} onChange={(e) => setNewPlayer({ ...newPlayer, position: e.target.value })}
@@ -274,9 +284,10 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
               gap: 8,
               minHeight: 44,
             }}>
-            <Icon name="plus" size={16} /> Add Another Player
+            <Icon name="plus" size={16} /> Add another player
           </button>
         )}
+        <p style={{ fontSize: 11, lineHeight: 1.6, color: "var(--color-text-sec)", marginTop: 14 }}>Parents control switching. New under-13 profiles require a verified guardian-consent workflow and cannot be created yet. Do not use an incorrect age to bypass that restriction.</p>
       </div>
     </div>
   );
