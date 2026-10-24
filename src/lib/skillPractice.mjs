@@ -137,7 +137,7 @@ export function practiceHistory(rows, drills) {
       categories[drill.category].sessions.add(row.id);
       const measured = recordedPractice(item);
       if (measured && measured.outcome_kind === practiceMetric(drill).kind)
-        entries.push({ ...measured, category: drill.category, name: drill.name, workoutId: row.id, completed_at: row.completed_at });
+        entries.push({ ...measured, category: drill.category, name: drill.name, workoutId: row.id, completed_at: row.completed_at, elapsed_seconds: row.elapsed_seconds });
     }
   }
   return { entries, categories: Object.fromEntries(Object.entries(categories).map(([key, item]) => [key, { reps: item.reps, sessions: item.sessions.size }])) };
