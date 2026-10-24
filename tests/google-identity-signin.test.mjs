@@ -24,3 +24,23 @@ test('new Google button is feature-gated and old working OAuth remains a fallbac
   assert.match(s,/onClick=\{handleGoogle\}/);
   assert.match(s,/window\.location\.replace\("\/dashboard"\)/);
 });
+
+test('pre-authorized preview environment shows official Google button plus safe legacy fallback', async () => {
+  const { loadComponent, reactHarness, findElement } = await import('./helpers/reactHarness.mjs');
+  const h=reactHarness();
+  const Brand=()=>null;
+  const GIS=()=>null;
+  const { default: Login }=await loadComponent(
+    new URL('../src/components/auth/LoginScreen.jsx',import.meta.url),
+    {react:h.react,'@/components/ui/BrandLogo':{default:Brand,__esModule:true},
+     './GoogleIdentityButton':{default:GIS,__esModule:true},'@/lib/firebase':{}},
+    {process:{env:{NEXT_PUBLIC_GOOGLE_CLIENT_ID:'test-public-client-id'}},window:{location:{replace(){}}}},
+  );
+  h.render(Login,{actions:{signInWithGoogle:async()=>{},signInWithEmail:async()=>{},resetPassword:async()=>{}}});h.flush();
+  const branded=findElement(h.output,node=>node.type===GIS);
+  assert.ok(branded,'official Google Identity component should render when public Client ID is set');
+  assert.equal(branded.props.clientId,'test-public-client-id');
+  const alt=findElement(h.output,node=>node.type==='button'&&String(node.props?.children||'').includes('alternative login'));
+  assert.ok(alt,'verified alternative OAuth path remains visible');
+  h.unmount();
+});
