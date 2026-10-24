@@ -113,7 +113,7 @@ export default function LoginScreen({ actions = liveActions } = {}) {
         </button>
         <p style={{ color: "var(--color-text-sec)", fontSize: 12, lineHeight: 1.6, textAlign: "center", margin: "15px 0 4px" }}>
           Google handles your sign-in. CourtIQ never sees your Google password.
-          You may briefly see Google's secure sign-in screen before returning to CourtIQ.
+          You may briefly see Google&apos;s secure sign-in screen before returning to CourtIQ.
         </p>
         <p style={{ color: "var(--color-text-sec)", fontSize: 11, lineHeight: 1.5, textAlign: "center", margin: "9px 0 23px" }}>No credit card required.</p>
 
