@@ -49,8 +49,9 @@ const TITLES = {
 };
 
 export default function Shell() {
-  const { screen, setScreen: navTo, player, refreshData, isTeamIQ } = useApp();
+  const { screen, setScreen: navTo, player, playerId, refreshData, isTeamIQ } = useApp();
   const scrollRef = useRef(null);
+  const lastPlayerId = useRef(playerId);
   const [showLogger, setShowLogger] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
@@ -82,6 +83,15 @@ export default function Shell() {
   }, [screen, displayScreen]);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [displayScreen]);
+
+  // A player change must close the previous player's logger/editor; the next
+  // tracking session is only opened explicitly for the newly selected player.
+  useEffect(() => {
+    if (lastPlayerId.current !== playerId) {
+      if (lastPlayerId.current) { setShowLogger(false); setShowProfile(false); }
+      lastPlayerId.current = playerId;
+    }
+  }, [playerId]);
 
   useEffect(() => {
     if (!showProfileMenu) return;
@@ -248,10 +258,28 @@ export default function Shell() {
               </div>
             </div>
           </div>
+          <button type="button" onClick={() => { setShowProfileMenu(false); setShowSwitcher(true); }}
+            aria-label={`Switch player, currently ${player?.name || "loading player"}`}
+            className="courtiq-family-switcher"
+            style={{ display: "flex", width: "100%", minHeight: 48, alignItems: "center", gap: 10,
+              border: "1px solid var(--color-border)", borderRadius: 14, marginTop: 10, marginBottom: 6,
+              padding: "7px 12px", background: "var(--color-card)", color: "var(--color-text)", cursor: "pointer", textAlign: "left" }}>
+            <span aria-hidden="true" style={{ display: "grid", placeItems: "center", width: 34, height: 34,
+              borderRadius: 11, background: "var(--color-accent-light)", color: "var(--color-accent)", fontSize: 15, fontWeight: 900 }}>
+              {player?.name?.slice(0, 1)?.toUpperCase() || "?"}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: 1.1, color: "var(--color-text-sec)" }}>Recording for</span>
+              <strong style={{ display: "block", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{player?.name || "Loading selected player…"}</strong>
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--color-accent)", display: "flex", alignItems: "center", gap: 6 }}>
+              Switch <Icon name="chevDown" size={13} color="var(--color-accent)" />
+            </span>
+          </button>
           {screen !== "iq" && <div className="courtiq-header-gametime"><GametimeAction onStart={() => setShowLogger(true)} /></div>}
         </header>
 
-        <main ref={scrollRef} className="courtiq-shell-content" style={{
+        <main key={playerId || "no-player"} ref={scrollRef} className="courtiq-shell-content" style={{
           flex: 1, padding: "16px 20px 120px", overflowX: "hidden", overflowY: "auto", WebkitOverflowScrolling: "touch",
           opacity: transitioning ? 0 : 1,
           transform: transitioning ? "translateY(6px)" : "translateY(0)",
@@ -264,9 +292,9 @@ export default function Shell() {
       <BottomNav />
       <GymArrivalMonitor onStartGame={() => setShowLogger(true)} onOpenFilm={() => navTo('film')} />
 
-      {showLogger && <ShotLogger quickStart onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
+      {showLogger && <ShotLogger key={playerId || "no-player"} quickStart onClose={() => setShowLogger(false)} darkMode={darkMode} onToggleTheme={() => setDarkMode(value => !value)} />}
       {showProfile && <ProfileEditor onClose={() => setShowProfile(false)} />}
-      {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} onSwitch={() => refreshData()} />}
+      {showSwitcher && <PlayerSwitcher onClose={() => setShowSwitcher(false)} />}
     </div>
   );
 }
