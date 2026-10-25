@@ -41,9 +41,9 @@ export async function fetchManagedPlayers(firebaseUid) {
   return accessible;
 }
 
-export async function createPlayerShareInvite(playerId, role = "editor") {
+export async function createPlayerShareInvite(playerId, recipientEmail, role = "editor") {
   return checked(await getSupabase().rpc("create_player_share_invite", {
-    p_player: playerId, p_role: role,
+    p_player: playerId, p_recipient_email: recipientEmail.trim().toLowerCase(), p_role: role,
   }));
 }
 
