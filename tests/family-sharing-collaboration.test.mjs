@@ -13,6 +13,7 @@ test("family sharing requires explicit invites and only enables player-scoped ac
   assert.match(migrationText,/private\.can_edit_player\(player_id\)/);
   assert.match(migrationText,/join_shared_player\(p_code text\)/);
   assert.match(migrationText,/role in \('editor','viewer'\)/);
+  assert.match(migrationText,/recipient_email/);
   assert.match(migrationText,/expires_at>now\(\)/);
   assert.match(migrationText,/redeemed_at is not null/);
   assert.match(migrationText,/on conflict \(player_id,account_id\) do nothing/);
@@ -33,11 +34,11 @@ const ref = file => readFile(new URL("../" + file, import.meta.url), "utf8");
 async function initializeDB() {
  const db = new PGlite();
  await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
-  create schema auth; create table auth.users(id uuid primary key);
+  create schema auth; create table auth.users(id uuid primary key,email text);
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
   grant usage on schema auth to authenticated;
-  insert into auth.users values ('${alice}'),('${bob}'),('${eve}');`);
+  insert into auth.users values ('${alice}','owner@example.com'),('${bob}','parent@example.com'),('${eve}','stranger@example.com');`);
  await db.exec(await ref("supabase/schema.sql"));
  await db.exec(`insert into public.players(id,firebase_uid,manager_uid,name) values
   ('${ownedChild}','${alice}_caleb','${alice}','Caleb'),
@@ -58,8 +59,9 @@ test("two parents can share exactly one player; strangers and viewers cannot edi
  try {
    assert.equal((await user(db,bob,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,0);
    assert.equal((await user(db,eve,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,0);
-   const token=(await user(db,alice,`select public.create_player_share_invite('${ownedChild}') code`)).rows[0].code;
+   const token=(await user(db,alice,`select public.create_player_share_invite('${ownedChild}','parent@example.com') code`)).rows[0].code;
    assert.match(token,/^[a-f0-9]{64}$/);
+   await assert.rejects(user(db,eve,`select public.join_shared_player('${token}')`));
    assert.equal((await user(db,bob,`select public.join_shared_player('${token}') id`)).rows[0].id,ownedChild);
    assert.equal((await user(db,bob,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,1);
    assert.equal((await user(db,eve,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,0);
