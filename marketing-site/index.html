@@ -1,1432 +1,220 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="google-site-verification" content="GP-iHg4tMgnoCaNLZHNZEhUTqEi5Yk80Ky89x0dGXRo" />
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CourtIQ — Track the game. Know your next move.</title>
-<meta name="description" content="CourtIQ is a web-based basketball development workspace: track games, review recorded stats, practice with purpose, and decide what to work on next.">
-<meta name="theme-color" content="#0D0D1A">
-<style>
-/* ========== RESET & BASE ========== */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #0D0D1A;
-  color: #ffffff;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-a { color: inherit; text-decoration: none; }
-img { max-width: 100%; display: block; }
-button { font-family: inherit; cursor: pointer; border: none; }
-ul { list-style: none; }
-
-/* ========== UTILITIES ========== */
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.section-padding {
-  padding: 96px 0;
-}
-
-.section-label {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: #FF6B35;
-  margin-bottom: 16px;
-}
-
-.section-title {
-  font-size: clamp(32px, 5vw, 48px);
-  font-weight: 800;
-  line-height: 1.15;
-  margin-bottom: 20px;
-}
-
-.section-subtitle {
-  font-size: 18px;
-  color: rgba(255,255,255,0.6);
-  max-width: 600px;
-  line-height: 1.7;
-}
-
-.text-center { text-align: center; }
-.mx-auto { margin-left: auto; margin-right: auto; }
-
-.gradient-line {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,107,53,0.3), rgba(59,130,246,0.3), transparent);
-}
-
-/* Fade-in animation */
-.fade-in {
-  opacity: 0;
-  transform: translateY(32px);
-  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.fade-in.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ========== BUTTONS ========== */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 15px;
-  padding: 14px 28px;
-  border-radius: 12px;
-  transition: all 0.25s ease;
-}
-
-.btn-primary {
-  background: #FF6B35;
-  color: #fff;
-}
-.btn-primary:hover {
-  background: #e85a24;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(255,107,53,0.3);
-}
-
-.btn-secondary {
-  background: rgba(255,255,255,0.06);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.btn-secondary:hover {
-  background: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
-}
-
-.btn-store {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  padding: 14px 28px;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 600;
-  transition: all 0.25s ease;
-}
-.btn-store:hover {
-  background: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-}
-.btn-store svg {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-.btn-store .store-text {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  line-height: 1.2;
-}
-.btn-store .store-text small {
-  font-size: 11px;
-  font-weight: 400;
-  color: rgba(255,255,255,0.5);
-}
-
-/* ========== NAVBAR ========== */
-.navbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  padding: 16px 0;
-  transition: all 0.3s ease;
-  background: rgba(13,13,26,0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid transparent;
-}
-.navbar.scrolled {
-  border-bottom-color: rgba(255,255,255,0.06);
-  background: rgba(13,13,26,0.9);
-}
-
-.nav-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.nav-logo {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.nav-logo .logo-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #FF6B35, #ff8f66);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 36px;
-}
-.nav-links a {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.7);
-  transition: color 0.2s;
-}
-.nav-links a:hover {
-  color: #fff;
-}
-
-.nav-cta {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.nav-download {
-  background: #FF6B35;
-  color: #fff;
-  padding: 10px 22px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.25s ease;
-}
-.nav-download:hover {
-  background: #e85a24;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(255,107,53,0.3);
-}
-
-/* Hamburger */
-.hamburger {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-  background: none;
-  padding: 4px;
-}
-.hamburger span {
-  width: 24px;
-  height: 2px;
-  background: #fff;
-  border-radius: 2px;
-  transition: all 0.3s ease;
-}
-.hamburger.active span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 5px);
-}
-.hamburger.active span:nth-child(2) {
-  opacity: 0;
-}
-.hamburger.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(5px, -5px);
-}
-
-/* Mobile menu */
-.mobile-menu {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(13,13,26,0.98);
-  z-index: 999;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.mobile-menu.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-.mobile-menu a {
-  font-size: 24px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.8);
-  transition: color 0.2s;
-}
-.mobile-menu a:hover {
-  color: #FF6B35;
-}
-
-/* ========== HERO ========== */
-.hero {
-  padding: 160px 0 80px;
-  position: relative;
-  overflow: hidden;
-}
-.hero::before {
-  content: '';
-  position: absolute;
-  top: -200px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle, rgba(255,107,53,0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.hero-content {
-  text-align: center;
-  position: relative;
-  z-index: 2;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255,107,53,0.1);
-  border: 1px solid rgba(255,107,53,0.2);
-  color: #FF6B35;
-  padding: 8px 18px;
-  border-radius: 100px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 32px;
-}
-.hero-badge .pulse {
-  width: 8px;
-  height: 8px;
-  background: #FF6B35;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.5); }
-}
-
-.hero h1 {
-  font-size: clamp(40px, 7vw, 76px);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -2px;
-  margin-bottom: 24px;
-  max-width: 900px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.hero h1 .accent {
-  background: linear-gradient(135deg, #FF6B35, #ff9a6c);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-sub {
-  font-size: clamp(16px, 2vw, 20px);
-  color: rgba(255,255,255,0.55);
-  max-width: 560px;
-  margin: 0 auto 40px;
-  line-height: 1.7;
-}
-
-.hero-buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 64px;
-}
-
-/* Phone mockup */
-.hero-mockup {
-  max-width: 340px;
-  margin: 0 auto;
-  position: relative;
-}
-
-.phone-frame {
-  width: 100%;
-  aspect-ratio: 9/19;
-  background: linear-gradient(180deg, #1a1a2e 0%, #0D0D1A 100%);
-  border-radius: 40px;
-  border: 2px solid rgba(255,255,255,0.1);
-  padding: 12px;
-  position: relative;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
-}
-
-.phone-screen {
-  width: 100%;
-  height: 100%;
-  border-radius: 30px;
-  background: linear-gradient(180deg, #111128 0%, #0D0D1A 50%, #111128 100%);
-  overflow: hidden;
-  position: relative;
-}
-
-.phone-notch {
-  width: 120px;
-  height: 28px;
-  background: #0D0D1A;
-  border-radius: 0 0 16px 16px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 2;
-}
-
-/* Fake app UI inside phone */
-.mock-app {
-  padding: 16px;
-  height: 100%;
-}
-.mock-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-.mock-header .mock-title {
-  font-size: 14px;
-  font-weight: 700;
-  margin-top: 8px;
-}
-.mock-header .mock-subtitle {
-  font-size: 10px;
-  color: rgba(255,255,255,0.4);
-  margin-top: 4px;
-}
-
-/* Half-court visualization */
-.mock-court {
-  width: 100%;
-  aspect-ratio: 1;
-  background: rgba(255,107,53,0.05);
-  border: 1px solid rgba(255,107,53,0.15);
-  border-radius: 16px;
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-.mock-court::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60%;
-  height: 50%;
-  border: 1px solid rgba(255,107,53,0.2);
-  border-bottom: none;
-  border-radius: 80px 80px 0 0;
-}
-.mock-court::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 30%;
-  height: 20%;
-  border: 1px solid rgba(255,107,53,0.15);
-  border-bottom: none;
-}
-
-.court-dot {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  animation: courtDotPulse 3s infinite;
-}
-.court-dot.made { background: #22C55E; box-shadow: 0 0 8px rgba(34,197,94,0.4); }
-.court-dot.missed { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-
-.court-dot:nth-child(1) { top: 30%; left: 20%; animation-delay: 0s; }
-.court-dot:nth-child(2) { top: 25%; left: 65%; animation-delay: 0.5s; }
-.court-dot:nth-child(3) { top: 55%; left: 45%; animation-delay: 1s; }
-.court-dot:nth-child(4) { top: 40%; left: 75%; animation-delay: 1.5s; }
-.court-dot:nth-child(5) { top: 20%; left: 40%; animation-delay: 2s; }
-.court-dot:nth-child(6) { top: 60%; left: 25%; animation-delay: 0.3s; }
-
-@keyframes courtDotPulse {
-  0%, 100% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.3); }
-}
-
-.mock-stats-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.mock-stat-card {
-  flex: 1;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  padding: 10px 8px;
-  text-align: center;
-}
-.mock-stat-card .stat-num {
-  font-size: 18px;
-  font-weight: 800;
-  color: #FF6B35;
-}
-.mock-stat-card .stat-label {
-  font-size: 8px;
-  color: rgba(255,255,255,0.4);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
-}
-
-/* Glow behind phone */
-.phone-glow {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(255,107,53,0.12), transparent 70%);
-  pointer-events: none;
-  z-index: -1;
-}
-
-/* ========== STATS BANNER ========== */
-.stats-banner {
-  padding: 48px 0;
-  border-top: 1px solid rgba(255,255,255,0.04);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  background: rgba(255,255,255,0.01);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  text-align: center;
-}
-
-.stat-item .stat-number {
-  font-size: clamp(32px, 5vw, 48px);
-  font-weight: 900;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.stat-item .stat-desc {
-  font-size: 14px;
-  color: rgba(255,255,255,0.4);
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-/* ========== FEATURES GRID ========== */
-.features { background: #0D0D1A; }
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-top: 56px;
-}
-
-.feature-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 20px;
-  padding: 36px 28px;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-}
-.feature-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,107,53,0.3), transparent);
-  opacity: 0;
-  transition: opacity 0.35s ease;
-}
-.feature-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255,107,53,0.15);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
-}
-.feature-card:hover::before {
-  opacity: 1;
-}
-
-.feature-icon {
-  font-size: 36px;
-  margin-bottom: 20px;
-  display: block;
-}
-
-.feature-card h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.feature-card p {
-  font-size: 15px;
-  color: rgba(255,255,255,0.5);
-  line-height: 1.65;
-}
-
-/* ========== HOW IT WORKS ========== */
-.how-it-works {
-  background: linear-gradient(180deg, #0D0D1A 0%, #0f0f22 100%);
-}
-
-.steps-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-  margin-top: 56px;
-  position: relative;
-}
-.steps-grid::before {
-  content: '';
-  position: absolute;
-  top: 48px;
-  left: 15%;
-  right: 15%;
-  height: 2px;
-  background: linear-gradient(90deg, rgba(255,107,53,0.3), rgba(59,130,246,0.3), rgba(34,197,94,0.3));
-}
-
-.step {
-  text-align: center;
-  position: relative;
-  z-index: 2;
-}
-
-.step-number {
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 24px;
-  border-radius: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  position: relative;
-}
-.step:nth-child(1) .step-number {
-  background: rgba(255,107,53,0.1);
-  border: 1px solid rgba(255,107,53,0.2);
-}
-.step:nth-child(2) .step-number {
-  background: rgba(59,130,246,0.1);
-  border: 1px solid rgba(59,130,246,0.2);
-}
-.step:nth-child(3) .step-number {
-  background: rgba(34,197,94,0.1);
-  border: 1px solid rgba(34,197,94,0.2);
-}
-
-.step-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
-  margin-bottom: 8px;
-}
-
-.step h3 {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.step p {
-  font-size: 15px;
-  color: rgba(255,255,255,0.5);
-  line-height: 1.65;
-  max-width: 280px;
-  margin: 0 auto;
-}
-
-/* ========== GAME FILM SECTION ========== */
-.game-film {
-  background: #0D0D1A;
-  overflow: hidden;
-}
-
-.film-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 64px;
-  align-items: center;
-}
-
-.film-text .section-label { margin-bottom: 12px; }
-
-.film-text h2 {
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 800;
-  line-height: 1.15;
-  margin-bottom: 20px;
-  letter-spacing: -1px;
-}
-
-.film-text p {
-  font-size: 17px;
-  color: rgba(255,255,255,0.55);
-  line-height: 1.75;
-  margin-bottom: 32px;
-}
-
-.film-features {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.film-feature {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 15px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.7);
-}
-.film-feature .check {
-  width: 24px;
-  height: 24px;
-  background: rgba(34,197,94,0.15);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #22C55E;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-/* Film visual */
-.film-visual {
-  position: relative;
-}
-
-.film-mockup {
-  width: 100%;
-  aspect-ratio: 16/10;
-  background: linear-gradient(135deg, #111128, #1a1a2e, #0D0D1A);
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 32px 64px rgba(0,0,0,0.4);
-}
-
-.film-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 24px;
-}
-
-.film-rec {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.film-rec .rec-dot {
-  width: 10px;
-  height: 10px;
-  background: #ef4444;
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
-}
-.film-rec .rec-text {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ef4444;
-  letter-spacing: 1px;
-}
-.film-rec .rec-time {
-  font-size: 13px;
-  color: rgba(255,255,255,0.5);
-  margin-left: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-.film-stats-overlay {
-  display: flex;
-  gap: 12px;
-}
-.film-stat-pill {
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.film-stat-pill .val {
-  color: #FF6B35;
-  margin-right: 4px;
-}
-
-/* Fake court lines in background */
-.film-court-bg {
-  position: absolute;
-  inset: 0;
-  opacity: 0.06;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-/* ========== PRICING ========== */
-.pricing {
-  background: linear-gradient(180deg, #0f0f22 0%, #0D0D1A 100%);
-}
-
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-top: 56px;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.pricing-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 24px;
-  padding: 40px 32px;
-  position: relative;
-  transition: all 0.35s ease;
-}
-.pricing-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
-}
-.pricing-card.pro {
-  border-color: rgba(255,107,53,0.25);
-  background: rgba(255,107,53,0.04);
-}
-.pricing-card.pro::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #FF6B35, transparent);
-}
-
-.pricing-badge {
-  display: inline-block;
-  background: rgba(255,107,53,0.15);
-  color: #FF6B35;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 6px 14px;
-  border-radius: 100px;
-  margin-bottom: 20px;
-}
-
-.pricing-card .plan-name {
-  font-size: 24px;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.pricing-card .plan-price {
-  font-size: 40px;
-  font-weight: 900;
-  letter-spacing: -1px;
-  margin-bottom: 4px;
-}
-.pricing-card .plan-price span {
-  font-size: 16px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.4);
-}
-
-.pricing-card .plan-desc {
-  font-size: 14px;
-  color: rgba(255,255,255,0.4);
-  margin-bottom: 32px;
-}
-
-.pricing-features {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 32px;
-}
-.pricing-features li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: rgba(255,255,255,0.65);
-}
-.pricing-features li .icon {
-  color: #22C55E;
-  font-weight: 700;
-  font-size: 16px;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.pricing-features li.disabled {
-  color: rgba(255,255,255,0.25);
-}
-.pricing-features li.disabled .icon {
-  color: rgba(255,255,255,0.15);
-}
-
-.pricing-card .btn {
-  width: 100%;
-  justify-content: center;
-}
-
-/* ========== PARENT SECTION ========== */
-.parent-section {
-  background: #0D0D1A;
-}
-
-.parent-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 64px;
-  align-items: center;
-}
-
-.parent-visual {
-  position: relative;
-}
-
-.parent-card-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.parent-notif {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: all 0.3s ease;
-}
-.parent-notif:hover {
-  background: rgba(255,255,255,0.06);
-  transform: translateX(4px);
-}
-
-.notif-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
-}
-.notif-icon.orange { background: rgba(255,107,53,0.15); }
-.notif-icon.blue { background: rgba(59,130,246,0.15); }
-.notif-icon.green { background: rgba(34,197,94,0.15); }
-
-.notif-text {
-  flex: 1;
-}
-.notif-text strong {
-  display: block;
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-.notif-text span {
-  font-size: 13px;
-  color: rgba(255,255,255,0.4);
-}
-
-.parent-text h2 {
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 800;
-  line-height: 1.15;
-  margin-bottom: 20px;
-  letter-spacing: -1px;
-}
-
-.parent-text p {
-  font-size: 17px;
-  color: rgba(255,255,255,0.55);
-  line-height: 1.75;
-  margin-bottom: 16px;
-}
-
-/* ========== TESTIMONIALS ========== */
-.testimonials {
-  background: linear-gradient(180deg, #0D0D1A 0%, #0f0f22 100%);
-}
-
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-top: 56px;
-}
-
-.testimonial-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 20px;
-  padding: 32px 28px;
-  transition: all 0.35s ease;
-}
-.testimonial-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
-}
-
-.testimonial-stars {
-  color: #FF6B35;
-  font-size: 16px;
-  letter-spacing: 2px;
-  margin-bottom: 16px;
-}
-
-.testimonial-card blockquote {
-  font-size: 15px;
-  color: rgba(255,255,255,0.65);
-  line-height: 1.7;
-  margin-bottom: 20px;
-  font-style: normal;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.testimonial-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.testimonial-avatar.a { background: rgba(255,107,53,0.2); color: #FF6B35; }
-.testimonial-avatar.b { background: rgba(59,130,246,0.2); color: #3B82F6; }
-.testimonial-avatar.c { background: rgba(34,197,94,0.2); color: #22C55E; }
-
-.testimonial-author .author-info strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-}
-.testimonial-author .author-info span {
-  font-size: 12px;
-  color: rgba(255,255,255,0.35);
-}
-
-/* ========== CTA SECTION ========== */
-.cta-section {
-  background: #0D0D1A;
-  position: relative;
-  overflow: hidden;
-}
-.cta-section::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(255,107,53,0.06), transparent 70%);
-  pointer-events: none;
-}
-
-.cta-content {
-  position: relative;
-  z-index: 2;
-  text-align: center;
-}
-
-.cta-content h2 {
-  font-size: clamp(32px, 5vw, 56px);
-  font-weight: 900;
-  line-height: 1.1;
-  letter-spacing: -1.5px;
-  margin-bottom: 20px;
-}
-
-.cta-content p {
-  font-size: 18px;
-  color: rgba(255,255,255,0.5);
-  margin-bottom: 40px;
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.cta-buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/* ========== FOOTER ========== */
-.footer {
-  border-top: 1px solid rgba(255,255,255,0.06);
-  padding: 48px 0;
-  background: #0a0a16;
-}
-
-.footer-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
-.footer-left .footer-logo {
-  font-size: 18px;
-  font-weight: 800;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.footer-left .footer-logo .logo-icon {
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(135deg, #FF6B35, #ff8f66);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-.footer-left p {
-  font-size: 13px;
-  color: rgba(255,255,255,0.3);
-}
-
-.footer-links {
-  display: flex;
-  gap: 28px;
-}
-.footer-links a {
-  font-size: 13px;
-  color: rgba(255,255,255,0.4);
-  transition: color 0.2s;
-}
-.footer-links a:hover {
-  color: #fff;
-}
-
-.footer-social {
-  display: flex;
-  gap: 12px;
-}
-.footer-social a {
-  width: 36px;
-  height: 36px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.25s ease;
-}
-.footer-social a:hover {
-  background: rgba(255,107,53,0.15);
-  border-color: rgba(255,107,53,0.3);
-}
-.footer-social svg {
-  width: 16px;
-  height: 16px;
-  fill: rgba(255,255,255,0.5);
-}
-
-.footer-bottom {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255,255,255,0.04);
-  text-align: center;
-  font-size: 12px;
-  color: rgba(255,255,255,0.2);
-}
-
-/* ========== RESPONSIVE ========== */
-@media (max-width: 1024px) {
-  .features-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 768px) {
-  .section-padding { padding: 64px 0; }
-  .hero { padding: 120px 0 56px; }
-
-  .nav-links, .nav-cta { display: none; }
-  .hamburger { display: flex; }
-  .mobile-menu { display: flex; }
-
-  .features-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .feature-card { padding: 24px 20px; }
-
-  .steps-grid {
-    grid-template-columns: 1fr;
-    gap: 48px;
-  }
-  .steps-grid::before { display: none; }
-
-  .film-layout,
-  .parent-layout {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-  .film-visual { order: -1; }
-
-  .pricing-grid {
-    grid-template-columns: 1fr;
-    max-width: 400px;
-  }
-
-  .testimonials-grid {
-    grid-template-columns: 1fr;
-    max-width: 480px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .stat-item .stat-desc { font-size: 12px; }
-
-  .footer-inner {
-    flex-direction: column;
-    text-align: center;
-  }
-  .footer-links { flex-wrap: wrap; justify-content: center; }
-  .footer-social { justify-content: center; }
-}
-
-@media (max-width: 480px) {
-  .hero h1 { letter-spacing: -1px; }
-  .hero-buttons { flex-direction: column; align-items: stretch; }
-  .btn-store { justify-content: center; }
-  .features-grid { grid-template-columns: 1fr; }
-  .hero-mockup { max-width: 280px; }
-}
-</style>
-
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google-site-verification" content="GP-iHg4tMgnoCaNLZHNZEhUTqEi5Yk80Ky89x0dGXRo" />
+<meta name="theme-color" content="#141922">
+<meta name="description" content="CourtIQ brings game tracking, player development, guided basketball drills, and real progress into one easy-to-use app for players, parents, and coaches.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="CourtIQ | Make every game count.">
+<meta property="og:description" content="Track the game. Train with a plan. Know your next move.">
+<meta property="og:url" content="https://getcourtiq.com/">
 <link rel="canonical" href="https://getcourtiq.com/">
 <link rel="icon" type="image/svg+xml" href="/brand/courtiq-v2/courtiq-app-icon.svg">
 <link rel="apple-touch-icon" href="/brand/courtiq-v2/apple-touch-icon.png">
-<meta property="og:title" content="CourtIQ — Track the game. Know your next move.">
-<meta property="og:description" content="Basketball game tracking, recorded performance insights, and purposeful skill training. Open the web app on phone, tablet, or desktop.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://getcourtiq.com/">
-<meta property="og:image" content="https://app.getcourtiq.com/opengraph-image">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://app.getcourtiq.com/opengraph-image">
+<title>CourtIQ | Make Every Game Count</title>
 <style>
-/* Content is visible even if JavaScript/animations are unavailable. */
-.fade-in{opacity:1!important;transform:none!important}
-#mobileMenu[hidden]{display:none!important}
-.nav-logo img,.footer-logo img{width:170px;height:auto}
-.sample-note{font-size:12px;color:#a5a6b5;margin-top:18px;text-align:center}
-a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:5px}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+:root{--ink:#141922;--night:#10151d;--night2:#202937;--orange:#ff6b35;--orange2:#ed5f2d;--ivory:#f7f4ef;--white:#fff;--muted:#69707a;--line:#dededb;--radius:24px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:88px}
+body{margin:0;background:var(--ivory);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font:inherit}
+.container{width:min(1150px,calc(100% - 48px));margin:auto}
+.skip-link{position:absolute;top:-70px;left:16px;background:white;color:#141922;padding:10px;z-index:999}
+.skip-link:focus{top:12px}
+.header{position:relative;background:#141922;color:#fff;border-bottom:1px solid #ffffff24;z-index:5}
+.header-in{min-height:86px;display:flex;align-items:center;justify-content:space-between;gap:28px}
+.brand{display:inline-flex;align-items:center;flex-shrink:0}
+.brand img{width:164px;height:auto}
+.nav{display:flex;align-items:center;gap:36px}
+.nav a:not(.nav-cta){font-weight:650;font-size:13px;color:#e7e9ed;transition:color .2s}
+.nav a:hover{color:#ffb28f}
+.nav-cta{background:var(--orange);color:var(--night)!important;padding:13px 19px;border-radius:13px;font-size:13px;font-weight:850;display:inline-flex;gap:10px;align-items:center}
+.nav-cta:hover,.button.primary:hover{background:#ff895c}
+.menu-toggle{display:none;border:1px solid #ffffff45;border-radius:10px;background:none;color:#fff;padding:10px;min-width:44px;min-height:44px;cursor:pointer}
+.hero{background:var(--night);color:#fff;overflow:hidden;position:relative}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 510px 370px at 86% 40%,#ff6b3525,transparent 80%),radial-gradient(ellipse 500px 500px at 38% -30%,#67799830,transparent 75%);pointer-events:none}
+.hero::after{content:"";position:absolute;inset:0;opacity:.18;background-image:linear-gradient(90deg,transparent calc(100% - 1px),#fff1 calc(100% - 1px)),linear-gradient(0deg,transparent calc(100% - 1px),#fff1 calc(100% - 1px));background-size:80px 80px;mask-image:linear-gradient(to right,transparent,black)}
+.hero-in{position:relative;min-height:680px;display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:42px;padding:76px 0 92px;z-index:1}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;color:#ffc3ab;font-size:11px;letter-spacing:1.75px;text-transform:uppercase;font-weight:850}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px #ff6b3525}
+.hero h1{font-size:clamp(52px,5.7vw,84px);line-height:1.02;letter-spacing:-.068em;margin:25px 0 22px;font-weight:900;max-width:660px}
+.hero h1 em{font-style:normal;color:var(--orange)}
+.hero .lead{color:#c8cbd2;font-size:clamp(16px,1.65vw,18px);line-height:1.72;max-width:535px;margin:0 0 29px}
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.button{min-height:54px;border-radius:14px;padding:15px 23px;display:inline-flex;align-items:center;justify-content:center;gap:11px;font-size:14px;font-weight:800;transition:transform .2s,background .2s}
+.button:hover{transform:translateY(-2px)}
+.button.primary{background:var(--orange);color:#15191e}
+.button.outline{border:1px solid #8290a460;color:#fff;background:#ffffff0b}
+.button.outline:hover{background:#ffffff1c}
+.hero-trust{margin-top:26px;font-size:12px;font-weight:600;color:#aeb5c0;display:flex;flex-wrap:wrap;gap:13px;align-items:center}
+.hero-trust span+span::before{content:"•";color:var(--orange);margin-right:13px}
+.hero-art{min-width:0;position:relative;display:flex;align-items:center;justify-content:center}
+.art-orbit{position:absolute;width:500px;max-width:115%;aspect-ratio:1;border-radius:50%;border:1px solid #f3aa8833;box-shadow:0 0 0 70px #ff6b3509,0 0 0 140px #ff6b3506}
+.athlete-frame{width:min(100%,375px);position:relative;transform:rotate(3deg);background:#1c242f;border:7px solid #46505d;border-radius:34px;box-shadow:0 40px 70px #0009,0 0 45px #ff6b3514;overflow:hidden}
+.athlete-frame img{width:100%;height:auto;min-height:480px;object-fit:cover;background:#131b25}
+.frame-caption{padding:12px 13px;background:#111720;color:#aab4c1;font-size:11px;letter-spacing:.01em}
+.frame-caption strong{color:#fff}
+.float-card{position:absolute;z-index:2;border:1px solid #ffffff38;background:#202b38ed;box-shadow:0 16px 36px #0007;backdrop-filter:blur(13px);border-radius:17px;color:#fff;padding:13px 17px}
+.float-card strong{display:block;font-size:18px;line-height:1.3}
+.float-card small{font-size:11px;color:#c6cdd5;font-weight:600}
+.float-card.top{right:-5px;top:9%}
+.float-card.bottom{left:-14px;bottom:14%}
+.float-card .orange{color:#ff955f}
+.ribbon{background:var(--orange);color:#161c24}
+.ribbon .container{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:center;min-height:94px}
+.ribbon-item{display:flex;align-items:center;gap:12px;padding:20px 0;font-weight:850;line-height:1.28;font-size:13px}
+.ribbon-icon{font-size:24px;line-height:1}
+.section{padding:100px 0}
+.section-eyebrow{font-size:11px;font-weight:850;letter-spacing:2px;color:#d75a2c;text-transform:uppercase;margin:0 0 18px}
+.section-head{display:flex;align-items:end;justify-content:space-between;gap:28px;margin-bottom:35px}
+h2{font-size:clamp(36px,4vw,58px);line-height:1.08;letter-spacing:-.055em;font-weight:900;margin:0}
+.section-sub{line-height:1.7;color:#68707c;max-width:420px;font-size:15px;margin:0}
+.feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.feature-card{background:#fff;border:1px solid #ece8e2;border-radius:22px;padding:29px;box-shadow:0 8px 25px #20202005;min-height:280px}
+.feature-number{font-size:11px;color:#a8a6a1;font-weight:800;letter-spacing:2px}
+.feature-icon{display:flex;align-items:center;justify-content:center;background:#fff0e7;width:58px;height:58px;border-radius:17px;color:#ef6434;font-size:27px;margin:18px 0 21px}
+.feature-card h3{font-size:22px;letter-spacing:-.038em;margin:0 0 10px}
+.feature-card p{font-size:14px;line-height:1.7;color:#616873;margin:0}
+.feature-card.feature-dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.feature-card.feature-dark p{color:#b5bcc5}
+.feature-dark .feature-icon{background:#37313a}
+.insight{background:var(--night);color:#fff;padding:103px 0}
+.insight-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:80px;align-items:center}
+.insight .section-eyebrow{color:#ff9368}
+.insight h2{max-width:460px}
+.insight p{color:#b5beca;line-height:1.77;font-size:16px}
+.insight ul{padding:0;margin:24px 0 30px;list-style:none;display:grid;gap:16px}
+.insight li{display:flex;align-items:start;gap:13px;color:#e2e4e8;font-size:14px}
+.insight li::before{content:"✓";color:var(--orange);font-weight:900}
+.score-panel{background:linear-gradient(145deg,#28313d,#1a212c);border-radius:27px;border:1px solid #ffffff24;padding:29px;box-shadow:0 34px 65px #0005}
+.score-header{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #ffffff26;padding-bottom:21px;font-size:12px;font-weight:850;letter-spacing:1px}
+.score-header span:last-child{color:var(--orange)}
+.score-figures{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:26px 0}
+.score-figures div{padding:16px;background:#ffffff09;border-radius:14px}
+.score-figures b{display:block;font-size:35px;letter-spacing:-1.5px}
+.score-figures span{display:block;color:#a7b3be;font-weight:700;font-size:11px;margin-top:5px}
+.court-map{position:relative;aspect-ratio:1.8;border-radius:18px;border:1px solid #ffffff30;overflow:hidden;background:radial-gradient(ellipse at 50% 80%,#ff6b3519,transparent 58%),#18212b}
+.court-map svg{width:100%;height:100%;display:block}
+.score-note{font-size:11px!important;color:#8e9aa7!important;margin:14px 0 0!important}
+.how{padding:100px 0;background:#fbfaf7}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:34px;margin-top:47px}
+.step{position:relative;border-top:1px solid #d6d5d1;padding-top:24px}
+.step .num{font-weight:900;color:#df6135;letter-spacing:-.03em;font-size:38px}
+.step h3{font-size:23px;letter-spacing:-.04em;margin:12px 0}
+.step p{color:#6d7179;line-height:1.7;font-size:14px;max-width:300px}
+.video{background:#ede9e2;padding:94px 0}
+.video-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.video-eyebrow{display:inline-flex;gap:7px;align-items:center;background:#e2dcd2;border-radius:50px;color:#424953;padding:9px 13px;font-size:11px;font-weight:850;letter-spacing:1px;text-transform:uppercase;margin-bottom:23px}
+.video p{color:#5d6570;line-height:1.75;max-width:460px}
+.note{display:flex;gap:11px;align-items:flex-start;font-size:12px;color:#636973;line-height:1.65;margin-top:23px}
+.note svg{flex:0 0 auto}
+.video-visual{border-radius:27px;padding:37px;min-height:360px;display:grid;place-items:center;background:linear-gradient(130deg,#202a37,#0f141b);color:#fff;position:relative;overflow:hidden}
+.video-visual::before{content:"";width:420px;height:420px;border-radius:100%;position:absolute;background:#ff6b3510;left:-100px;bottom:-300px;box-shadow:0 0 0 60px #ff6b3509,0 0 0 140px #ff6b3505}
+.vid-inner{width:min(100%,330px);position:relative;z-index:2;display:grid;gap:17px}
+.clip-bar{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:850}
+.clip-bar em{font-style:normal;color:#ff9062}
+.clip-screen{background:#101722;border:1px solid #52627370;border-radius:19px;aspect-ratio:1.45;display:grid;place-items:center;position:relative}
+.play-icon{border-radius:50%;width:65px;height:65px;border:1px solid #ffffff6f;display:grid;place-items:center;color:#fff;font-size:23px;padding-left:4px}
+.clip-badge{position:absolute;top:13px;left:13px;background:#ffffff20;color:#fff;border-radius:8px;padding:8px;font-size:10px}
+.clip-bottom{display:flex;justify-content:space-between;font-size:11px;color:#b9c2cd}
+.beta{background:#fff;color:#151b24;padding:98px 0}
+.beta-panel{background:#141922;color:#fff;border-radius:31px;padding:68px 64px;display:flex;justify-content:space-between;align-items:center;gap:45px;position:relative;overflow:hidden}
+.beta-panel::after{content:"";width:290px;height:290px;border:1px solid #ff6b353d;position:absolute;border-radius:50%;right:-120px;top:-180px;box-shadow:0 0 0 60px #ff6b3509,0 0 0 120px #ff6b3508;pointer-events:none}
+.beta-panel h2{font-size:clamp(38px,4vw,57px);max-width:640px}
+.beta-panel p{color:#b8c0ca;max-width:560px;line-height:1.7;font-size:14px}
+.beta-panel .section-eyebrow{color:#ff9d7b}
+.beta-panel .button{white-space:nowrap;flex-shrink:0}
+.footer{background:#10151d;color:#b6bcc5;padding:61px 0 29px}
+.footer-top{display:flex;justify-content:space-between;gap:24px;align-items:start;border-bottom:1px solid #ffffff26;padding-bottom:44px}
+.footer .brand img{width:166px}
+.footer-strap{margin-top:16px;font-size:13px;max-width:340px;line-height:1.65;color:#9ea7b3}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap;font-size:13px}
+.footer-links a:hover{color:#fff}
+.footer-bottom{display:flex;justify-content:space-between;gap:24px;padding-top:28px;color:#808c99;font-size:11px;line-height:1.65}
+.footer-bottom p{max-width:690px;margin:0}
+@media(max-width:1000px){.hero-in{gap:30px}.hero h1{font-size:58px}.insight-grid{gap:38px}.float-card.top{right:-17px}.float-card.bottom{left:-18px}}
+@media(max-width:760px){.container{width:min(100% - 36px,560px)}.header-in{min-height:72px}.brand img{width:140px}.menu-toggle{display:block}.nav{display:none;position:absolute;top:72px;left:0;right:0;align-items:stretch;flex-direction:column;gap:0;background:#161c25;padding:12px 20px 23px;border-top:1px solid #ffffff22;box-shadow:0 18px 24px #0006}.nav.open{display:flex}.nav a{padding:14px 8px!important}.nav-cta{justify-content:center}.hero-in{grid-template-columns:1fr;padding:65px 0 70px;gap:62px}.hero h1{font-size:clamp(51px,12vw,69px)}.hero-art{min-height:510px}.athlete-frame{width:min(84%,360px)}.float-card.top{right:0}.float-card.bottom{left:0;bottom:6%}.ribbon .container{grid-template-columns:1fr;gap:0;padding:10px 0}.ribbon-item{padding:13px 0}.ribbon-item+.ribbon-item{border-top:1px solid #14192225}.section{padding:70px 0}.section-head{display:block}.section-sub{margin-top:20px}.feature-grid{grid-template-columns:1fr}.feature-card{min-height:initial}.insight{padding:75px 0}.insight-grid,.video-grid{grid-template-columns:1fr;gap:36px}.how{padding:75px 0}.steps{grid-template-columns:1fr;gap:18px}.step p{max-width:none}.video{padding:75px 0}.beta{padding:70px 0}.beta-panel{padding:46px 26px;display:block}.beta-panel .button{margin-top:16px}.footer-top{display:block}.footer-links{margin-top:30px}.footer-bottom{display:block}.footer-bottom span{display:block;margin-top:15px}}
+@media(max-width:410px){.hero h1{font-size:clamp(45px,12vw,53px)}.float-card{padding:9px 11px}.float-card strong{font-size:14px}.float-card small{font-size:10px}.hero-art{min-height:440px}.athlete-frame{width:85%}.athlete-frame img{min-height:380px}.score-panel{padding:18px}.score-figures b{font-size:26px}.score-figures div{padding:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
-<nav class="navbar" id="navbar"><div class="nav-inner">
-  <a href="/" class="nav-logo"><img src="/brand/courtiq-v2/courtiq-logo-dark.svg" width="679" height="120" alt="CourtIQ"></a>
-  <div class="nav-links"><a href="#features">Features</a><a href="#pricing">Access</a><a href="#about">What to expect</a></div>
-  <div class="nav-cta"><a href="https://app.getcourtiq.com/dashboard" class="nav-download">Open CourtIQ</a></div>
-  <button class="hamburger" id="hamburger" aria-label="Open navigation" aria-expanded="false" aria-controls="mobileMenu"><span></span><span></span><span></span></button>
-</div></nav>
-<div class="mobile-menu" id="mobileMenu" hidden><a href="#features" onclick="closeMobileMenu()">Features</a><a href="#pricing" onclick="closeMobileMenu()">Access</a><a href="#about" onclick="closeMobileMenu()">What to expect</a><a href="https://app.getcourtiq.com/dashboard" class="btn btn-primary">Open CourtIQ</a></div>
-<main>
-<section class="hero" id="home"><div class="container">
-  <div class="hero-content fade-in"><div class="hero-badge"><span class="pulse"></span>Web app · pilot release</div>
-  <h1>Track Your Game.<br>Understand Your Work.<br><span class="accent">Own Your Next Move.</span></h1>
-  <p class="hero-sub">Record basketball games, review shooting and performance trends, and practice the skills that matter next. CourtIQ works in your browser on phone, tablet, and desktop.</p>
-  <div class="hero-buttons"><a href="https://app.getcourtiq.com/dashboard" class="btn btn-primary">Open the web app</a><a href="#features" class="btn btn-secondary">See what it does</a></div>
-  </div>
-    <!-- Illustrative sample data, not a live player record. -->
-    <div class="hero-mockup fade-in" role="img" aria-label="Illustrative CourtIQ game tracker with sample statistics">
-      <div class="phone-glow"></div>
-      <div class="phone-frame">
-        <div class="phone-screen">
-          <div class="phone-notch"></div>
-          <div class="mock-app">
-            <div class="mock-header">
-              <div class="mock-title">Gametime</div>
-              <div class="mock-subtitle">vs. Eastside Hawks</div>
-            </div>
-            <div class="mock-court">
-              <div class="court-dot made"></div>
-              <div class="court-dot missed"></div>
-              <div class="court-dot made"></div>
-              <div class="court-dot made"></div>
-              <div class="court-dot missed"></div>
-              <div class="court-dot made"></div>
-            </div>
-            <div class="mock-stats-row">
-              <div class="mock-stat-card">
-                <div class="stat-num">18</div>
-                <div class="stat-label">PTS</div>
-              </div>
-              <div class="mock-stat-card">
-                <div class="stat-num">62%</div>
-                <div class="stat-label">FG</div>
-              </div>
-              <div class="mock-stat-card">
-                <div class="stat-num">5</div>
-                <div class="stat-label">AST</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="sample-note">Illustrative sample data. Not a live player record.</p>
-    </div>
-  </div>
-</section>
-
-
-<div class="stats-banner"><div class="container"><div class="stats-grid">
-  <div class="stat-item"><div class="stat-number">162</div><div class="stat-desc">Basketball drills</div></div>
-  <div class="stat-item"><div class="stat-number">8</div><div class="stat-desc">Skill categories</div></div>
-  <div class="stat-item"><div class="stat-number">Web</div><div class="stat-desc">Phone · tablet · desktop</div></div>
-</div></div></div>
-<div class="gradient-line"></div>
-<section class="features section-padding" id="features"><div class="container">
-  <div class="text-center"><div class="section-label">Inside CourtIQ</div><h2 class="section-title">Track the game.<br>Train with a purpose.</h2><p class="section-subtitle mx-auto">A basketball-development workspace built around the events you record—not promises of automatic scouting or player rankings.</p></div>
-  <div class="features-grid">
-    <div class="feature-card"><span class="feature-icon" aria-hidden="true">🏀</span><h3>GAMETIME</h3><p>Record shots, free throws, rebounds, assists, steals, blocks, turnovers, fouls, and minutes. Review the completed game and its shooting splits.</p></div>
-    <div class="feature-card"><span class="feature-icon" aria-hidden="true">📊</span><h3>My IQ</h3><p>Explore recorded performance trends and development priorities. Insights depend on complete, accurate entries; they are not verified scouting grades.</p></div>
-    <div class="feature-card"><span class="feature-icon" aria-hidden="true">🎯</span><h3>Skill Lab</h3><p>Choose from 162 drills, follow guided practice steps, record your own reps, and compare like-for-like completed workouts.</p></div>
-    <div class="feature-card"><span class="feature-icon" aria-hidden="true">🗺️</span><h3>Heat maps</h3><p>See where your recorded shots come from and how results differ by court zone. Missing entries cannot be treated as a complete game.</p></div>
-    <div class="feature-card"><span class="feature-icon" aria-hidden="true">📝</span><h3>Journal</h3><p>Reflect on confidence, focus, and your basketball experience alongside your recorded development work.</p></div>
-    <div class="feature-card"><span class="feature-icon" aria-hidden="true">↗</span><h3>Share cards</h3><p>Create square or story-format cards from your recorded stats. Review the card before downloading or sharing, especially for younger players.</p></div>
-  </div>
+<a class="skip-link" href="#content">Skip to content</a>
+<header class="header"><div class="container header-in">
+  <a class="brand" href="/" aria-label="CourtIQ homepage"><img src="/brand/courtiq-v2/courtiq-logo-dark.svg" alt="CourtIQ" width="679" height="120"></a>
+  <button class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle navigation">☰</button>
+  <nav class="nav" id="primary-nav" aria-label="Main navigation">
+    <a href="#features">Features</a><a href="#how">How it works</a><a href="#video">Video</a><a href="#access">Access</a><a class="nav-cta" href="https://app.getcourtiq.com/">Open CourtIQ <span aria-hidden="true">↗</span></a>
+  </nav>
+</div></header>
+<main id="content">
+<section class="hero" aria-labelledby="hero-title"><div class="container hero-in">
+<div class="hero-copy">
+  <div class="eyebrow"><span class="pulse"></span> Basketball development, made clearer</div>
+  <h1 id="hero-title">MAKE EVERY<br>GAME <em>COUNT.</em></h1>
+  <p class="lead">Track the game. Train with a plan. Understand the work behind your progress. CourtIQ brings your basketball journey together in one place.</p>
+  <div class="actions"><a href="https://app.getcourtiq.com/" class="button primary">Open the App <span aria-hidden="true">↗</span></a><a href="#features" class="button outline">Explore CourtIQ <span aria-hidden="true">↓</span></a></div>
+  <div class="hero-trust"><span>Web-based</span><span>Parent &amp; player profiles</span><span>No purchase on this site</span></div>
+</div>
+<div class="hero-art">
+  <div class="art-orbit" aria-hidden="true"></div>
+  <div class="athlete-frame"><img src="https://app.getcourtiq.com/product-mobile.jpg" alt="Actual CourtIQ basketball shot-tracking interface" width="320" height="640" loading="eager"><div class="frame-caption"><strong>Inside CourtIQ</strong> · Real app screen, sample data</div></div>
+  <div class="float-card top" aria-hidden="true"><small>TRACK THE GAME</small><strong>Every possession.<br><span class="orange">Your next move.</span></strong></div>
+  <div class="float-card bottom" aria-hidden="true"><small>TRAIN WITH PURPOSE</small><strong>Work. Review. Repeat.</strong></div>
+</div>
 </div></section>
-<div class="gradient-line"></div>
-<section class="how-it-works section-padding"><div class="container">
-  <div class="text-center"><div class="section-label">How it works</div><h2 class="section-title">A clear next move.<br>Not just more numbers.</h2></div>
-  <div class="steps-grid">
-    <div class="step"><div class="step-number">1</div><div class="step-label">Play</div><h3>Record the game</h3><p>Open GAMETIME, enter what happened, and finish your session. Do not treat the tracker as an official league box score.</p></div>
-    <div class="step"><div class="step-number">2</div><div class="step-label">Understand</div><h3>Review the evidence</h3><p>Look at the completed report, shooting zones, and recorded trends. Smaller or incomplete samples carry clear limits.</p></div>
-    <div class="step"><div class="step-number">3</div><div class="step-label">Train</div><h3>Practice, then repeat</h3><p>Pick a skill, follow a drill, and record the work. Return after your next game to review your development.</p></div>
-  </div>
+<section class="ribbon" aria-label="CourtIQ highlights"><div class="container">
+ <div class="ribbon-item"><span class="ribbon-icon" aria-hidden="true">◉</span> Stat tracking built for real games</div>
+ <div class="ribbon-item"><span class="ribbon-icon" aria-hidden="true">▤</span> Guided drills and recorded workouts</div>
+ <div class="ribbon-item"><span class="ribbon-icon" aria-hidden="true">↗</span> Insights built from your own data</div>
 </div></section>
-<div class="gradient-line"></div>
-<section class="game-film section-padding"><div class="container"><div class="film-layout">
-  <div class="film-text"><div class="section-label">Device video</div><h2>Your clips.<br>On your device.</h2><p>Record with your device camera, then attach a compatible clip to a saved CourtIQ session. This is device-local storage—not automatic full-game recording or a cloud backup.</p>
-  <div class="film-features">
-    <div class="film-feature"><span class="check">✓</span>Attach compatible MP4, WebM, or MOV clips</div>
-    <div class="film-feature"><span class="check">✓</span>100 MB per clip; 250 MB per account on that device</div>
-    <div class="film-feature"><span class="check">✓</span>Download a copy and keep your own backup</div>
-    <div class="film-feature"><span class="check">✓</span>Clearing browser data can remove locally stored clips</div>
-  </div></div>
-  <div class="feature-card"><h3>What video does not include</h3><p>No unlimited cloud storage, automatic highlight creation, synchronized full-game recording, or verified video-to-stat analysis is included in this web pilot.</p></div>
-</div></div></section>
-<div class="gradient-line"></div>
-<section class="pricing section-padding" id="pricing"><div class="container">
-  <div class="text-center"><div class="section-label">Access</div><h2 class="section-title">Try the web pilot.<br>No paid checkout is active.</h2><p class="section-subtitle mx-auto">CourtIQ is in a supervised pilot. The final free allowance, optional trial, paid packages, and recurring terms will be published when verified and activated. No automatic subscription starts here.</p></div>
-  <div class="pricing-grid">
-    <div class="pricing-card"><div class="plan-name">Web pilot</div><div class="plan-desc">Explore the current basketball-development workspace.</div><ul class="pricing-features"><li><span class="icon">✓</span>Open in your browser</li><li><span class="icon">✓</span>Sign in to your own account</li><li><span class="icon">✓</span>No purchase or card collection on this website</li><li><span class="icon">✓</span>Features and availability may change during the pilot</li></ul><a href="https://app.getcourtiq.com/dashboard" class="btn btn-primary">Open CourtIQ</a></div>
-    <div class="pricing-card"><div class="plan-name">Memberships · not activated</div><div class="plan-desc">Player and owner-managed Coach packages are being prepared.</div><ul class="pricing-features"><li><span class="icon">—</span>No live subscriptions or automatic charges</li><li><span class="icon">—</span>No shared coach, parent, or player invitations</li><li><span class="icon">—</span>No app-wide rankings or cloud video</li><li><span class="icon">—</span>Final prices and terms are not offered for purchase yet</li></ul><a href="#about" class="btn btn-secondary">Read the pilot boundaries</a></div>
-  </div>
+<section id="features" class="section"><div class="container">
+ <p class="section-eyebrow">One basketball workspace</p>
+ <div class="section-head"><h2>More than<br>the final score.</h2><p class="section-sub">A clean, connected experience for players, parents, and coaches who want to understand what happened and what to work on next.</p></div>
+ <div class="feature-grid">
+  <article class="feature-card feature-dark"><span class="feature-number">01 / GAMETIME</span><div class="feature-icon" aria-hidden="true">◉</div><h3>Track every play.</h3><p>Log makes, misses, rebounds, assists, steals, blocks and more. Build a real picture of each recorded game.</p></article>
+  <article class="feature-card"><span class="feature-number">02 / TRAIN</span><div class="feature-icon" aria-hidden="true">◎</div><h3>Put in the work.</h3><p>Find drills, follow clear instructions, record reps and revisit completed practice sessions.</p></article>
+  <article class="feature-card"><span class="feature-number">03 / MY IQ</span><div class="feature-icon" aria-hidden="true">↗</div><h3>Know what's next.</h3><p>Review shot zones, trends and evidence-informed development suggestions based on what you've logged.</p></article>
+ </div>
 </div></section>
-<div class="gradient-line"></div>
-<section class="parent-section section-padding" id="about"><div class="container"><div class="parent-layout">
-  <div class="feature-card"><h3>Recorded work, not guaranteed outcomes</h3><p>CourtIQ uses self-recorded basketball data. Recommendations and experimental statistical outlooks can be wrong, and do not guarantee athletic improvement, recruiting outcomes, or professional-player potential.</p></div>
-  <div class="parent-text"><div class="section-label">What to expect</div><h2>One account.<br>Your development work.</h2><p>This web pilot is intended for users age 13 and older. It does not offer a verified guardian-consent workflow for younger self-operated accounts.</p><p>Do not share account passwords. Separate parent/player links, assistant-coach invitations, app-wide comparisons, and AI Coach chat are not part of the activated pilot offer. Read the current privacy policy and terms before registering.</p></div>
-</div></div></section>
-<div class="gradient-line"></div>
-<section class="cta-section section-padding" id="download"><div class="container"><div class="cta-content">
-  <h2>Your game.<br>Your next move.</h2><p>Open CourtIQ in your browser. Track honestly, review the evidence, and practice with purpose.</p>
-  <div class="cta-buttons"><a href="https://app.getcourtiq.com/dashboard" class="btn btn-primary">Open the web app</a></div>
+<section class="insight"><div class="container insight-grid">
+ <div><p class="section-eyebrow">Track with intention</p><h2>Numbers are good.<br>Context is better.</h2><p>From the first made basket to the full-game breakdown, CourtIQ helps organize the details that can otherwise get lost.</p>
+ <ul><li>Shot charts and shooting-zone summaries</li><li>Game logs and performance history</li><li>Simple family player switching</li><li>Downloadable stat-sharing cards</li></ul>
+ <a class="button primary" href="https://app.getcourtiq.com/">Start tracking <span aria-hidden="true">↗</span></a></div>
+ <div class="score-panel" aria-label="Illustrative basketball stats presentation"><div class="score-header"><span>COURTIQ / GAME RECAP</span><span>RECORD • REVIEW</span></div>
+ <div class="score-figures"><div><b>18</b><span>POINTS</span></div><div><b>7</b><span>REBOUNDS</span></div><div><b>4</b><span>ASSISTS</span></div></div>
+ <div class="court-map">
+ <svg viewBox="0 0 550 290" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" fill="none" stroke="#93a0aa" stroke-width="2.5" opacity=".9">
+ <rect x="13" y="12" width="524" height="266" rx="15" stroke-opacity=".3"/><path d="M 170,278 L 170,155 Q 275,45 380,155 L 380,278" stroke="#f5f0e755"/><path d="M225 278 V188 Q275 160 325 188 V278" stroke="#f5f0e75d"/><path d="M230 278 L230 229 H320 V278"/><circle cx="275" cy="200" r="53" stroke-opacity=".7"/><circle cx="275" cy="255" r="10" stroke="#ff6b35"/><path d="M235 255 H315" stroke="#ff6b35"/><circle cx="170" cy="115" r="10" fill="#ff6b35" stroke="none"/><circle cx="220" cy="75" r="9" fill="#ff6b35" stroke="none"/><circle cx="330" cy="75" r="9" fill="#b3bfc6" stroke="none"/><circle cx="385" cy="120" r="10" fill="#ff6b35" stroke="none"/><circle cx="317" cy="192" r="9" fill="#ff6b35" stroke="none"/><circle cx="235" cy="195" r="8" fill="#b3bfc6" stroke="none"/>
+ </svg></div><p class="score-note">Illustrative sample stats and diagram, not a live CourtIQ report.</p></div>
+</div></section>
+<section id="how" class="how"><div class="container">
+ <p class="section-eyebrow">The CourtIQ rhythm</p><h2>Record. Review.<br>Get better.</h2>
+ <div class="steps"><article class="step"><div class="num">01</div><h3>Play your game.</h3><p>Choose your player, open Gametime and enter the actions that matter.</p></article><article class="step"><div class="num">02</div><h3>See the full picture.</h3><p>Look at your recorded numbers, shooting areas, reports and history.</p></article><article class="step"><div class="num">03</div><h3>Train your next move.</h3><p>Practice a skill, log the work and come back with more evidence.</p></article></div>
+</div></section>
+<section id="video" class="video"><div class="container video-grid">
+ <div><div class="video-eyebrow">◌ &nbsp; CourtIQ video</div><h2>Your moments.<br>In your hands.</h2><p>Keep compatible basketball clips with saved sessions on your own device. Review the video alongside your recorded work and download a backup whenever you need it.</p>
+ <div class="note"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="none" stroke="#ef6b3b" stroke-width="2"/><path d="M11 10v5m0-8v1" stroke="#ef6b3b" stroke-width="2" stroke-linecap="round"/></svg><span>Today, CourtIQ saves one compatible session clip locally on the device (100 MB per clip, 250 MB per account). In-app continuous game recording with live stats and automatic AI analysis are not part of the current production release.</span></div></div>
+ <div class="video-visual" role="img" aria-label="Illustration of a locally stored CourtIQ video clip"><div class="vid-inner"><div class="clip-bar"><span>SESSION VIDEO</span><em>DEVICE ONLY</em></div><div class="clip-screen"><div class="clip-badge">COURTIQ / YOUR CLIP</div><div class="play-icon">▶</div></div><div class="clip-bottom"><span>One session. One saved clip.</span><span>KEEP THE ORIGINAL</span></div></div></div>
+</div></section>
+<section id="access" class="beta"><div class="container"><div class="beta-panel">
+ <div><p class="section-eyebrow">CourtIQ web pilot</p><h2>YOUR GAME.<br>YOUR NEXT MOVE.</h2><p>Explore CourtIQ in your browser. New accounts use Google sign-in. There is no checkout or automatic paid membership on this website. Feature access and availability may change during the pilot.</p></div>
+ <a href="https://app.getcourtiq.com/" class="button primary">Open CourtIQ <span aria-hidden="true">↗</span></a>
 </div></div></section>
 </main>
-<footer class="footer"><div class="container"><div class="footer-inner">
-  <div class="footer-left"><div class="footer-logo"><img src="/brand/courtiq-v2/courtiq-logo-dark.svg" width="679" height="120" alt="CourtIQ"></div><p>© 2026 CourtIQ · A Pivot Training product.</p></div>
-  <div class="footer-links"><a href="https://app.getcourtiq.com/privacy">Privacy Policy</a><a href="https://app.getcourtiq.com/terms">Terms of Service</a><a href="https://app.getcourtiq.com/support">Support</a></div>
-</div><div class="footer-bottom">Made in Atlanta, Georgia · Web-based basketball development.</div></div></footer>
+<footer class="footer"><div class="container">
+ <div class="footer-top"><div><a class="brand" href="/" aria-label="CourtIQ homepage"><img src="/brand/courtiq-v2/courtiq-logo-dark.svg" width="679" height="120" alt="CourtIQ"></a><div class="footer-strap">For the work before the spotlight.<br>Track the game. Know your next move.</div></div>
+ <nav class="footer-links" aria-label="Legal and support"><a href="https://app.getcourtiq.com/privacy">Privacy Policy</a><a href="https://app.getcourtiq.com/terms">Terms of Service</a><a href="https://app.getcourtiq.com/support">Help &amp; Support</a><a href="https://app.getcourtiq.com/">Open App</a></nav></div>
+ <div class="footer-bottom"><p>CourtIQ is a record-based development tool, not official scorekeeping or a validated recruiting service. It is intended for eligible users age 13 and older; under-13 self-operated sign-up is not currently supported.</p><span>© 2026 CourtIQ · A Pivot Training product.</span></div>
+</div></footer>
 <script>
-const hamburger=document.getElementById('hamburger'),mobileMenu=document.getElementById('mobileMenu'),navbar=document.getElementById('navbar');
-function closeMobileMenu(){hamburger.classList.remove('active');hamburger.setAttribute('aria-expanded','false');mobileMenu.classList.remove('open');mobileMenu.hidden=true;document.body.style.overflow='';}
-hamburger.addEventListener('click',()=>{const open=hamburger.getAttribute('aria-expanded')!=='true';hamburger.setAttribute('aria-expanded',String(open));hamburger.classList.toggle('active',open);mobileMenu.hidden=!open;mobileMenu.classList.toggle('open',open);document.body.style.overflow=open?'hidden':'';});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMobileMenu();});
-window.addEventListener('scroll',()=>navbar.classList.toggle('scrolled',window.scrollY>20),{passive:true});
+const menuButton=document.getElementById('menu-toggle');
+const menu=document.getElementById('primary-nav');
+menuButton.addEventListener('click',()=>{const open=menu.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));menuButton.textContent=open?'✕':'☰';});
+menu.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>{menu.classList.remove('open');menuButton.setAttribute('aria-expanded','false');menuButton.textContent='☰';}));
 </script>
 </body></html>
