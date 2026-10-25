@@ -15,7 +15,7 @@ test('public site is web-first and does not offer unapproved prices or unverifie
   assert.doesNotMatch(html,/caches.delete|\.unregister\(|fonts.googleapis.com/);
 });
 test('site anchors, branded images and privacy routes are complete', async () => {
-  assert.equal((body.match(/<h1\\b/g)||[]).length,1);
+  assert.equal((body.match(/<h1\b/g)||[]).length,1);
   const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));
   for(const match of body.matchAll(/href="#([^"]+)"/g)) assert.ok(ids.has(match[1]),match[1]);
   for(const tag of body.match(/<img\b[^>]+>/g)||[]) {
