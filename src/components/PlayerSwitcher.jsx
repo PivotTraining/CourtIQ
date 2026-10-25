@@ -312,7 +312,7 @@ This transfers the record, not a copy. If both phones tracked the same game, can
         {/* Access belongs to an explicit named player, never the whole family. */}
         <div style={{ padding: 16, borderRadius: 16, background: "var(--color-muted)",
           border: "1px solid var(--color-border)", display: "grid", gap: 10, marginBottom: 16 }}>
-          <h3 style={{ margin: 0, color: "var(--color-text)", fontSize: 15 }}>Connect another parent's phone</h3>
+          <h3 style={{ margin: 0, color: "var(--color-text)", fontSize: 15 }}>Connect another parent&apos;s phone</h3>
           <p style={{ margin: 0, color: "var(--color-text-sec)", fontSize: 12, lineHeight: 1.55 }}>
             Already received a private player-sharing code? Paste it here to connect the same player record.
             Existing games on the original profile are not automatically combined.
