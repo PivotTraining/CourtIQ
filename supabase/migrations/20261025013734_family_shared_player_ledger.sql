@@ -161,7 +161,7 @@ create table public.shared_game_transfers(
  session_id uuid primary key references public.sessions(id) on delete cascade,
  source_player uuid not null,
  destination_player uuid not null references public.players(id) on delete cascade,
- transferred_by uuid not null references auth.users(id) on delete restrict,
+ transferred_by uuid references auth.users(id) on delete set null,
  transferred_at timestamptz not null default now()
 );
 alter table public.shared_game_transfers enable row level security;
@@ -184,7 +184,9 @@ begin
    using errcode='42501';
  end if;
  select * into s from public.sessions where id=p_session and player_id=p_source_player for update;
- if not found or s.type<>'game' or s.mode is distinct from 'individual'
+ perform 1 from public.players where id=p_destination_player for update;
+ if not found then raise exception 'Shared destination was removed' using errcode='22023'; end if;
+ if s.type<>'game' or s.mode is distinct from 'individual'
    or s.tracker_status='active' then
    raise exception 'Only completed, individual games can be imported' using errcode='22023';
  end if;
