@@ -56,14 +56,7 @@ async function user(db,uid,sql){
  return db.query(sql);
 }
 test("two parents can share exactly one player; strangers and viewers cannot edit", async t => {
- let db;
- try { db = await initializeDB(); } catch(err) {
-   if (/extension.*pgcrypto.*not available|Extension pgcrypto.*not found/i.test(String(err))) {
-     t.diagnostic("Skipping DB integration: test fixture has no pgcrypto extension");
-     return;
-   }
-   throw err;
- }
+ const db = await initializeDB();
  try {
    assert.equal((await user(db,bob,\`select count(*)::int n from players where id='\${ownedChild}'\`)).rows[0].n,0);
    assert.equal((await user(db,eve,\`select count(*)::int n from players where id='\${ownedChild}'\`)).rows[0].n,0);
