@@ -33,8 +33,43 @@ export async function createPlayerProfile(profile) {
 // ─── MULTI-PLAYER ───
 
 export async function fetchManagedPlayers(firebaseUid) {
-  return readAll(() => getSupabase().from("players").select("*")
-    .eq("manager_uid", firebaseUid).order("created_at").order("id"));
+  if (!firebaseUid) throw new Error("Sign in to load player profiles.");
+  // RLS returns only this account's managed profiles and explicitly shared
+  // players. Do not hard-filter manager_uid or invited players disappear.
+  const accessible = await readAll(() => getSupabase().from("players").select("*")
+    .order("created_at").order("id"));
+  return accessible;
+}
+
+export async function createPlayerShareInvite(playerId, role = "editor") {
+  return checked(await getSupabase().rpc("create_player_share_invite", {
+    p_player: playerId, p_role: role,
+  }));
+}
+
+export async function joinSharedPlayer(code) {
+  return checked(await getSupabase().rpc("join_shared_player", {
+    p_code: code.trim().toLowerCase(),
+  }));
+}
+
+export async function getPlayerCollaborators(playerId) {
+  return readAll(() => getSupabase().from("player_collaborators")
+    .select("account_id,role,created_at").eq("player_id", playerId).order("created_at"));
+}
+
+export async function revokePlayerShare(playerId, accountId) {
+  return checked(await getSupabase().rpc("revoke_shared_player", {
+    p_player: playerId, p_account: accountId,
+  }));
+}
+
+export async function importSharedGame(sourcePlayerId, destinationPlayerId, sessionId) {
+  return checked(await getSupabase().rpc("import_shared_game", {
+    p_source_player: sourcePlayerId,
+    p_destination_player: destinationPlayerId,
+    p_session: sessionId,
+  }));
 }
 
 export async function addManagedPlayer(firebaseUid, player) {
