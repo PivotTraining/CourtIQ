@@ -69,6 +69,14 @@ test("two parents can share exactly one player; strangers and viewers cannot edi
    assert.equal((await user(db,bob,`delete from players where id='${ownedChild}' returning id`)).rows.length,0);
    const sid=(await user(db,bob,`insert into sessions(player_id,type,mode) values ('${ownedChild}','game','individual') returning id`)).rows[0].id;
    assert.equal((await user(db,alice,`select count(*)::int n from sessions where id='${sid}'`)).rows[0].n,1);
+   const tracked=(await user(db,bob,`insert into sessions(player_id,type,mode,tracker_status)
+     values ('${ownedChild}','game','individual','active') returning id`)).rows[0].id;
+   const command='30000000-0000-0000-0000-000000000004';
+   await user(db,bob,`select public.apply_session_command('${tracked}','${command}',0,
+     '{"kind":"stat","key":"ast","delta":1,"recorded_at":"2026-10-24T20:00:00Z"}'::jsonb)`);
+   assert.equal((await user(db,alice,`select (game_stats->>'ast')::int n from sessions where id='${tracked}'`)).rows[0].n,1);
+   assert.equal((await user(db,eve,`select count(*)::int n from session_commands where session_id='${tracked}'`)).rows[0].n,0);
+
    assert.equal((await user(db,eve,`select count(*)::int n from sessions where id='${sid}'`)).rows[0].n,0);
    await user(db,alice,`select public.revoke_shared_player('${ownedChild}','${bob}')`);
    assert.equal((await user(db,bob,`select count(*)::int n from sessions where id='${sid}'`)).rows[0].n,0);
