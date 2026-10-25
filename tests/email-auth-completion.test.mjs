@@ -15,8 +15,9 @@ async function loginFixture(actions = {}) {
   };
   const { default: Login } = await loadComponent(
     new URL('../src/components/auth/LoginScreen.jsx', import.meta.url),
-    { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true } },
-    { window: { location: { replace: path => redirects.push(path) } } },
+    { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true },
+    './GoogleIdentityButton': { default: () => null, __esModule: true } },
+    { window: { location: { replace: path => redirects.push(path) } }, process: { env: {} } },
   );
   h.render(Login, { actions: { ...defaults, ...actions } }); h.flush();
   const input = id => findElement(h.output, node => node.type === 'input' && node.props.id === id);
