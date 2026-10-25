@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchManagedPlayers, addManagedPlayer, deleteManagedPlayer } from "@/lib/queries";
+import { fetchManagedPlayers, addManagedPlayer, deleteManagedPlayer,
+  createPlayerShareInvite, joinSharedPlayer, getPlayerCollaborators,
+  revokePlayerShare, fetchSessionHistory, importSharedGame } from "@/lib/queries";
 import Icon from "@/components/ui/Icons";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
@@ -28,6 +30,17 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   const [saving, setSaving] = useState(false);
   const [switchingId, setSwitchingId] = useState(null);
   const [error, setError] = useState("");
+  const [invitationInput, setInvitationInput] = useState("");
+  const [shareTarget, setShareTarget] = useState(null);
+  const [shareCode, setShareCode] = useState("");
+  const [shareRole, setShareRole] = useState("editor");
+  const [collaborators, setCollaborators] = useState([]);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [importSource, setImportSource] = useState("");
+  const [importTarget, setImportTarget] = useState("");
+  const [importGames, setImportGames] = useState([]);
+  const [importBusy, setImportBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -99,6 +112,87 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
     }
   };
 
+  const refreshPlayers = async () => {
+    const updated = await fetchManagedPlayers(user.id);
+    setPlayers(updated);
+    return updated;
+  };
+
+  const handleJoin = async () => {
+    if (shareBusy || !user?.id) return;
+    setShareBusy(true); setError(""); setMessage("");
+    try {
+      const linkedPlayerId = await joinSharedPlayer(invitationInput);
+      setInvitationInput("");
+      const updated = await refreshPlayers();
+      const selected = updated.find(p => p.id === linkedPlayerId);
+      if (!selected) throw new Error("The shared player could not be verified.");
+      setMessage(`${selected.name} is now shared with this account. Select the profile to see synced games.`);
+    } catch {
+      setError("Could not accept that invite. Confirm the full code is correct, unused, and less than 24 hours old.");
+    } finally { setShareBusy(false); }
+  };
+
+  const handleInvite = async (player) => {
+    if (shareBusy || player.manager_uid !== user?.id) return;
+    setShareBusy(true); setError(""); setMessage(""); setShareCode("");
+    try {
+      const code = await createPlayerShareInvite(player.id, shareRole);
+      setShareTarget(player.id);
+      setShareCode(code);
+      const members = await getPlayerCollaborators(player.id);
+      setCollaborators(members);
+      setMessage("Share this one-time code privately with the other parent. It expires in 24 hours.");
+    } catch {
+      setError("Could not create a family invite. Check your connection and try again.");
+    } finally { setShareBusy(false); }
+  };
+
+  const handleShowCollaborators = async (player) => {
+    setShareTarget(player.id); setShareCode(""); setError(""); setMessage("");
+    try { setCollaborators(await getPlayerCollaborators(player.id)); }
+    catch { setCollaborators([]); setError("Couldn't load the linked parents."); }
+  };
+
+  const handleRevoke = async (playerId, accountId) => {
+    if (shareBusy || !window.confirm("Remove this parent's access to this player? Their separate original game records will not be deleted.")) return;
+    setShareBusy(true); setError("");
+    try {
+      await revokePlayerShare(playerId, accountId);
+      setCollaborators((prev) => prev.filter(m => m.account_id !== accountId));
+    } catch { setError("Could not revoke access. Try again."); }
+    finally { setShareBusy(false); }
+  };
+
+  const handleLoadGames = async (sourceId) => {
+    setImportSource(sourceId); setImportGames([]); setError("");
+    if (!sourceId) return;
+    try {
+      const history = await fetchSessionHistory(sourceId);
+      setImportGames(history.filter(g => g.type === "game"
+        && g.mode === "individual" && g.tracker_status !== "active"));
+    } catch { setError("Couldn't load the original games. Your existing records are unchanged."); }
+  };
+
+  const handleImport = async (game) => {
+    if (importBusy || !importSource || !importTarget) return;
+    const source = players.find(p => p.id === importSource);
+    const destination = players.find(p => p.id === importTarget);
+    if (!source || source.manager_uid !== user?.id || !destination || destination.manager_uid === user?.id) {
+      setError("Choose a player owned by this account and an editor-shared destination."); return;
+    }
+    if (!window.confirm(`Move this saved game from ${source.name} to ${destination.name}?
+This transfers the record, not a copy. If both phones tracked the same game, cancel to avoid counting it twice.`)) return;
+    setImportBusy(true); setError(""); setMessage("");
+    try {
+      await importSharedGame(source.id,destination.id,game.id);
+      setImportGames(prev => prev.filter(g => g.id !== game.id));
+      setMessage("Game moved to the shared player. Both linked parent accounts can now see it.");
+    } catch {
+      setError("Game wasn't transferred. It may match another game already saved on that date, or you may have view-only access. Nothing was deleted.");
+    } finally { setImportBusy(false); }
+  };
+
   return (
     <div role="presentation" style={{
       position: "fixed",
@@ -121,7 +215,8 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
       }} role="dialog" aria-modal="true" aria-label="Choose a family player" onClick={(e) => e.stopPropagation()}>
         <div style={{ width: 40, height: 4, background: "var(--color-muted)", borderRadius: 2, margin: "0 auto 16px" }} />
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Who is playing?</h2>
-        <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>One parent account. Separate game stats and training history for each player.</p>
+        <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>One player history. Linked parents can record and review the same player once access is accepted.</p>
+        {message && <p role="status" style={{ fontSize: 13, color: "var(--color-accent)" }}>{message}</p>}
         {error && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{error}</p>}
 
         {loading ? (
@@ -159,7 +254,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-text-sec)" }}>{p.position} {p.team_name ? `· ${p.team_name}` : ""} {p.age ? `· ${p.age}yr` : ""}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-text-sec)" }}>{p.manager_uid !== user?.id ? "Shared by another parent · " : ""}{p.position} {p.team_name ? `· ${p.team_name}` : ""} {p.age ? `· ${p.age}yr` : ""}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                     {!isActive && (
@@ -181,7 +276,14 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                     {isActive && (
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-accent)" }}>Selected</span>
                     )}
-                    {players.length > 1 && !isActive && p.firebase_uid !== user?.id && (
+                    {p.manager_uid === user?.id && (
+                      <button type="button" onClick={() => handleShowCollaborators(p)} disabled={shareBusy}
+                        title={`Share ${p.name} with another parent`}
+                        style={{ minHeight: 44, padding: "8px 7px", border: "none", borderRadius: 8,
+                          background: "var(--color-accent-light)", color: "var(--color-accent)",
+                          cursor: "pointer", fontSize: 11, fontWeight: 800 }}>Share</button>
+                    )}
+                    {players.length > 1 && !isActive && p.manager_uid === user?.id && p.firebase_uid !== user?.id && (
                       <button onClick={() => handleDelete(p.id)} disabled={saving || !!switchingId} aria-label={`Permanently delete ${p.name} and all records`}
                         style={{
                           width: 32,
@@ -204,6 +306,108 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Access belongs to an explicit named player, never the whole family. */}
+        <div style={{ padding: 16, borderRadius: 16, background: "var(--color-muted)",
+          border: "1px solid var(--color-border)", display: "grid", gap: 10, marginBottom: 16 }}>
+          <h3 style={{ margin: 0, color: "var(--color-text)", fontSize: 15 }}>Connect another parent's phone</h3>
+          <p style={{ margin: 0, color: "var(--color-text-sec)", fontSize: 12, lineHeight: 1.55 }}>
+            Already received a private player-sharing code? Paste it here to connect the same player record.
+            Existing games on the original profile are not automatically combined.
+          </p>
+          <input value={invitationInput} onChange={e => setInvitationInput(e.target.value)}
+            aria-label="Player sharing invitation code" placeholder="Paste the 64-character sharing code"
+            autoComplete="off" style={inputStyle} />
+          <button type="button" onClick={handleJoin}
+            disabled={shareBusy || !/^[a-f0-9]{64}$/i.test(invitationInput.trim())}
+            style={{ padding: 12, border: "none", borderRadius: 12, fontWeight: 750,
+              background: "var(--color-accent)", color: "#fff", minHeight: 44,
+              opacity: /^[a-f0-9]{64}$/i.test(invitationInput.trim()) && !shareBusy ? 1 : 0.55 }}>
+            {shareBusy ? "Connecting…" : "Accept player invite"}
+          </button>
+          {shareTarget && players.find(p => p.id === shareTarget)?.manager_uid === user?.id && (
+            <div style={{ display: "grid", gap: 9, paddingTop: 10, borderTop: "1px solid var(--color-border)" }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: "var(--color-text)" }}>
+                Share {players.find(p => p.id === shareTarget)?.name}
+              </div>
+              <select value={shareRole} onChange={e => setShareRole(e.target.value)}
+                aria-label="Parent access level" style={inputStyle}>
+                <option value="editor">Can view and track games</option>
+                <option value="viewer">Can view stats only</option>
+              </select>
+              <button type="button" onClick={() => handleInvite(players.find(p => p.id === shareTarget))}
+                disabled={shareBusy} style={{ minHeight: 44, borderRadius: 12,
+                  background: "var(--color-accent-light)", color: "var(--color-accent)",
+                  fontWeight: 800, border: "1px solid var(--color-accent)" }}>
+                {shareBusy ? "Creating…" : "Generate private invite code"}
+              </button>
+              {shareCode && <>
+                <textarea readOnly value={shareCode} aria-label="Private invitation code to copy"
+                  rows={3} onFocus={e => e.target.select()}
+                  style={{ ...inputStyle, fontSize: 12, wordBreak: "break-all" }} />
+                <button type="button" onClick={async () => {
+                  try { await navigator.clipboard.writeText(shareCode); setMessage("Copied. Send it privately to the other parent."); }
+                  catch { setMessage("Select the code above to copy it manually."); }
+                }} style={{ minHeight: 44, borderRadius: 12 }}>Copy invite code</button>
+              </>}
+              {collaborators.length > 0 && <>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>Connected accounts</div>
+                {collaborators.map(member => <div key={member.account_id}
+                  style={{ display: "flex", gap: 10, justifyContent: "space-between", alignItems: "center",
+                    fontSize: 12, color: "var(--color-text-sec)" }}>
+                  <span>{member.role === "viewer" ? "Viewer" : "Stat editor"} · account ending {member.account_id.slice(-6)}</span>
+                  <button type="button" disabled={shareBusy}
+                    onClick={() => handleRevoke(shareTarget,member.account_id)}
+                    style={{ minHeight: 40, border: "none", borderRadius: 8,
+                      background: "var(--color-card)", color: "var(--color-danger)", padding: "4px 10px" }}>
+                    Remove access
+                  </button>
+                </div>)}
+              </>}
+            </div>
+          )}
+        </div>
+        {players.some(p => p.manager_uid !== user?.id) && players.some(p => p.manager_uid === user?.id) && (
+          <div style={{ display: "grid", gap: 10, marginBottom: 16, borderRadius: 16,
+            padding: 16, border: "1px solid var(--color-border)" }}>
+            <h3 style={{ fontSize: 15, margin: 0, color: "var(--color-text)" }}>Review older game records</h3>
+            <p style={{ fontSize: 12, margin: 0, color: "var(--color-text-sec)", lineHeight: 1.5 }}>
+              Migrate separately saved games one by one after checking the date and opponent. If both phones tracked
+              the same game, CourtIQ blocks likely duplicates instead of adding them together.
+            </p>
+            <label style={{ fontSize: 12 }}>Shared destination
+              <select aria-label="Shared destination player" style={inputStyle} value={importTarget}
+                onChange={e => { setImportTarget(e.target.value); setImportGames([]); setImportSource(""); }}>
+                <option value="">Choose a shared player</option>
+                {players.filter(p => p.manager_uid !== user?.id).map(p =>
+                  <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>
+            {importTarget && <label style={{ fontSize: 12 }}>Original player on this account
+              <select aria-label="Original player profile" style={inputStyle} value={importSource}
+                onChange={e => handleLoadGames(e.target.value)}>
+                <option value="">Choose the source player</option>
+                {players.filter(p => p.manager_uid === user?.id && p.id !== importTarget).map(p =>
+                  <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </label>}
+            {importSource && importGames.map(g => <div key={g.id}
+              style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between",
+                borderBottom: "1px solid var(--color-border)", paddingBottom: 9 }}>
+              <span style={{ fontSize: 12 }}>{g.date || g.created_at?.slice(0, 10)}
+                {g.tracker_context?.opponent ? ` · ${g.tracker_context.opponent}` : " · opponent not saved"}</span>
+              <button type="button" disabled={importBusy} onClick={() => handleImport(g)}
+                style={{ minHeight: 44, padding: "8px 12px", fontSize: 12,
+                  borderRadius: 9, border: "none", fontWeight: 700,
+                  background: "var(--color-accent-light)", color: "var(--color-accent)" }}>
+                {importBusy ? "Moving…" : "Move game"}
+              </button>
+            </div>)}
+            {importSource && importGames.length === 0 && <p role="status" style={{ fontSize: 12 }}>
+              No eligible saved individual games remain on that source profile.
+            </p>}
           </div>
         )}
 
