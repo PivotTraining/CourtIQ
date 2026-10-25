@@ -34,6 +34,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   const [shareTarget, setShareTarget] = useState(null);
   const [shareCode, setShareCode] = useState("");
   const [shareRole, setShareRole] = useState("editor");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [collaborators, setCollaborators] = useState([]);
   const [shareBusy, setShareBusy] = useState(false);
   const [importSource, setImportSource] = useState("");
@@ -137,12 +138,12 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
     if (shareBusy || player.manager_uid !== user?.id) return;
     setShareBusy(true); setError(""); setMessage(""); setShareCode("");
     try {
-      const code = await createPlayerShareInvite(player.id, shareRole);
+      const code = await createPlayerShareInvite(player.id, recipientEmail, shareRole);
       setShareTarget(player.id);
       setShareCode(code);
       const members = await getPlayerCollaborators(player.id);
       setCollaborators(members);
-      setMessage("Share this one-time code privately with the other parent. It expires in 24 hours.");
+      setMessage("Send this one-time code privately to the invited email owner. It expires in 24 hours and cannot be redeemed from a different Google account.");
     } catch {
       setError("Could not create a family invite. Check your connection and try again.");
     } finally { setShareBusy(false); }
@@ -332,13 +333,18 @@ This transfers the record, not a copy. If both phones tracked the same game, can
               <div style={{ fontWeight: 800, fontSize: 14, color: "var(--color-text)" }}>
                 Share {players.find(p => p.id === shareTarget)?.name}
               </div>
+              <label style={{ fontSize: 12, color: "var(--color-text-sec)" }}>Other parent&apos;s Google account email
+                <input value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)}
+                  aria-label="Recipient parent email" autoComplete="email" type="email"
+                  placeholder="parent@example.com" style={{ ...inputStyle, marginTop: 5 }} />
+              </label>
               <select value={shareRole} onChange={e => setShareRole(e.target.value)}
                 aria-label="Parent access level" style={inputStyle}>
                 <option value="editor">Can view and track games</option>
                 <option value="viewer">Can view stats only</option>
               </select>
               <button type="button" onClick={() => handleInvite(players.find(p => p.id === shareTarget))}
-                disabled={shareBusy} style={{ minHeight: 44, borderRadius: 12,
+                disabled={shareBusy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail.trim())} style={{ minHeight: 44, borderRadius: 12,
                   background: "var(--color-accent-light)", color: "var(--color-accent)",
                   fontWeight: 800, border: "1px solid var(--color-accent)" }}>
                 {shareBusy ? "Creating…" : "Generate private invite code"}
