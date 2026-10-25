@@ -74,3 +74,41 @@ test("two parents can share exactly one player; strangers and viewers cannot edi
    assert.equal((await user(db,bob,`select count(*)::int n from sessions where id='${sid}'`)).rows[0].n,0);
  } finally { await db.close(); }
 });
+
+test("view-only collaborator can see the canonical player but cannot save a game or change the profile", async () => {
+  const db=await initializeDB();
+  try {
+    const token=(await user(db,alice,`select public.create_player_share_invite('${ownedChild}','parent@example.com','viewer') code`)).rows[0].code;
+    await user(db,bob,`select public.join_shared_player('${token}')`);
+    assert.equal((await user(db,bob,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,1);
+    await assert.rejects(user(db,bob,`insert into sessions(player_id,type,mode) values ('${ownedChild}','game','individual')`));
+    assert.equal((await user(db,bob,`update players set name='Overwritten' where id='${ownedChild}' returning id`)).rows.length,0);
+    assert.equal((await user(db,alice,`select name from players where id='${ownedChild}'`)).rows[0].name,'Caleb');
+  } finally { await db.close(); }
+});
+
+test("separate games transfer only after a per-game duplicate check and preserve shots", async () => {
+  const db=await initializeDB();
+  try {
+    const token=(await user(db,alice,`select public.create_player_share_invite('${ownedChild}','parent@example.com') code`)).rows[0].code;
+    await user(db,bob,`select public.join_shared_player('${token}')`);
+    const primaryGame=(await user(db,alice,`insert into sessions(player_id,type,mode,date,tracker_context)
+      values ('${ownedChild}','game','individual','2026-10-24','{"opponent":"Rivals"}') returning id`)).rows[0].id;
+    const olderGame=(await user(db,bob,`insert into sessions(player_id,type,mode,date,tracker_context)
+      values ('${bobChild}','game','individual','2026-10-24','{"opponent":"Rivals"}') returning id`)).rows[0].id;
+    const shot=(await user(db,bob,`insert into shot_logs(session_id,player_id,zone_id,made)
+      values ('${olderGame}','${bobChild}','paint',true) returning id`)).rows[0].id;
+    await assert.rejects(user(db,bob,`select public.import_shared_game('${bobChild}','${ownedChild}','${olderGame}')`),/POSSIBLE_DUPLICATE_GAME/);
+    assert.equal((await user(db,bob,`select count(*)::int n from sessions where id='${olderGame}' and player_id='${bobChild}'`)).rows[0].n,1);
+    const safeGame=(await user(db,bob,`insert into sessions(player_id,type,mode,date,tracker_context)
+      values ('${bobChild}','game','individual','2026-10-23','{"opponent":"Another Team"}') returning id`)).rows[0].id;
+    const safeShot=(await user(db,bob,`insert into shot_logs(session_id,player_id,zone_id,made)
+      values ('${safeGame}','${bobChild}','paint',false) returning id`)).rows[0].id;
+    assert.equal((await user(db,bob,`select public.import_shared_game('${bobChild}','${ownedChild}','${safeGame}') id`)).rows[0].id,safeGame);
+    assert.equal((await user(db,alice,`select count(*)::int n from sessions where player_id='${ownedChild}'`)).rows[0].n,2);
+    assert.equal((await user(db,alice,`select count(*)::int n from shot_logs where id='${safeShot}' and player_id='${ownedChild}'`)).rows[0].n,1);
+    assert.equal((await user(db,bob,`select count(*)::int n from shot_logs where id='${shot}' and player_id='${bobChild}'`)).rows[0].n,1);
+    assert.equal((await user(db,eve,`select count(*)::int n from sessions where player_id='${ownedChild}'`)).rows[0].n,0);
+    assert.equal((await user(db,alice,`select count(*)::int n from sessions where id='${primaryGame}'`)).rows[0].n,1);
+  } finally { await db.close(); }
+});
