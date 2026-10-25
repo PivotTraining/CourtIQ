@@ -102,8 +102,12 @@ begin
    raise exception 'Only the owning parent can invite collaborators' using errcode='42501';
  end if;
  if p_role not in ('editor','viewer') then raise exception 'Invalid access level'; end if;
- if p_recipient_email is null or length(trim(p_recipient_email))>254
-   or trim(p_recipient_email) !~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+
+ if p_recipient_email is null
+   or length(trim(p_recipient_email)) not between 3 and 254
+   or position('@' in trim(p_recipient_email)) <= 1
+   or position('.' in split_part(trim(p_recipient_email),'@',2))=0 then
+   raise exception 'Valid recipient email required' using errcode='22023';
+ end if;
  if (select count(*) from public.player_share_invites i
      where i.player_id=p_player and i.redeemed_at is null
        and i.expires_at>now())>=5 then
