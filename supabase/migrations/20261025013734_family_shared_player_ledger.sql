@@ -85,7 +85,7 @@ create table public.player_share_invites (
   expires_at timestamptz not null,
   used_by uuid references auth.users(id) on delete set null,
   redeemed_at timestamptz,
-  check ((used_by is null) = (redeemed_at is null))
+  check (redeemed_at is null or redeemed_at>=created_at)
 );
 create index player_share_invites_active_idx on public.player_share_invites(player_id,expires_at)
 where redeemed_at is null;
