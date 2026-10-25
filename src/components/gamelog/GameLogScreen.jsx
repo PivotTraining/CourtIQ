@@ -200,6 +200,7 @@ export default function GameLogScreen() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshRevision, setRefreshRevision] = useState(0);
   const [tab, setTab] = useState("individual"); // individual | team
   const [historyError, setHistoryError] = useState(false);
   const [deleteNotice, setDeleteNotice] = useState("");
@@ -218,6 +219,21 @@ export default function GameLogScreen() {
       .catch(() => { if (active) setHistoryError(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
+  }, [playerId, refreshRevision]);
+
+  // Other parents' completed games appear on this device when it regains focus.
+  // A manual refresh is also available; no background camera or data upload.
+  useEffect(() => {
+    if (!playerId) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") setRefreshRevision(v => v + 1);
+    };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [playerId]);
 
   if (historyError) return <RecordsUnavailable />;
@@ -248,6 +264,14 @@ export default function GameLogScreen() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "0 4px" }}>
       {deleteNotice && <p role="status" style={{ padding: 12, borderRadius: 10, background: "var(--color-muted)", color: "var(--color-text)" }}>{deleteNotice}</p>}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button type="button" onClick={() => setRefreshRevision(v => v + 1)}
+          style={{ minHeight: 44, padding: "8px 14px", borderRadius: 12,
+            border: "1px solid var(--color-border)", background: "var(--color-card)",
+            color: "var(--color-text)", fontWeight: 700, fontSize: 12 }}>
+          Refresh shared stats
+        </button>
+      </div>
       <HistoryFilters sessions={sessions} value={dateFilter} onChange={setDateFilter} />
 
       {/* Individual / Team Tabs */}
