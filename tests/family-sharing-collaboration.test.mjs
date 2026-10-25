@@ -46,8 +46,6 @@ async function initializeDB() {
  await db.exec(await ref("supabase/migrations/20260930171602_web_player_ownership_safeguards.sql"));
  await db.exec(await ref("supabase/migrations/20260930202201_reliable_sessions_and_development.sql"));
  await db.exec(await ref("supabase/migrations/20261014160509_tracker_ownership_alignment.sql"));
- // PGlite may not bundle pgcrypto. When it does, this is a real database ACL test.
- await db.exec(`create schema if not exists extensions; create extension if not exists pgcrypto with schema extensions;`);
  await db.exec(migrationText);
  return db;
 }
@@ -66,7 +64,7 @@ test("two parents can share exactly one player; strangers and viewers cannot edi
    assert.equal((await user(db,bob,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,1);
    assert.equal((await user(db,eve,`select count(*)::int n from players where id='${ownedChild}'`)).rows[0].n,0);
    await assert.rejects(user(db,eve,`select public.join_shared_player('${token}')`));
-   await assert.rejects(user(db,bob,`delete from players where id='${ownedChild}'`));
+   assert.equal((await user(db,bob,`delete from players where id='${ownedChild}' returning id`)).rows.length,0);
    const sid=(await user(db,bob,`insert into sessions(player_id,type,mode) values ('${ownedChild}','game','individual') returning id`)).rows[0].id;
    assert.equal((await user(db,alice,`select count(*)::int n from sessions where id='${sid}'`)).rows[0].n,1);
    assert.equal((await user(db,eve,`select count(*)::int n from sessions where id='${sid}'`)).rows[0].n,0);
