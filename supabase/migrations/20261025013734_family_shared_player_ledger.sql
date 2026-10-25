@@ -230,8 +230,8 @@ begin
   raise exception 'Unexpected tracker function; collaboration patch withheld';
  end if;
  replaced:=regexp_replace(definition,
-   'not exists \([[:space:]]*select 1[[:space:]]*from public\.players[[:space:]]*where id = s\.player_id[[:space:]]*and manager_uid = \(select auth\.uid\(\)\)::text[[:space:]]*\)',
-   'not private.can_edit_player(s.player_id)');
+   'manager_uid[[:space:]]*=[[:space:]]*\(select auth\.uid\(\)\)::text',
+   'private.can_edit_player(s.player_id)');
  if replaced=definition then raise exception 'Tracker ownership guard did not match'; end if;
  execute replaced;
 end $repair$;
