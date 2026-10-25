@@ -42,6 +42,10 @@ returns boolean language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function private.is_player_owner(uuid),
   private.can_read_player(uuid),private.can_edit_player(uuid) from public,anon,authenticated;
+-- RLS evaluates the functions under the authenticated role; grant only EXECUTE.
+-- The private schema itself is not exposed via the Data API.
+grant execute on function private.is_player_owner(uuid),
+  private.can_read_player(uuid),private.can_edit_player(uuid) to authenticated;
 
 create policy collaborators_visible on public.player_collaborators
 for select to authenticated
