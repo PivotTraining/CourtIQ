@@ -108,7 +108,7 @@ begin
  end if;
  code:=replace(gen_random_uuid()::text,'-','') || replace(gen_random_uuid()::text,'-','');
  insert into public.player_share_invites(player_id,token_sha256,role,issued_by,expires_at)
- values(p_player,encode(extensions.digest(code,'sha256'),'hex'),p_role,auth.uid(),now()+interval '24 hours');
+ values(p_player,encode(sha256(convert_to(code,'UTF8')),'hex'),p_role,auth.uid(),now()+interval '24 hours');
  return code;
 end $$;
 revoke all on function public.create_player_share_invite(uuid,text) from public,anon;
@@ -123,7 +123,7 @@ begin
    raise exception 'Invalid sharing invitation' using errcode='22023';
  end if;
  select * into invite from public.player_share_invites i
- where i.token_sha256=encode(extensions.digest(p_code,'sha256'),'hex')
+ where i.token_sha256=encode(sha256(convert_to(p_code,'UTF8')),'hex')
  for update;
  if not found or invite.expires_at<=now() or invite.redeemed_at is not null
  then raise exception 'Invitation expired or already used' using errcode='22023'; end if;
