@@ -1,0 +1,49 @@
+.formiq{--formiq-ink:#edf1f6;--formiq-quiet:#a1a3ac;background:#0b0c10;color:var(--formiq-ink);border-radius:17px;padding:14px;display:grid;gap:13px;min-width:0;overflow:hidden}
+.formiq *{box-sizing:border-box}
+.formiq-heading{display:flex;gap:10px;justify-content:space-between;align-items:start}
+.formiq-heading>div{min-width:0}
+.formiq-kicker{color:#ff996c;font-size:10px;font-weight:850;letter-spacing:1.2px}
+.formiq-heading h4{font-size:19px;font-weight:900;line-height:1.25;margin:5px 0}
+.formiq-heading p{color:var(--formiq-quiet);font-size:12px;line-height:1.6;margin:0}
+.formiq-badge{flex:none;padding:6px 8px;border-radius:999px;background:#29232b;color:#ffb49b;font-weight:850;font-size:9px}
+.formiq-badge.on{color:#5be4a0;background:#15402d}
+.formiq-camera{position:relative;background:#111318;overflow:hidden;min-height:180px;aspect-ratio:4/3;border-radius:14px;border:1px solid #30333b;isolation:isolate}
+.formiq-camera video,.formiq-camera canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.formiq-camera video{z-index:1;object-fit:fill}
+.formiq-camera canvas{z-index:2;touch-action:manipulation}
+.formiq-placeholder{position:absolute;z-index:3;inset:0;display:grid;align-content:center;justify-items:center;gap:10px;padding:12px;text-align:center;background:radial-gradient(ellipse at center,#222934,#0b1016 65%)}
+.formiq-placeholder span{font-size:55px;color:#ff7748;line-height:1}
+.formiq-placeholder strong{font-size:16px;letter-spacing:1.3px}
+.formiq-placeholder small{color:#a7abb6;font-size:11px;line-height:1.5}
+.formiq-target-instruction{position:absolute;z-index:4;left:8px;right:8px;bottom:10px;background:#17191ce0;border:1px solid #d8ff6c;padding:10px;color:#e7ffba;text-align:center;font-size:12px;font-weight:750;border-radius:9px;pointer-events:none}
+.formiq-controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.formiq-controls button{min-height:44px;border-radius:10px;border:1px solid #484958;background:#262a32;color:#e9eaf1;padding:9px 11px;font-size:11px;font-weight:850}
+.formiq-controls .formiq-start{background:#ff6b35;color:white;border:0;flex:1 1 200px}
+.formiq-controls .formiq-stop{background:#562b31;color:#fff;border-color:#88444b}
+.formiq-controls label{display:flex;align-items:center;gap:7px;font-size:11px;color:#d5d8e2}
+.formiq-controls select{height:44px;background:#20232c;color:white;padding:7px;border:1px solid #484958;border-radius:8px;font-size:14px}
+.formiq-measures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.formiq-measures>div{background:#17191f;border:1px solid #343742;border-radius:12px;padding:11px 9px;display:grid;align-content:start;gap:5px;min-width:0}
+.formiq-measures small{color:#adb1ba;font-size:10px}
+.formiq-measures strong{font-weight:900;font-size:27px;line-height:1.1}
+.formiq-measures .formiq-phase{text-transform:capitalize;font-size:17px}
+.formiq-measures span{color:#9297a4;font-size:9px;line-height:1.5;overflow-wrap:anywhere}
+.formiq-legend{display:flex;flex-wrap:wrap;gap:8px 13px;color:#d4d8df;font-size:10px}
+.formiq-legend span{display:inline-flex;align-items:center;gap:6px}
+.formiq-legend i{width:12px;height:4px;border-radius:4px}
+.formiq-legend .green{background:#44d784}.formiq-legend .red{background:#ff5d5d}.formiq-legend .blue{background:#7ed4ff}
+.formiq-capture{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.formiq-capture button{background:#ec743e;color:white;border:0;min-height:45px;border-radius:10px;padding:10px 14px;font-weight:850;font-size:12px}
+.formiq-capture span{font-size:10px;color:#b6b8c1}
+.formiq-error,.formiq-message{font-size:11px;line-height:1.6;margin:0;overflow-wrap:anywhere}
+.formiq-error{color:#ffabab}.formiq-message{color:#d4e4e8}
+.formiq-disclaimer{font-size:10px;line-height:1.65;color:#a4a6af;border-left:3px solid #f19a67;padding-left:10px;margin:0}
+.formiq-disclaimer strong{color:#e2e7f0}
+.formiq-guide{display:grid;gap:10px}
+.formiq-guide>h4{font-size:15px;font-weight:900;margin:7px 0 2px}
+.formiq-tip{background:#1a1a20;border:1px solid #34343d;border-radius:15px;display:flex;gap:13px;align-items:start;padding:15px 13px}
+.formiq-count{flex:none;display:grid;place-items:center;width:39px;height:39px;border-radius:50%;background:rgba(255,107,53,.08);border:1px solid rgba(255,139,64,.35);font-size:15px;font-weight:900;color:#ff9a4b}
+.formiq-tip h5{font-size:15px;line-height:1.35;margin:2px 0 6px;font-weight:900;color:#f3f2f7}
+.formiq-tip p{font-size:12px;line-height:1.6;color:#a2a3ae;margin:0}
+@media(min-width:500px){.formiq{padding:18px}.formiq-measures{grid-template-columns:repeat(4,minmax(0,1fr))}.formiq-measures strong{font-size:23px}}
+@media(max-width:340px){.formiq-badge{font-size:8px}.formiq-controls button{flex:1 1 100%}.formiq-camera{min-height:155px}}

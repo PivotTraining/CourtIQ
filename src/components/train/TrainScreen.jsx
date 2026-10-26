@@ -262,6 +262,12 @@ export default function TrainScreen() {
         <p style={{ fontSize: 12, color: '#DFDCE5', lineHeight: 1.7, marginBottom: 13 }}>Start Finishing Lab: assess, build, adapt and retest across four measurable stages.</p>
         <button type="button" onClick={() => setScreen('skills')} style={{ width: '100%', minHeight: 48, border: 0, borderRadius: 12, background: '#EF6235', fontSize: 13, color: '#FFFFFF', fontWeight: 900, cursor: 'pointer' }}>Open Finishing Lab →</button>
       </section>
+      <section aria-label="Shooting Form IQ training" style={{ marginBottom: 16, padding: 18, borderRadius: 17, background: "#17191F", color: "#F8FAFC", border: "1px solid #343744" }}>
+        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1.2, color: "#FF9C71" }}>SHOOTING MACHINE / LIVE FORM IQ</span>
+        <h2 style={{ margin: "8px 0", fontWeight: 900, fontSize: 21 }}>Film the reps. See the angles.</h2>
+        <p style={{ fontSize: 12, lineHeight: 1.65, color: "#CACDD8", marginBottom: 12 }}>Turn on your camera for live green/red body landmark overlays and elbow/knee angles. Calibrate the basketball to see an approximate, uncalibrated 2D flight trace. Track made and missed shots separately.</p>
+        <button type="button" onClick={() => setScreen("skills")} style={{ minHeight: 47, width: "100%", borderRadius: 11, border: 0, color: "white", background: "#F26937", fontWeight: 900, fontSize: 13 }}>Open Shooting Machine &amp; Form IQ →</button>
+      </section>
       {developmentEnabled && <section className="bg-card rounded-2xl p-4 mb-4 border border-border">
         <h3 className="font-bold text-sm">Saved development work</h3>
         {workoutError && <p role="alert">{workoutError}</p>}

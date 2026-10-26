@@ -55,7 +55,7 @@ export function newMachineDraft(id, createdAt = new Date().toISOString()) {
   return {
     id, createdAt, zone: MACHINE_ZONES[0].id, style: MACHINE_STYLES[0].id,
     target: 100, machine: '', focus: 'Shooting machine', feedSeconds: '', plan: 'custom',
-    notes: '', elapsed: 0, paused: false, entries: [], form: {},
+    notes: '', elapsed: 0, paused: false, entries: [], form: {}, observations: [],
   };
 }
 
@@ -113,6 +113,15 @@ export function machineWorkoutResult(draft) {
   const interval = draft.feedSeconds === '' ? null : Number(draft.feedSeconds);
   if (interval !== null && (!Number.isFinite(interval) || interval < 0.5 || interval > 30))
     throw new Error('Machine feed interval must be between 0.5 and 30 seconds.');
+  const observations = Array.isArray(draft.observations) ? draft.observations : [];
+  if (observations.length > 30 || observations.some(item =>
+    !item || item.method !== 'on-device-movenet-v1' ||
+    !Number.isFinite(Date.parse(item.at)) ||
+    !['set', 'extension'].includes(item.phase) ||
+    !['elbow_angle', 'knee_angle', 'projected_rise_angle'].every(key =>
+      item[key] === null || (Number.isInteger(item[key]) && item[key] >= 0 && item[key] <= 180)) ||
+    (item.wrist_above_shoulder !== null && typeof item.wrist_above_shoulder !== 'boolean')
+  )) throw new Error('Camera observations are invalid. Remove and recapture the affected form data.');
   const elapsed = Number(draft.elapsed);
   if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 86400) throw new Error('Practice duration is invalid.');
   return { id: draft.id, elapsed_seconds: Math.floor(elapsed), drills: [{
@@ -124,7 +133,14 @@ export function machineWorkoutResult(draft) {
       version: MACHINE_VERSION, started_at: draft.createdAt,
       name: safeText(draft.machine, 80), focus: safeText(draft.focus, 100),
       feed_seconds: interval, plan: safeText(draft.plan, 30),
-      notes: safeText(draft.notes, 1500), form: Object.fromEntries(
+      notes: safeText(draft.notes, 1500),
+      observations: observations.map(item => ({
+        at: item.at, phase: item.phase, elbow_angle: item.elbow_angle,
+        knee_angle: item.knee_angle, wrist_above_shoulder: item.wrist_above_shoulder,
+        projected_rise_angle: item.projected_rise_angle, method: 'on-device-movenet-v1',
+        arc_method: item.projected_rise_angle === null ? null : '2d-colour-track-uncalibrated',
+      })),
+      form: Object.fromEntries(
         FORM_CUES.map(cue => [cue.id, draft.form?.[cue.id] === true])),
       entries: draft.entries.map(row => ({
         id: row.id, zone: row.zone, style: row.style, makes: row.makes,

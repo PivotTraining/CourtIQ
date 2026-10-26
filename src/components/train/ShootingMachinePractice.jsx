@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import SessionVideo from '@/components/shots/SessionVideo';
+import LiveShootingAnalyzer from './LiveShootingAnalyzer';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 import {
   FORM_CUES, MACHINE_PLANS, MACHINE_STYLES, MACHINE_ZONES, machineCsv, machineDraftKey,
@@ -125,6 +126,13 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     }
     record(makes, attempts, 'machine-display');
   };
+  const captureFormObservation = observation => {
+    if (!isCurrent || savedId || saving || pendingConfirmation) throw new Error('Finish or start a new workout before capturing more observations.');
+    if (!observation || observation.method !== 'on-device-movenet-v1' ||
+        !Number.isFinite(Date.parse(observation.at))) throw new Error('Unrecognized camera observation.');
+    if ((draft.observations || []).length >= 30) throw new Error('This workout already has 30 observations. Save it before capturing more.');
+    setDraft(current => ({ ...current, observations: [...(current.observations || []), observation] }));
+  };
   const undo = () => {
     if (!draft || savedId || saving || pendingConfirmation) return;
     setDraft(current => ({ ...current, entries: current.entries.slice(0, -1) }));
@@ -224,7 +232,13 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         </div>
       </div>
       <div className="machine-section">
-        <h4>2. Choose a shooting location</h4><p className="machine-hint">Left and right are from the shooter’s view facing the rim. Select a new spot when the machine moves.</p>
+        <h4>2. Analyze form while shooting</h4>
+        <p className="machine-hint">See live red/green joint overlays and an optional uncalibrated ball trace. You can still train or save shots without the camera.</p>
+        <LiveShootingAnalyzer onObservation={captureFormObservation} disabled={pendingConfirmation || saving} />
+        <p className="machine-hint">{(draft.observations || []).length}/30 on-device form observations captured with this draft.</p>
+      </div>
+      <div className="machine-section">
+        <h4>3. Choose a shooting location</h4><p className="machine-hint">Left and right are from the shooter’s view facing the rim. Select a new spot when the machine moves.</p>
         <div className="machine-zones" role="group" aria-label="Shooting location">
           {MACHINE_ZONES.map(zone => {
             const line = summary.perZone.find(item => item.id === zone.id);
@@ -239,7 +253,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         </select></label>
       </div>
       <div className="machine-section">
-        <h4>3. Record shots</h4><p className="machine-hint">Choose one method. Tap each make/miss, or enter the total shown by the machine for this spot. Do not record the same shots twice.</p>
+        <h4>4. Record shots</h4><p className="machine-hint">Choose one method. Tap each make/miss, or enter the total shown by the machine for this spot. Do not record the same shots twice.</p>
         <div className="machine-shot-buttons">
           <button type="button" className="machine-made" disabled={saving || pendingConfirmation || draft.entries.length >= 5000} onClick={() => record(1, 1, 'tap')}>+ Made</button>
           <button type="button" className="machine-missed" disabled={saving || pendingConfirmation || draft.entries.length >= 5000} onClick={() => record(0, 1, 'tap')}>+ Missed</button>
@@ -254,7 +268,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
           <button type="button" onClick={undo} disabled={!draft.entries.length || saving || pendingConfirmation}>Undo last entry</button></div>
       </div>
       <div className="machine-section">
-        <h4>4. Live session measurements</h4>
+        <h4>5. Live session measurements</h4>
         <div className="machine-metrics">
           <div><strong>{summary.attempts}</strong><span>Attempts</span></div>
           <div><strong>{summary.makes}</strong><span>Made</span></div>
@@ -275,7 +289,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <p className="machine-hint">Percentages are calculated from manually entered outcomes, not camera detection. Goal progress can exceed 100% if you shoot extra attempts.</p>
       </div>
       <div className="machine-section">
-        <h4>5. Video-review checklist and notes</h4>
+        <h4>6. Video-review checklist and notes</h4>
         <p className="machine-hint">Use these cues while watching film. Checking a box means someone reviewed it; CourtIQ is not estimating release angle, arc, or mechanical quality.</p>
         <div className="machine-form-cues">{FORM_CUES.map(cue =>
           <label key={cue.id}><input type="checkbox" disabled={pendingConfirmation} checked={draft.form?.[cue.id] === true} onChange={event =>
@@ -321,6 +335,13 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
           <span key={style.id}>{style.label}: {style.makes}/{style.attempts} · {valueOrDash(style.pct)}</span>)}</div>
         <strong>Video-review observations</strong>
         <p>{selectedDetail.machine.notes || 'No notes were entered for this session.'}</p>
+        {(selectedDetail.machine.observations || []).length > 0 && <div className="machine-form-history">
+          <strong>Saved on-device form measurements ({selectedDetail.machine.observations.length})</strong>
+          {selectedDetail.machine.observations.slice(-8).map((item, index) => <p key={item.at + index}>
+            {new Date(item.at).toLocaleTimeString()} · {item.phase} · Elbow {item.elbow_angle ?? '—'}° · Knee {item.knee_angle ?? '—'}° · Image-plane ball rise {item.projected_rise_angle ?? '—'}°
+          </p>)}
+          <p>These are uncalibrated camera observations, not verified shooting-form scores or true 3D ball-flight measurements.</p>
+        </div>}
         <p>{FORM_CUES.filter(cue => selectedDetail.machine.form?.[cue.id])
           .map(cue => cue.label).join(' · ') || 'No form cues marked as reviewed.'}</p>
       </div>}
