@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { fetchActiveSessions, fetchTrackerSession, createTrackerSession, applySessionCommand } from '@/lib/queries';
-import { EMPTY_GAME_STATS, loadRecovery, saveRecovery, projectCommand, flushRecovery, recoveryKey, recordedPeriodScoring, recordedGameResult } from '@/lib/sessionRecovery.mjs';
+import { EMPTY_GAME_STATS, loadRecovery, saveRecovery, projectCommand, recoveryKey, recordedPeriodScoring, recordedGameResult } from '@/lib/sessionRecovery.mjs';
 import { COURT_ZONES } from '@/lib/constants';
 import CourtTrackerView from './CourtTrackerView';
 import AdvancedSessionReport from './AdvancedSessionReport';
@@ -12,6 +12,7 @@ import SessionTimeline from './SessionTimeline';
 import GameContextForm from './GameContextForm';
 import GameTrackerRecorder from './GameTrackerRecorder';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
+import { drainLiveEntries } from '@/lib/liveEntryQueue.mjs';
 
 export default function ReliableTracker({ onClose, darkMode, onToggleTheme, quickStart = false }) {
   const { playerId, player, refreshData } = useApp();
@@ -27,6 +28,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   const valueRef = useRef(null);
   const identity = useRef(`${accountId}:${playerId}`);
   const busyRef = useRef(false);
+  const syncPromiseRef=useRef(null),endingRef=useRef(false);
   const [active, setActive] = useState([]);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +45,8 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   const [timeline, setTimeline] = useState(false);
   const [showContext, setShowContext] = useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
+  const [ending,setEnding]=useState(false);
+  const [keepZone,setKeepZone]=useState(false);
 
   const persist = next => {
     if (identity.current !== `${accountId}:${playerId}`) throw new Error('Account changed.');
@@ -56,6 +60,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     const expected = `${accountId}:${playerId}`;
     identity.current = expected;
     valueRef.current = null; busyRef.current = false;
+    syncPromiseRef.current=null;endingRef.current=false;setEnding(false);
     setValue(null); setReady(false); setActive([]); setBusy(false); setConflict(false); setError('');
     let alive = true;
     async function load() {
@@ -120,37 +125,72 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     return () => window.removeEventListener('beforeunload', warn);
   }, []);
 
-  async function sync(next = valueRef.current) {
-    if (!next || busyRef.current) return false;
-    busyRef.current = true; setBusy(true); setError('');
-    const expected = `${accountId}:${playerId}`;
-    try {
-      setStatus('Syncing…');
-      await flushRecovery(next, backend.applySessionCommand, persist, () => identity.current === expected);
-      setStatus('Saved to your account');
-      return true;
-    } catch (err) {
-      if (identity.current !== expected) return false;
-      const stale = err.code === '40001' || String(err.message).includes('SESSION_CONFLICT');
-      setConflict(stale);
-      setStatus(stale ? 'Another device changed this game — sync stopped' : 'Entries saved on this device — not yet synced');
-      setError(stale ? 'No competing edits were overwritten. Download your pending entries before resolving this game.' : 'Sync failed. Your queued entries are still on this device. Reconnect and retry before signing out.');
-      return false;
-    } finally { if (identity.current === expected) { busyRef.current = false; setBusy(false); } }
+  async function sync() {
+    if(syncPromiseRef.current)return syncPromiseRef.current;
+    if(!valueRef.current?.pending.length)return true;
+    if(busyRef.current || conflict)return false;
+    const expected=`${accountId}:${playerId}`;
+    const work=(async()=>{
+      setBusy(true);
+      try{
+        setStatus('Syncing queued game entries…');
+        await drainLiveEntries({
+          getCurrent:()=>valueRef.current,
+          persist,
+          send:backend.applySessionCommand,
+          isCurrent:()=>identity.current===expected,
+        });
+        if(identity.current!==expected)return false;
+        setStatus('All game entries saved to your account');
+        setError('');
+        return true;
+      }catch(err){
+        if(identity.current!==expected)return false;
+        const stale=err.code==='40001' || String(err.message).includes('SESSION_CONFLICT');
+        setConflict(stale);
+        setStatus(stale?'Another device changed this game — sync stopped':
+          'Entries queued on this device — tap Retry sync');
+        setError(stale?
+          'A competing change was detected. Pending entries were kept. Download them before resolving.':
+          'Connection failed. Every accepted tap remains queued locally. Retry sync when reconnected.');
+        return false;
+      }finally{
+        if(identity.current===expected)setBusy(false);
+      }
+    })();
+    syncPromiseRef.current=work;
+    try{return await work;}finally{
+      if(syncPromiseRef.current===work)syncPromiseRef.current=null;
+      // A command can land between the last queue check and releasing the
+      // promise. Never leave it stranded after a successful drain.
+      if(identity.current===expected && valueRef.current?.pending.length && !conflict
+        && !syncPromiseRef.current) {
+        // Network errors are retried by the explicit control or 'online' event,
+        // not continuously in a tight loop.
+      }
+    }
   }
 
-  async function entry(payload) {
-    if (busyRef.current || conflict || !valueRef.current) return;
-    try {
-      const current = valueRef.current;
-      const command = { id: crypto.randomUUID(), sessionId: current.snapshot.session.id,
-        version: current.snapshot.session.tracker_version,
-        payload: { ...payload, period: teamControls?.period ?? period, clock: teamControls?.clock ?? clock, recorded_at: new Date().toISOString() } };
-      const next = { ...current, snapshot: projectCommand(current.snapshot, command), pending: [...current.pending, command] };
+  function entry(payload,permitEnding=false) {
+    if(busyRef.current || conflict || (endingRef.current&&!permitEnding) || !valueRef.current)return false;
+    try{
+      const current=valueRef.current;
+      if(current.snapshot.session.tracker_status!=='active')return false;
+      const command={id:crypto.randomUUID(),sessionId:current.snapshot.session.id,
+        version:current.snapshot.session.tracker_version,
+        payload:{...payload,period:teamControls?.period??period,clock:teamControls?.clock??clock,
+          recorded_at:new Date().toISOString()}};
+      const next={...current,snapshot:projectCommand(current.snapshot,command),
+        pending:[...current.pending,command]};
+      // Synchronously commit to durable device recovery BEFORE reporting input.
       persist(next);
-      setStatus(`${next.pending.length} entries on this device — not yet synced`);
-      return await sync(next);
-    } catch (err) { setError(err.message || 'This device could not save the entry. It was not recorded.'); return false; }
+      setStatus(`${next.pending.length} accepted game ${next.pending.length===1?'entry':'entries'} queued on this device`);
+      void sync();
+      return true;
+    }catch(err){
+      setError(err.message||'This device could not save the entry. It was not recorded.');
+      return false;
+    }
   }
 
   async function start() {
@@ -193,11 +233,43 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   }
   async function finish() {
     if(mediaBusy){setError('Stop the game recording and finish saving its video before ending the session.');return;}
-    if (valueRef.current?.pending.length && !await sync()) return;
-    if (await entry({ kind: 'end' })) {
-      window.localStorage.removeItem(recoveryKey(accountId, playerId));
+    if(endingRef.current)return;
+    endingRef.current=true;setEnding(true);
+    try{
+      if(valueRef.current?.pending.length && !await sync())return;
+      if(!entry({kind:'end'},true))return;
+      if(!await sync())return;
+      window.localStorage.removeItem(recoveryKey(accountId,playerId));
       await refreshData();
-    }
+    }finally{endingRef.current=false;setEnding(false);}
+  }
+
+  function correctEvent(target,patch){
+    if(busyRef.current||conflict||endingRef.current||!valueRef.current)return false;
+    try{
+      const current=valueRef.current;
+      const original=current.snapshot.events.find(event=>event.id===target);
+      if(!original||!['stat','shot'].includes(original.payload.kind))throw new Error('Only shot and stat entries can be corrected.');
+      const alreadyReversed=current.snapshot.events.some(event=>
+        event.payload.kind==='reverse'&&event.payload.target===target);
+      if(alreadyReversed)throw new Error('This entry was already reversed.');
+      const now=new Date().toISOString();
+      const reversal={id:crypto.randomUUID(),sessionId:current.snapshot.session.id,
+        version:current.snapshot.session.tracker_version,
+        payload:{kind:'reverse',target,period:original.payload.period,
+          clock:original.payload.clock,recorded_at:now}};
+      const reversed=projectCommand(current.snapshot,reversal);
+      const replacement={id:crypto.randomUUID(),sessionId:current.snapshot.session.id,
+        version:reversed.session.tracker_version,
+        payload:{...original.payload,...patch,kind:original.payload.kind,
+          recorded_at:now,corrects:original.id}};
+      const corrected=projectCommand(reversed,replacement);
+      const next={...current,snapshot:corrected,pending:[...current.pending,reversal,replacement]};
+      persist(next);
+      setStatus('Correction queued locally. Original entry remains in the audit trail.');
+      void sync();
+      return true;
+    }catch(err){setError(err.message||'Correction not recorded.');return false;}
   }
 
   const snapshot = value?.snapshot;
@@ -240,7 +312,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     <div role="status" aria-live="polite">{status}</div>
     <div className="tracker-tool-row">
       {value.pending.length > 0 && <button style={inputStyle} disabled={busy || conflict} onClick={() => sync()}>Retry sync ({value.pending.length})</button>}
-      <button style={inputStyle} onClick={() => setTimeline(!timeline)} aria-expanded={timeline}>Entries</button>
+      <button style={inputStyle} onClick={() => setTimeline(!timeline)} aria-expanded={timeline}>Entries & corrections</button>
       {!teamControls && <button style={inputStyle} onClick={() => { setContext(snapshot.session.tracker_context); setShowContext(!showContext); }} aria-expanded={showContext}>Game details</button>}
       <button style={inputStyle} onClick={() => {
         if(mediaBusy){setError('Stop and save the game video before leaving the stat tracker.');return;}
@@ -255,18 +327,25 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       <p className="tracker-hint">Manual clock reference; player minutes are recorded separately. Period numbers beyond the selected format represent overtime.</p>
     </div>}
     {showContext && <><GameContextForm value={context} onChange={setContext} /><button style={inputStyle} disabled={busy || conflict} onClick={async () => { if (await entry({ kind: 'context', context })) setShowContext(false); }}>Save game details</button></>}
-    {timeline && <SessionTimeline events={snapshot.events} busy={busy || conflict} reverse={id => entry({ kind: 'reverse', target: id })} />}
+    {timeline && <SessionTimeline events={snapshot.events} busy={conflict || ending} reverse={id => entry({ kind: 'reverse', target: id })} onCorrect={correctEvent} />}
   </section>;
   return <CourtTrackerView sessionType={snapshot.session.type} shots={shots} selectedZone={selectedZone} selectZone={setSelectedZone}
     gameStats={stats} updateStat={(key, delta) => entry({ kind: 'stat', key, delta })}
-    saving={busy || conflict} ending={false} saveError={error} tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
+    saving={conflict || ending} ending={ending} saveError={error} tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
     courtTheme={courtTheme} setCourtTheme={setCourtTheme} undoCount={reversible.length}
     undoLast={() => entry({ kind: 'reverse', target: reversible.at(-1)?.id })} endSession={teamControls ? () => {
        if(mediaBusy){setError('Stop and save the recording before returning to the team.');return;}
        onClose();
      } : finish}
     endLabel={teamControls ? 'Back to team' : 'End session'} headerTitle={teamControls?.roster.find(player => player.id === playerId)?.name}
-    logShot={made => { entry({ kind: 'shot', zone_id: selectedZone, made }); setSelectedZone(null); }}
+    keepZone={keepZone} setKeepZone={setKeepZone}
+    period={teamControls?.period??period}
+    setPeriod={teamControls?()=>{}:setPeriod}
+    clock={teamControls?.clock??clock}
+    setClock={teamControls?()=>{}:setClock}
+    gameContext={snapshot.session.tracker_context}
+    onEditGame={()=>{setContext(snapshot.session.tracker_context||context);setShowContext(true);}}
+    logShot={made => { if(entry({ kind: 'shot', zone_id: selectedZone, made }) && !keepZone) setSelectedZone(null); }}
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools}
      videoDock={snapshot.session.type==='game'?
        <GameTrackerRecorder accountId={accountId} sessionId={snapshot.session.id}
