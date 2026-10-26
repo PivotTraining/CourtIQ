@@ -72,6 +72,30 @@ export async function importSharedGame(sourcePlayerId, destinationPlayerId, sess
   }));
 }
 
+// A fusion never adds two copies of the same basket. The chosen shot
+// ledger is authoritative; individual box-score fields select their source.
+export async function fuseSharedGame(canonicalSessionId, sourceSessionId, fieldSources, shootingSource) {
+  return checked(await getSupabase().rpc("fuse_shared_game", {
+    p_canonical: canonicalSessionId,
+    p_source: sourceSessionId,
+    p_fields: fieldSources,
+    p_shooting: shootingSource,
+  }));
+}
+
+export async function undoSharedGameFusion(fusionId) {
+  return checked(await getSupabase().rpc("undo_shared_game_fusion", {
+    p_fusion: fusionId,
+  }));
+}
+
+export async function fetchSharedGameFusions(sessionIds) {
+  if (!sessionIds?.length) return [];
+  return readAll(() => getSupabase().from("shared_game_fusions")
+    .select("id,canonical_session_id,source_session_id,field_sources,shooting_source,created_at,reversed_at")
+    .in("source_session_id",sessionIds).is("reversed_at",null));
+}
+
 export async function addManagedPlayer(firebaseUid, player) {
   return requireSavedRow(await getSupabase()
     .from("players")
