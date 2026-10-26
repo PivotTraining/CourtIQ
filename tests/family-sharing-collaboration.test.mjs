@@ -120,3 +120,44 @@ test("separate games transfer only after a per-game duplicate check and preserve
     assert.equal((await user(db,alice,`select count(*)::int n from sessions where id='${primaryGame}'`)).rows[0].n,1);
   } finally { await db.close(); }
 });
+
+test("same-game fusion selects one authoritative shot ledger and field sources, then Undo restores originals", async () => {
+ const db=await initializeDB();
+ try {
+  const mergeMigration=await ref("supabase/migrations/20261026090919_reconcile_shared_game_records.sql");
+  await db.exec(mergeMigration);
+  const token=(await user(db,alice,`select public.create_player_share_invite('${ownedChild}','parent@example.com') code`)).rows[0].code;
+  await user(db,bob,`select public.join_shared_player('${token}')`);
+  const target=(await user(db,alice,`insert into sessions(player_id,type,date,mode,tracker_context,game_stats)
+    values('${ownedChild}','game','2026-10-24','individual','{"opponent":"Rivals"}','{"ast":1,"reb":3,"stl":2}')
+    returning id`)).rows[0].id;
+  const originalShot=(await user(db,alice,`insert into shot_logs(session_id,player_id,zone_id,made)
+    values('${target}','${ownedChild}','paint',true) returning id`)).rows[0].id;
+  const source=(await user(db,bob,`insert into sessions(player_id,type,date,mode,tracker_context,game_stats)
+    values('${bobChild}','game','2026-10-24','individual','{"opponent":"Rivals"}','{"ast":4,"reb":7,"stl":1}')
+    returning id`)).rows[0].id;
+  await user(db,bob,`insert into shot_logs(session_id,player_id,zone_id,made)
+    values('${source}','${bobChild}','left-corner-3',true),
+          ('${source}','${bobChild}','top-key-3',false)`);
+  await assert.rejects(user(db,eve,`select public.fuse_shared_game('${target}','${source}','{"ast":"source"}'::jsonb,'source')`));
+  const fusionId=(await user(db,bob,`select public.fuse_shared_game('${target}','${source}',
+    '{"ast":"source","reb":"source","stl":"canonical"}'::jsonb,'source') id`)).rows[0].id;
+  const canonical=(await user(db,alice,`select game_stats,tracker_version from sessions where id='${target}'`)).rows[0];
+  assert.equal(canonical.game_stats.ast,4);
+  assert.equal(canonical.game_stats.reb,7);
+  assert.equal(canonical.game_stats.stl,2);
+  assert.equal(canonical.tracker_version,1);
+  assert.equal((await user(db,alice,`select count(*)::int n from shot_logs where session_id='${target}'`)).rows[0].n,2);
+  assert.equal((await user(db,alice,`select count(*)::int n from sessions where player_id='${ownedChild}' and type='game'`)).rows[0].n,1);
+  assert.equal((await user(db,bob,`select count(*)::int n from shot_logs where session_id='${source}'`)).rows[0].n,2);
+  await assert.rejects(user(db,bob,`select public.fuse_shared_game('${target}','${source}','{}'::jsonb,'canonical')`));
+  assert.equal((await user(db,bob,`select public.undo_shared_game_fusion('${fusionId}') reverted`)).rows[0].reverted,true);
+  const restored=(await user(db,alice,`select game_stats,tracker_version from sessions where id='${target}'`)).rows[0];
+  assert.equal(restored.game_stats.ast,1);
+  assert.equal(restored.game_stats.reb,3);
+  assert.equal(restored.game_stats.stl,2);
+  assert.equal(restored.tracker_version,2);
+  assert.equal((await user(db,alice,`select count(*)::int n from shot_logs where session_id='${target}' and id='${originalShot}'`)).rows[0].n,1);
+  await assert.rejects(user(db,bob,`select public.undo_shared_game_fusion('${fusionId}')`));
+ } finally { await db.close(); }
+});
