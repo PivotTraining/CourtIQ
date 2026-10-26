@@ -1,0 +1,31 @@
+.game-video-dock{flex-shrink:0;margin:2px 14px 9px;padding:10px 11px;border:1px solid #854c3f;border-radius:14px;background:linear-gradient(125deg,#171b24,#2b1d1b);color:#f8f9fc;display:grid;gap:8px}
+.game-video-heading{display:flex;align-items:center;justify-content:space-between;gap:9px;min-width:0}
+.game-video-heading>div{display:grid;gap:3px;min-width:0}
+.game-video-heading strong{font-size:12px;font-weight:900;letter-spacing:1px;color:#ffb38b}
+.game-video-heading span{font-size:10px;line-height:1.5;color:#ced3da}
+.game-video-heading>span{white-space:nowrap;font-size:11px;color:#d5dbe3;font-weight:800}
+.game-video-heading>span.game-video-live{color:#ff8b96}
+.game-video-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.game-video-actions button,.game-video-actions select,.game-video-saved button,.game-video-pending button{min-height:44px;padding:9px 11px;background:#282d3b;color:#f8fbff;border:1px solid #576476;border-radius:10px;font-size:11px;font-weight:800}
+.game-video-actions button:disabled{opacity:.45}
+.game-video-actions button.game-record-primary{background:#d32638;border-color:#fa6472;color:white;font-size:13px;flex:1 1 126px}
+.game-video-actions button.game-record-stop{background:#b72235;border-color:#f7707d;color:white;flex:1 1 136px}
+.game-video-consent{flex:1 1 100%;display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:#f1f4fa;line-height:1.45}
+.game-video-consent input{accent-color:#e96840;width:18px;height:18px;min-width:18px}
+.game-video-camera{position:relative;width:100%;height:clamp(132px,21dvh,220px);background:#080a0f;overflow:hidden;border-radius:10px;border:1px solid #49515c}
+.game-video-camera video{display:block;width:100%;height:100%;object-fit:contain;background:#080a0f}
+.game-video-camera p{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;background:#0b101de3;margin:0}
+.game-video-counter{position:absolute;top:8px;left:8px;padding:5px 8px;font-size:12px;font-weight:900;background:#a61122e6;color:white;border-radius:7px}
+.game-video-saved{background:#222b34;border:1px solid #526273;border-radius:10px;padding:10px}
+.game-video-saved summary{cursor:pointer;min-height:38px;font-size:11px;font-weight:800}
+.game-video-saved video{width:100%;max-height:230px;object-fit:contain;border-radius:7px;background:#080a0f;margin:5px 0}
+.game-video-pending{background:#421d23;border:1px solid #e7838c;border-radius:10px;padding:10px;display:flex;flex-wrap:wrap;gap:8px}
+.game-video-pending strong,.game-video-pending p{flex:1 1 100%;margin:0;font-size:11px}
+.game-video-pending p{color:#ffced3;line-height:1.55}
+.game-video-pending button{border-color:#d5b1b6}
+.game-video-error,.game-video-info{font-size:11px;line-height:1.55;margin:0;overflow-wrap:anywhere}
+.game-video-error{color:#ffb1b1}
+.game-video-info{color:#bdf5d7}
+.game-video-note{font-size:10px;line-height:1.5;color:#b8c3d1;margin:0}
+@media(min-width:700px){.game-video-dock{max-width:990px;margin:4px auto 10px;width:calc(100% - 28px)}.game-video-camera{height:220px}}
+@media(max-width:360px){.game-video-dock{margin-left:7px;margin-right:7px;padding:8px}.game-video-actions button{flex-grow:1}}
