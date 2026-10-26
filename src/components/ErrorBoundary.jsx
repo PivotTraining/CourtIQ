@@ -31,7 +31,7 @@ export default class ErrorBoundary extends Component {
 
       return (
         <div style={{
-          minHeight: "100vh",
+          minHeight: this.props.contained ? 320 : "100vh",
           background: "var(--color-bg)",
           display: "flex",
           flexDirection: "column",
