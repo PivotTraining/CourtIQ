@@ -18,7 +18,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lottie-web": "^5.13.0",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "stripe": "23.0.0"
@@ -33,13 +33,14 @@
     },
     "next": {
       "postcss": "8.5.28"
-    }
+    },
+    "dompurify": "3.4.17"
   },
   "devDependencies": {
-    "@eslint/compat": "2.1.1",
-    "@next/eslint-plugin-next": "14.2.35",
     "@electric-sql/pglite": "0.5.8",
+    "@eslint/compat": "2.1.1",
     "@eslint/eslintrc": "^3.3.6",
+    "@next/eslint-plugin-next": "14.2.35",
     "@tailwindcss/postcss": "^4.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "15.5.27",
