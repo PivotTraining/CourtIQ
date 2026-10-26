@@ -1,8 +1,9 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  FORM_STEPS, JOINT_LINKS, findBallInFrame, makeFormObservation,
-  observedRiseAngle, poseMetrics, referenceState, sampleBallColour,
+  FORM_STEPS, JOINT_LINKS, findBallInFrame, freshExtensionDetector,
+  makeFormObservation, observedRiseAngle, poseMetrics, referenceState,
+  sampleBallColour, trackExtensionPattern,
 } from '@/lib/liveShootingAnalytics.mjs';
 import './live-shooting.css';
 
@@ -58,21 +59,29 @@ function drawOverlay(canvas,points,metric,ball,trail,stage) {
   }
 }
 
-export default function LiveShootingAnalyzer({ onObservation, disabled=false }) {
+export default function LiveShootingAnalyzer({ onObservation, disabled=false, remaining=30 }) {
   const videoRef=useRef(null),overlayRef=useRef(null),frameRef=useRef(null);
   const detectorRef=useRef(null),streamRef=useRef(null),rafRef=useRef(null);
   const generation=useRef(0),observationRef=useRef(null),ballColour=useRef(null);
+  const extensionRef=useRef(freshExtensionDetector()),onObservationRef=useRef(onObservation);
+  onObservationRef.current=onObservation;
+  const remainingRef=useRef(remaining),autoRef=useRef(false);
+  remainingRef.current=remaining;
+  const disabledRef=useRef(disabled);disabledRef.current=disabled;
   const ballPosition=useRef(null),trailRef=useRef([]),lastTime=useRef(0),lastBallAt=useRef(0),lastRiseAt=useRef(0);
   const [status,setStatus]=useState('idle'),[error,setError]=useState('');
   const [hand,setHand]=useState('right'),[metric,setMetric]=useState(null);
   const [rise,setRise]=useState(null),[ballPick,setBallPick]=useState(false);
   const [ballStatus,setBallStatus]=useState('not-calibrated'),[observations,setObservations]=useState(0);
   const [message,setMessage]=useState('');
+  const [autoCapture,setAutoCapture]=useState(false),[facing,setFacing]=useState('environment');
+  const [lastCapture,setLastCapture]=useState(null);autoRef.current=autoCapture;
   const handRef=useRef(hand);handRef.current=hand;
   const statusRef=useRef(status);statusRef.current=status;
 
   const release=useCallback((reset=true)=>{
     ++generation.current;
+    extensionRef.current=freshExtensionDetector();
     if(rafRef.current!==null)cancelAnimationFrame(rafRef.current);
     rafRef.current=null;
     const stream=streamRef.current;streamRef.current=null;
@@ -99,11 +108,13 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
     setStatus('starting');setError('');setMessage('Requesting camera and preparing pose tracking…');
     observationRef.current=null;ballColour.current=null;ballPosition.current=null;
     trailRef.current=[];lastBallAt.current=0;lastRiseAt.current=0;setRise(null);setBallStatus('not-calibrated');
+    extensionRef.current=freshExtensionDetector();
+    setMetric(null);
     let stream;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not expose camera access.');
       stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:15,max:30}},
+        video:{facingMode:{ideal:facing},width:{ideal:640},height:{ideal:480},frameRate:{ideal:15,max:30}},
         audio:false,
       });
       if(id!==generation.current){stream.getTracks().forEach(t=>t.stop());return;}
@@ -140,6 +151,17 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
             const data=poseMetrics(points,handRef.current);
             observationRef.current=data;
             setMetric(data);
+            const event=trackExtensionPattern(extensionRef.current,data,time);
+            extensionRef.current=event.state;
+            if(event.capture && autoRef.current && !disabledRef.current && remainingRef.current>0){
+              try{
+                const record={ ...makeFormObservation(data,null), trigger:'extension-pattern-v1' };
+                onObservationRef.current?.(record);
+                remainingRef.current-=1;
+                setObservations(old=>old+1);
+                setLastCapture({type:'Possible release-like extension',at:record.at});
+              }catch{setAutoCapture(false);autoRef.current=false;setError('Automatic capture stopped. Review the draft and use manual capture.');}
+            }
             const surface=frame.getContext('2d',{willReadFrequently:true});
             let ball=null,trail=trailRef.current;
             if(surface&&ballColour.current){
@@ -198,10 +220,13 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
   };
   const snapshot=()=>{
     try{
-      const item=makeFormObservation(observationRef.current,rise);
-      onObservation?.(item);
+      if(disabledRef.current || remainingRef.current<=0)throw new Error('This draft has reached its 30-observation limit.');
+      const item={...makeFormObservation(observationRef.current,rise),trigger:'manual'};
+      onObservationRef.current?.(item);
+      remainingRef.current-=1;
       setObservations(old=>old+1);
-      setMessage('Form angles saved to this draft. They will reach Practice history when you save the session.');
+      setLastCapture({type:'Manual form frame',at:item.at});
+      setMessage('Form angles captured in this draft. Save the machine workout to add them to history.');
       setError('');
     }catch(cause){setError(strip(cause?.message));}
   };
@@ -227,10 +252,20 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
       {status==='active'||status==='starting'?<button type="button" className="formiq-stop" onClick={()=>release()}>Stop camera</button>:
         <button type="button" className="formiq-start" disabled={disabled||status==='starting'} onClick={start}>
           {status==='starting'?'Loading pose model…':'Start camera & live analysis'}</button>}
-      <label>Shot hand <select value={hand} onChange={event=>setHand(event.target.value)} disabled={disabled}>
+      <label>Shot hand <select value={hand} onChange={event=>{setHand(event.target.value);extensionRef.current=freshExtensionDetector();}} disabled={disabled}>
         <option value="right">Right</option><option value="left">Left</option>
       </select></label>
+      <label>Camera <select value={facing} onChange={event=>setFacing(event.target.value)} disabled={status==='active'||status==='starting'}>
+        <option value="environment">Rear</option><option value="user">Front</option>
+      </select></label>
       {status==='active'&&<button type="button" onClick={()=>{setBallPick(true);setMessage('Tap the orange ball in the camera view while it is still.');}}>⌖ Calibrate ball</button>}
+    </div>
+    <div className="formiq-autocapture">
+      <label><input type="checkbox" checked={autoCapture} onChange={event=>{setAutoCapture(event.target.checked);extensionRef.current=freshExtensionDetector();}} disabled={disabled||remaining<=0} />
+        <span><strong>Auto-capture release-like arm extensions</strong><small>Opt-in · requires a visible set posture, then extended shooting arm. Captures form snapshots only. Not a shot counter.</small></span>
+      </label>
+      <span className="formiq-capacity">{remaining} of 30 draft slots left</span>
+      {lastCapture && <p role="status">{lastCapture.type} captured · {new Date(lastCapture.at).toLocaleTimeString()}</p>}
     </div>
     <div className="formiq-measures" role="status" aria-live="off">
       <div><small>Shooting elbow</small><strong style={{color:ink(refs.elbow)}}>{show(metric?.elbow)}</strong><span>{refs.elbow==='unavailable'?'Move into frame':refs.elbow==='reference'?'In phase reference':'Review this frame'}</span></div>
@@ -240,12 +275,12 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
     </div>
     <div className="formiq-legend"><span><i className="green" /> Within phase reference</span><span><i className="red" /> Review position</span><span><i className="blue" /> Tracked body</span></div>
     {status==='active'&&<div className="formiq-capture">
-      <button type="button" disabled={disabled||!metric?.visible} onClick={snapshot}>Save current form observation</button>
-      <span>{observations} captured in this view</span>
+      <button type="button" disabled={disabled||!metric?.visible||remaining<=0} onClick={snapshot}>Save current form observation</button>
+      <span>{observations} captured in this view · {remaining} available in draft</span>
     </div>}
     {error&&<p className="formiq-error" role="alert">{error}</p>}
     {message&&<p className="formiq-message" role="status">{message}</p>}
-    <p className="formiq-disclaimer">Green/red lines are illustrative coaching reference ranges, not a pass/fail diagnosis. The ball trace is a rough 2D image-plane rise angle, <strong>not calibrated 3D arc, release angle, entry angle, or a make/miss detector</strong>. Best results: tripod, full body and ball visible, side-on view, bright contrasting background. Camera frames stay on this device; no automatic video recording or cloud upload.</p>
+    <p className="formiq-disclaimer">Green/red lines are illustrative coaching reference ranges, not a pass/fail diagnosis. The ball trace is a rough 2D image-plane rise angle, <strong>not calibrated 3D arc, release angle, entry angle, or a make/miss detector</strong>. Best results: tripod, full body and ball visible, side-on view, bright contrasting background. Release-like automatic observations do not represent makes, attempts, or verified shots. Camera frames stay on this device; no automatic video recording or cloud upload.</p>
     <div className="formiq-guide"><h4>Six checkpoints for a repeatable shot</h4>
       {FORM_STEPS.map((item,index)=><article className="formiq-tip" key={item.id}>
         <span className="formiq-count">{index+1}</span>
