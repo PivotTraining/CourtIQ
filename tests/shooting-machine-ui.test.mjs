@@ -20,7 +20,7 @@ function input(h, value) {
   assert.ok(found, 'Missing input with value: ' + value);
   return found;
 }
-async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
+async function setup(onSave, accountId = 'family-a', playerId = 'caleb', videoStoreFailTimes = 0) {
   const memory = new Map();
   const storage = {
     getItem: k => memory.has(k) ? memory.get(k) : null,
@@ -30,6 +30,7 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
   const h = reactHarness();
   let sequence = 0;
   const clipWrites=[];
+  let videoStorageFailures=videoStoreFailTimes;
   const Video = () => null;
   const Analyzer = () => null;
   const { default: Component } = await loadComponent(source, {
@@ -37,7 +38,7 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
     '@/context/AuthContext': { useAuth: () => ({ user: { id: accountId } }) },
     '@/components/shots/SessionVideo': Video,
     '@/lib/deviceVideo.mjs': {
-      createDeviceVideoStore:()=>({put:async(...args)=>{clipWrites.push(args);return {};} }),
+      createDeviceVideoStore:()=>({put:async(...args)=>{clipWrites.push(args);if(videoStorageFailures>0){videoStorageFailures--;throw new Error('Device quota');}return {};} }),
       validateClip: blob => {if(!(blob instanceof Blob) || !['video/mp4','video/webm'].includes(blob.type))throw new Error('Invalid film.');},
     },
     './LiveShootingAnalyzer': Analyzer,
@@ -47,6 +48,7 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
     crypto: { randomUUID: () => 'uuid-' + (++sequence) },
     window: { localStorage: storage, confirm: () => true },
     setInterval: () => 1, clearInterval: () => {}, Date,
+    URL: {createObjectURL:()=> 'blob:local-clip-preview',revokeObjectURL:()=>{}},
   });
   h.render(Component, { playerId, records: [], canSave: true, onSave }); h.flush();
   return { h, memory, storage, Component, Video, Analyzer, clipWrites };
@@ -162,5 +164,26 @@ test('late camera recording from first player cannot attach to second player', a
   oldAnalyzer.props.onClipReady(new Blob(['old-child'],{type:'video/mp4'}));h.flush();
   assert.doesNotMatch(visibleText(h.output),/Annotated clip ready/);
   assert.equal(clipWrites.length,0);
+  h.unmount();
+});
+
+test('if the local video write fails after stats save, user can retry the clip without duplicating a workout',async()=>{
+  let saves=0;
+  const {h,Analyzer,clipWrites}=await setup(async result=>{saves++;return {...result,player_id:'caleb'};},
+    'family-a','caleb',1);
+  button(h,'Start machine practice').props.onClick();h.flush();
+  button(h,'+ Made').props.onClick();h.flush();
+  findElement(h.output,node=>node.type===Analyzer).props.onClipReady(new Blob(['camera'],{type:'video/mp4'}));
+  h.flush();
+  const local=findElement(h.output,node=>node.type==='video' && node.props['aria-label']==='Review annotated shooting video before saving');
+  assert.ok(local,'user can preview video before saving stats');
+  await button(h,'Finish and save practice').props.onClick();await h.settle();
+  assert.equal(saves,1);
+  assert.equal(clipWrites.length,1);
+  assert.match(visibleText(h.output),/Practice statistics saved/);
+  await button(h,'Retry attaching video to saved practice').props.onClick();await h.settle();
+  assert.equal(saves,1,'only video is retried, never the remote stats write');
+  assert.equal(clipWrites.length,2);
+  assert.match(visibleText(h.output),/Annotated video saved locally/);
   h.unmount();
 });
