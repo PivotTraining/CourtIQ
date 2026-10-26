@@ -36,7 +36,7 @@ function StatInputs({ stats, updateStat, busy, compact = false }) {
 
 export default function CourtTrackerView({ sessionType, shots, selectedZone, selectZone, gameStats, updateStat,
   saving, ending, saveError, tab, setTab, darkMode, onToggleTheme, courtTheme, setCourtTheme,
-  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, endLabel = 'End session', headerTitle }) {
+  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, videoDock, endLabel = 'End session', headerTitle }) {
   const busy = saving || ending;
   const selected = COURT_ZONES.find(zone => zone.id === selectedZone);
   const dialogRef = useRef(null);
@@ -70,6 +70,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </button>
       </header>
       {saveError && <div className="tracker-error" role="alert">{saveError}</div>}
+      {videoDock}
       <div className="tracker-tabs" aria-label="Tracking view">
         {['court', 'stats'].map(value => <button key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>
           <Icon name={value === 'court' ? 'basketball' : 'barChart'} size={16} />{value === 'court' ? 'Shot chart' : 'Box score'}
