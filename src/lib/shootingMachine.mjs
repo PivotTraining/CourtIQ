@@ -90,7 +90,14 @@ export function machineSummary(entries) {
     const made = matching.reduce((sum, row) => sum + row.makes, 0);
     return { attempts: taken, makes: made, pct: taken ? Math.round(made * 100 / taken) : null };
   };
-  return { attempts, makes, misses: attempts - makes,
+  const perStyle = MACHINE_STYLES.map(style => {
+    const shots = entries.filter(entry => entry.style === style.id);
+    const taken = shots.reduce((sum, entry) => sum + entry.attempts, 0);
+    const made = shots.reduce((sum, entry) => sum + entry.makes, 0);
+    return { ...style, attempts: taken, makes: made,
+      pct: taken ? Math.round(made * 100 / taken) : null };
+  });
+  return { attempts, makes, misses: attempts - makes, perStyle,
     pct: attempts ? Math.round(makes * 100 / attempts) : null,
     threes: split(3), twos: split(2), freeThrows: split(1),
     perZone, populatedZones: perZone.filter(row => row.attempts > 0) };
