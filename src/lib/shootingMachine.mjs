@@ -21,6 +21,18 @@ export const MACHINE_STYLES = [
   { id: 'movement', label: 'On the move / relocation' },
   { id: 'free-throw', label: 'Free throws' },
 ];
+export const MACHINE_PLANS = [
+  { id: 'custom', label: 'Custom machine workout', goal: 100, style: 'catch-shoot', first: 'left-corner',
+    instruction: 'Choose any spot, style, and number of attempts.' },
+  { id: 'five-spot', label: '5 spots · 100 catch-and-shoot threes', goal: 100, style: 'catch-shoot', first: 'left-corner',
+    instruction: '20 shots each: left corner, left wing, top, right wing, right corner.' },
+  { id: 'midrange', label: 'Midrange · 100 shots', goal: 100, style: 'catch-shoot', first: 'left-baseline',
+    instruction: '20 shots each: left baseline, left elbow, paint, right elbow, right baseline.' },
+  { id: 'free-throws', label: 'Free throws · 50 shots', goal: 50, style: 'free-throw', first: 'free-throw',
+    instruction: 'Use the same routine on all 50 attempts. Log the machine display when complete.' },
+  { id: 'moving', label: 'Game-speed movement · 75 threes', goal: 75, style: 'movement', first: 'left-corner',
+    instruction: '15 attempts at each of five three-point locations at a manageable feed pace.' },
+];
 export const FORM_CUES = [
   { id: 'feet', label: 'Feet ready and balanced' },
   { id: 'alignment', label: 'Shoulders and hips aligned' },
@@ -42,7 +54,7 @@ export function newMachineDraft(id, createdAt = new Date().toISOString()) {
   if (!id || !Number.isFinite(Date.parse(createdAt))) throw new Error('Start a valid practice.');
   return {
     id, createdAt, zone: MACHINE_ZONES[0].id, style: MACHINE_STYLES[0].id,
-    target: 100, machine: '', focus: 'Shooting machine', feedSeconds: '',
+    target: 100, machine: '', focus: 'Shooting machine', feedSeconds: '', plan: 'custom',
     notes: '', elapsed: 0, paused: false, entries: [], form: {},
   };
 }
@@ -91,6 +103,9 @@ export function machineWorkoutResult(draft) {
   if (!summary.attempts) throw new Error('Record at least one attempt before saving.');
   const goal = Number(draft.target);
   if (!Number.isSafeInteger(goal) || goal < 1 || goal > 10000) throw new Error('Set a target from 1 to 10,000 shots.');
+  const interval = draft.feedSeconds === '' ? null : Number(draft.feedSeconds);
+  if (interval !== null && (!Number.isFinite(interval) || interval < 0.5 || interval > 30))
+    throw new Error('Machine feed interval must be between 0.5 and 30 seconds.');
   const elapsed = Number(draft.elapsed);
   if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 86400) throw new Error('Practice duration is invalid.');
   return { id: draft.id, elapsed_seconds: Math.floor(elapsed), drills: [{
@@ -101,7 +116,7 @@ export function machineWorkoutResult(draft) {
     machine: {
       version: MACHINE_VERSION, started_at: draft.createdAt,
       name: safeText(draft.machine, 80), focus: safeText(draft.focus, 100),
-      feed_seconds: draft.feedSeconds === '' ? null : Number(draft.feedSeconds),
+      feed_seconds: interval, plan: safeText(draft.plan, 30),
       notes: safeText(draft.notes, 1500), form: Object.fromEntries(
         FORM_CUES.map(cue => [cue.id, draft.form?.[cue.id] === true])),
       entries: draft.entries.map(row => ({
