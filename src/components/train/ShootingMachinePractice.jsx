@@ -22,7 +22,7 @@ const formatDate = date => {
   return Number.isFinite(parsed.getTime()) ? parsed.toLocaleDateString() : 'Unknown date';
 };
 
-export default function ShootingMachinePractice({ playerId, records = [], canSave = false, onSave }) {
+export default function ShootingMachinePractice({ playerId, records = [], canSave = false, onSave, onVerify }) {
   const { user } = useAuth();
   const accountId = user?.id;
   const key = accountId && playerId ? machineDraftKey(accountId, playerId) : null;
@@ -46,6 +46,8 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const [filmPlayback,setFilmPlayback] = useState('unverified');
   const [filmSaving,setFilmSaving] = useState(false);
   const [cameraRecording,setCameraRecording] = useState(false);
+  const [verifyStatus,setVerifyStatus] = useState('idle');
+  const [verifyMessage,setVerifyMessage] = useState('');
 
   useEffect(()=>{
     const clip=pendingFilmRef.current;
@@ -74,6 +76,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
       pendingFilmRef.current=null;setPendingFilmSize(0);setFilmRevision(v=>v+1);
     }
     setCameraRecording(false);
+    setVerifyStatus('idle');setVerifyMessage('');
     if (!key) { setDraft(null); return; }
     let restored = null;
     try {
@@ -228,6 +231,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         }catch(err){filmIssue=err.message||'Local video storage failed.';}
       }
       setSavedId(result.id);
+      setVerifyStatus('unverified');setVerifyMessage('You can independently confirm this result was stored in the player cloud history.');
       setSelectedVideoId(filmSaved || !filmed ? result.id : null);
       setExpanded(false);
       setMessage(filmIssue ?
@@ -253,11 +257,29 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     setDraft(newMachineDraft(crypto.randomUUID()));
     setSavedId(null);
     setSelectedVideoId(null);
+    setVerifyStatus('idle');setVerifyMessage('');
     setMessage('');
     setError('');
     setBulkMakes('0');
     setBulkAttempts('25');
     setExpanded(true);
+  };
+  const verifyCloud=async()=>{
+    if(!savedId||!isCurrent||!onVerify||verifyStatus==='checking')return;
+    setVerifyStatus('checking');setVerifyMessage('Checking the server for the saved result…');
+    try{
+      const row=await onVerify(savedId);
+      if(scopeRef.current!==key || row?.id!==savedId || row?.player_id!==playerId)
+        throw new Error('The server did not confirm this player and result.');
+      setVerifyStatus('confirmed');
+      setVerifyMessage('Verified: this shooting-machine workout was retrieved from the player\'s cloud history.');
+    }catch(err){
+      if(scopeRef.current===key){
+        setVerifyStatus('error');
+        setVerifyMessage((err?.message||'Cloud verification failed.')+
+          ' Do not delete your local video or backup until verification succeeds.');
+      }
+    }
   };
   const retryFilmStorage=async()=>{
     const clip=pendingFilmRef.current;
@@ -421,7 +443,15 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         aria-label="Preview unsaved annotated shooting video" />}
     </div>}
     {draft && savedId === draft.id && <div className="machine-saved">
-      <h4>Session saved</h4><p>{summary.makes} of {summary.attempts} · {valueOrDash(summary.pct)} · {formatTime(draft.elapsed)} active time</p>
+      <h4>Session saved</h4>
+      {onVerify && <div className="machine-cloud-verification">
+        <button type="button" disabled={verifyStatus==='checking'} onClick={verifyCloud}>
+          {verifyStatus==='checking'?'Checking cloud history…':'Verify saved workout in cloud'}
+        </button>
+        <p role="status" className={verifyStatus==='error'?'machine-verify-failed':'machine-verify-status'}>
+          {verifyMessage || 'Verify that the server can retrieve this workout under the selected player.'}
+        </p>
+      </div>}<p>{summary.makes} of {summary.attempts} · {valueOrDash(summary.pct)} · {formatTime(draft.elapsed)} active time</p>
       <p>Your shots are saved as practice, not game stats. Add a short clip below or begin another workout.</p>
     </div>}
     {history.length > 0 && <section className="machine-history" aria-label="Previous shooting machine workouts">
