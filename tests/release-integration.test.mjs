@@ -45,7 +45,7 @@ test('reviewed lint-only replacement retains all 21 Next rules and their severit
   for (const [names, severity] of [[errors, 2], [warnings, 1]])
     for (const name of names) assert.equal(config.rules[`@next/next/${name}`][0], severity, name);
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
-  assert.equal(pkg.dependencies.next, '15.5.27');
+  assert.equal(pkg.dependencies.next, '15.5.28'); // Security-patched Next.js release
   assert.equal(pkg.devDependencies['eslint-config-next'], '15.5.27');
 });
 
