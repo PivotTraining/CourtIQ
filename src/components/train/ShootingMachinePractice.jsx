@@ -266,10 +266,10 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
             setDraft(current => ({ ...current, form: { ...current.form, [cue.id]: event.target.checked } }))} />{cue.label}</label>)}</div>
         <label className="machine-notes">Coaching observations<textarea maxLength={1500} rows={3} value={draft.notes}
           onChange={event => change('notes', event.target.value)} placeholder="What improved? What did you notice about footwork, release, rhythm, and fatigue?" /></label>
-        <p className="machine-hint">Film with the phone Camera, then save a short clip here after the workout. If using one phone for filming, enter the machine's shot totals when filming is done. Keep the original recording in Photos or another backup.</p>
+        <p className="machine-hint">Film with the phone Camera, then save a short clip here after the workout. If using one phone for filming, enter the machine&apos;s shot totals when filming is done. Keep the original recording in Photos or another backup.</p>
       </div>
       <footer className="machine-finish">
-        <div><strong>Save to this player's Practice history</strong>
+        <div><strong>Save to this player&apos;s Practice history</strong>
           <p>{canSave ? 'Saving confirms the player and stores these measurements in the account.' : 'Cloud saving is not enabled or history has not loaded. Export before leaving.'}</p>
         </div>
         <div className="machine-finish-buttons">
