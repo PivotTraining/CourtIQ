@@ -25,6 +25,8 @@ test('machine and manually tapped shots produce exact location and type percenta
   assert.equal(totals.perZone.find(row => row.id === 'left-wing').pct, 72);
   assert.equal(totals.perZone.find(row => row.id === 'right-wing').pct, null);
   assert.equal(totals.populatedZones.length, 4);
+  assert.deepEqual([totals.perStyle.find(row => row.id === 'catch-shoot').attempts,
+    totals.perStyle.find(row => row.id === 'catch-shoot').makes], [51, 30]);
 });
 
 test('all zone names are distinct and carry only supported point categories', () => {
@@ -106,6 +108,8 @@ test('UI exposes account save gating, manual-entry methods, video attachment, an
   assert.match(component, /'machine-display'/);
   assert.match(component, /'tap'/);
   assert.match(component, /<SessionVideo/);
+  assert.match(component, /frozenResult/);
+  assert.match(component, /setDetailId/);
   assert.match(component, /never changes game statistics/);
   assert.match(skills, /<ShootingMachinePractice/);
 });
