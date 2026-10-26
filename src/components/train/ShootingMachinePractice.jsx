@@ -352,7 +352,9 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
               aria-label="Review annotated shooting video before saving" />
             <p role="status">{filmPlayback==='unplayable'
               ? 'This browser cannot play the recording. Download the original and do not discard the session video.'
-              : filmPlayback==='metadata-loaded'
+              : filmPlayback==='played'
+                ? 'The video advanced in this browser. Review the full clip to confirm that the tracking lines stay aligned.'
+                : filmPlayback==='metadata-loaded'
                 ? 'Clip metadata loaded. Play it to confirm the recording includes the shooting overlays.'
                 : 'Review this local clip before saving the workout.'}</p>
           </div>}
