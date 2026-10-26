@@ -86,8 +86,6 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   async function enableCamera(recordNow=false){
     if(!accountId||!sessionId||workingRef.current||recorderRef.current)return;
     if(!consent){setError('Confirm you have permission to record everyone visible first.');return;}
-    if(recordNow && saved &&
-        !window.confirm('This game already has a saved video clip on this device. A new successful recording replaces its device copy. Download the existing video first. Continue?'))return;
     setError('');setInfo('');
     markBusy(true);setState('starting');setVisible(true);
     let stream=null;
@@ -117,7 +115,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   function startCapture(){
     if(workingRef.current||recorderRef.current?.state==='recording'||!cameraRef.current)return;
     if(!consent){setError('Filming permission is required before recording.');return;}
-    if(saved&&!window.confirm('Replace the existing device-only game clip after the new recording is safely saved? Download the current clip first.'))return;
+    if(saved&&!window.confirm('A game video is already saved here. Download it before replacing it. Replace this copy after a successful new recording?'))return;
     setError('');setInfo('');
     const MediaRecorderCtor=globalThis.MediaRecorder;
     const type=supportedRecordingType(MediaRecorderCtor);
@@ -218,11 +216,11 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       {recording&&<button type="button" className="game-record-stop" onClick={stopRecording}>■ Stop &amp; save clip</button>}
       {cameraRef.current&&!recording&&<button type="button" onClick={()=>{stopCamera();setVisible(false);}} disabled={state==='saving'}>Close camera</button>}
     </div>
-    {(visible||state==='starting'||recording)&&<div className="game-video-camera" aria-label="What the camera is recording">
+    <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting' && !recording}>
       <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview" />
       {state==='starting'&&<p>Opening camera…</p>}
       {recording&&<span className="game-video-counter">● REC {elapsed}</span>}
-    </div>}
+    </div>
     {saved?.blob&&<details className="game-video-saved"><summary>Review saved game video · {(saved.blob.size/1048576).toFixed(1)} MB</summary>
       {videoUrl&&<video src={videoUrl} controls playsInline preload="metadata" aria-label="Saved game clip playback" />}
       <button type="button" onClick={()=>download(saved.blob)}>Download saved video backup</button>
