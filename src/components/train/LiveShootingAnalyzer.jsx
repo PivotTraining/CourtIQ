@@ -362,7 +362,7 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
         <span role="status">{recording?'● REC '+Math.floor(recordSeconds/60)+':'+String(recordSeconds%60).padStart(2,'0'):'Video recording OFF'}</span>
       </div>
       {recordNote&&<p role="status">{recordNote}</p>}
-      <small>Local device recording requires browser support and explicit consent. Limited to 4 minutes / 100 MB. Stop recording before saving the workout. Saving will attach the clip only to this player's workout on this device.</small>
+      <small>Local device recording requires browser support and explicit consent. Limited to 4 minutes / 100 MB. Stop recording before saving the workout. Saving will attach the clip only to this player&apos;s workout on this device.</small>
     </div>
     <div className="formiq-autocapture">
       <label><input type="checkbox" checked={autoCapture} onChange={event=>{setAutoCapture(event.target.checked);extensionRef.current=freshExtensionDetector();}} disabled={disabled||remaining<=0} />
