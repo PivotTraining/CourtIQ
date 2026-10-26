@@ -140,20 +140,25 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
         if(!aliveRef.current)return;
         setState('saving');savingRef.current=true;
         setInfo('Finishing game recording…');
+        let retainedClip=false;
         try{
           const blob=collector.finish(rec.mimeType||type);
           validateClip(blob);
           setPending(blob); // retained if IndexedDB quota prevents attaching
+          retainedClip=true;
           const stored=await storeRef.current.put(accountId,sessionId,blob);
           if(!aliveRef.current||ownerRef.current!==JSON.stringify([accountId,sessionId]))return;
-          setSaved(stored);setPending(null);
+          setSaved(stored);setPending(null);retainedClip=false;
           setInfo('Game clip saved locally with this session. Review it and download a backup. Stats remain separate.');
           setError('');
         }catch(cause){
           if(aliveRef.current)setError('Game video could not be stored: '+explain(cause)+' The finished clip is kept in this open tab; download it before leaving.');
         }finally{
           savingRef.current=false;
-          if(aliveRef.current){setState(cameraRef.current?'preview':'idle');markBusy(false);}
+          if(aliveRef.current){
+            setState(retainedClip?'needs-backup':cameraRef.current?'preview':'idle');
+            markBusy(retainedClip);
+          }
         }
       };
       rec.start(1000);
@@ -178,13 +183,18 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   async function retryStorage(){
     if(!pending||savingRef.current)return;
     markBusy(true);setState('saving');setError('');
+    let attached=false;
     try{
       const record=await storeRef.current.put(accountId,sessionId,pending);
+      attached=true;
       if(!aliveRef.current)return;
       setSaved(record);setPending(null);
       setInfo('Recovered and saved game video locally.');
     }catch(cause){if(aliveRef.current)setError('Local video save failed: '+explain(cause));}
-    finally{if(aliveRef.current){setState(cameraRef.current?'preview':'idle');markBusy(false);}}
+    finally{if(aliveRef.current){
+      setState(attached?(cameraRef.current?'preview':'idle'):'needs-backup');
+      markBusy(!attached);
+    }}
   }
 
   const download=(blob)=>{
@@ -229,6 +239,11 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       <p>Do not close the tracker until you download this clip or retry saving it.</p>
       <button type="button" onClick={()=>download(pending)}>Download unsaved clip</button>
       <button type="button" onClick={retryStorage} disabled={state==='saving'}>Retry video save</button>
+      <button type="button" onClick={()=>{
+        if(!window.confirm('Only continue if you saved the downloaded video outside CourtIQ. Remove the unsaved device-only recording from this tab?'))return;
+        setPending(null);setError('');setInfo('Unattached local video discarded after backup acknowledgment.');
+        setState(cameraRef.current?'preview':'idle');markBusy(false);
+      }}>I backed up my clip. Continue</button>
     </div>}
     {error&&<p className="game-video-error" role="alert">{error}</p>}
     {info&&<p className="game-video-info" role="status">{info}</p>}
