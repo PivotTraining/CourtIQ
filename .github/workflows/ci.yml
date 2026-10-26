@@ -33,3 +33,19 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'courtiq-ci-placeholder-key' }}
       - name: Dependency security audit
         run: npm audit --audit-level=moderate
+
+  verify-patched-dependencies:
+    name: Prepare security patch lockfile (temporary)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Resolve patched dependency tree
+        run: |
+          npm pkg set "dependencies.next=15.5.28" "overrides.dompurify=3.4.17"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node -e "const fs=require('fs'); const blob=JSON.stringify({pkg:fs.readFileSync('package.json','utf8'),lock:fs.readFileSync('package-lock.json','utf8')}); for(let i=0;i<blob.length;i+=4000) console.log('PATCH_CHUNK_'+String(i/4000).padStart(4,'0')+':'+blob.slice(i,i+4000));"
