@@ -56,7 +56,7 @@ async function workspace(loadResults = async () => [], saveResult = async (playe
   const dependencies = { react: h.react, '@/context/AppContext': { useApp: () => ({ playerId: 'alice' }) },
     '@/lib/drillBank': { DRILL_BANK, DRILL_CATEGORIES, SKILL_LEVELS: [{ id: 'beginner', label: 'Beginner' }] }, '@/lib/skillPractice.mjs': policy,
     '@/lib/queries': {}, '@/components/ui/Icons': () => null, './DrillWalkthrough': () => null, './PracticeOutlook': () => null, './SkillPracticeSession': () => null,
-    './FinishingLab': () => null, '@/lib/adaptiveFinishing.mjs': await import('../src/lib/adaptiveFinishing.mjs') };
+    './FinishingLab': () => null, './ShootingMachinePractice': () => null, '@/lib/adaptiveFinishing.mjs': await import('../src/lib/adaptiveFinishing.mjs') };
   const loaded = await loadComponent(sourceUrl, dependencies, { process: { env: {} }, AbortController, setTimeout: () => 1, clearTimeout() {} });
   h.render(loaded.SkillsWorkspace, { playerId: 'alice', preview: true, loadResults, saveResult });
   await h.settle();
