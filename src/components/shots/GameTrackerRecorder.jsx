@@ -19,6 +19,7 @@ const explain = cause => {
 
 export default function GameTrackerRecorder({ accountId, sessionId, playerName='', onBusyChange, storeFactory=STORE }) {
   const videoRef=useRef(null),cameraRef=useRef(null),recorderRef=useRef(null),timerRef=useRef(null);
+  const requestRef=useRef(0),cameraTimeoutRef=useRef(null);
   const aliveRef=useRef(false),ownerRef=useRef(JSON.stringify([accountId,sessionId]));
   const workingRef=useRef(false),savingRef=useRef(false);
   const storeRef=useRef(null);
@@ -29,6 +30,10 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   const [consent,setConsent]=useState(false),[error,setError]=useState(''),[info,setInfo]=useState('');
   const [saved,setSaved]=useState(null),[pending,setPending]=useState(null),[videoUrl,setVideoUrl]=useState('');
   const [visible,setVisible]=useState(false);
+  const clearCameraTimeout=useCallback(()=>{
+    if(cameraTimeoutRef.current!==null)clearTimeout(cameraTimeoutRef.current);
+    cameraTimeoutRef.current=null;
+  },[]);
 
   const markBusy=useCallback(value=>{
     workingRef.current=value;
@@ -51,6 +56,34 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     }
   },[]);
 
+  const cancelCameraStartup=()=>{
+    ++requestRef.current;
+    clearCameraTimeout();
+    stopCamera();
+    if(aliveRef.current){
+      setState('idle');setVisible(false);
+      markBusy(false);
+      setInfo('Camera startup cancelled. Tap Record game to try again.');
+    }
+  };
+
+  // Let React paint the visible video before asking Safari to play it.
+  // Never block camera startup or recording on the play() promise.
+  useEffect(()=>{
+    if((state!=='preview' && state!=='recording') || !cameraRef.current)return;
+    const node=videoRef.current;
+    if(!node)return;
+    node.muted=true;node.playsInline=true;
+    try{
+      const promise=node.play();
+      if(promise?.catch)promise.catch(()=>{
+        if(aliveRef.current)setInfo('Camera connected. Tap the video preview to display the live picture.');
+      });
+    }catch{
+      setInfo('Camera connected. Tap the preview to display the live picture.');
+    }
+  },[state]);
+
   useEffect(()=>{
     aliveRef.current=true;
     const owner=ownerRef.current;
@@ -69,13 +102,14 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     document.addEventListener('visibilitychange',handleVisibility);
     return ()=>{
       live=false;aliveRef.current=false;
+      ++requestRef.current;clearCameraTimeout();
       document.removeEventListener('visibilitychange',handleVisibility);
       stopRecording();
       stopCamera();
       // The parent should not unmount while saving. Still release media
       // rather than leave the hardware camera on after navigation.
     };
-  },[accountId,sessionId,stopCamera,stopRecording]);
+  },[accountId,sessionId,stopCamera,stopRecording,clearCameraTimeout]);
 
   useEffect(()=>{
     if(!saved?.blob){setVideoUrl('');return;}
@@ -86,29 +120,47 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   async function enableCamera(recordNow=false){
     if(!accountId||!sessionId||workingRef.current||recorderRef.current)return;
     if(!consent){setError('Confirm you have permission to record everyone visible first.');return;}
-    setError('');setInfo('');
-    markBusy(true);setState('starting');setVisible(true);
+    const token=++requestRef.current;
+    const owner=ownerRef.current;
+    setError('');setInfo('Opening the camera… If prompted, allow camera access.');
+    setVisible(true);setState('starting');markBusy(true);
+    cameraTimeoutRef.current=setTimeout(()=>{
+      if(!aliveRef.current||token!==requestRef.current)return;
+      ++requestRef.current;
+      stopCamera();markBusy(false);setVisible(false);setState('idle');
+      setError('The camera took too long to respond. Try again in Safari, check camera permission, or close another app using your camera.');
+    },10000);
     let stream=null;
     try{
-      if(!navigator.mediaDevices?.getUserMedia)throw new Error('The camera is unavailable. Open the app over HTTPS in Safari or Chrome.');
-      stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{ideal:cameraFace},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:24,max:30}},
-        audio:false,
-      });
-      if(!aliveRef.current){stream.getTracks().forEach(track=>track.stop());return;}
+      if(!navigator.mediaDevices?.getUserMedia)
+        throw new Error('Camera access is unavailable here. Open https://app.getcourtiq.com in Safari or Chrome and allow camera access.');
+      // Start light: requesting 720p/30fps can keep Safari busy before the preview appears.
+      const constraints={video:{facingMode:{ideal:cameraFace},width:{ideal:640},
+        height:{ideal:480},frameRate:{ideal:15}},audio:false};
+      try {
+        stream=await navigator.mediaDevices.getUserMedia(constraints);
+      }catch(cause){
+        // Some iOS camera devices reject advanced constraints despite having a camera.
+        if(!['OverconstrainedError','ConstraintNotSatisfiedError','NotFoundError'].includes(cause?.name))throw cause;
+        stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      }
+      if(!aliveRef.current||token!==requestRef.current||ownerRef.current!==owner){
+        stream.getTracks().forEach(track=>track.stop());return;
+      }
       cameraRef.current=stream;
       const node=videoRef.current;
-      if(!node)throw new Error('The live camera preview could not initialize.');
+      if(!node)throw new Error('Camera preview could not initialize. Close the game camera and try again.');
       node.srcObject=stream;node.muted=true;node.playsInline=true;
-      await node.play();
-      if(!aliveRef.current){stopCamera();return;}
-      setState('preview');
-      markBusy(false);
+      // Video playback is handled by the effect AFTER the visible camera node renders.
+      // Awaiting node.play() here stalled startup on some mobile browsers.
+      clearCameraTimeout();setState('preview');markBusy(false);
       if(recordNow)startCapture();
-      else setInfo('Live camera preview on. Frame the court, then press Record game.');
+      else setInfo('Camera connected. The live view should appear above the stat controls.');
     }catch(cause){
       stream?.getTracks().forEach(track=>track.stop());
-      if(aliveRef.current){setState('idle');setError(explain(cause));markBusy(false);}
+      if(!aliveRef.current||token!==requestRef.current)return;
+      cameraRef.current=null;clearCameraTimeout();
+      setVisible(false);setState('idle');setError(explain(cause));markBusy(false);
     }
   }
 
@@ -220,15 +272,17 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
         <option value="environment">Rear camera</option><option value="user">Front camera</option>
       </select>
       {!cameraRef.current&&!recording&&<button type="button" className="game-record-primary" disabled={!consent||state==='starting'||state==='saving'}
-        onClick={()=>enableCamera(true)}>● Record game</button>}
+        onClick={()=>enableCamera(true)}>{state==='starting'?'Opening camera…':'● Record game'}</button>}
+      {state==='starting'&&<button type="button" onClick={cancelCameraStartup}>Cancel camera startup</button>}
       {!cameraRef.current&&!recording&&<button type="button" disabled={!consent||state==='starting'||state==='saving'} onClick={()=>enableCamera(false)}>Preview camera</button>}
       {cameraRef.current&&!recording&&<button type="button" className="game-record-primary" disabled={state==='saving'||!consent} onClick={startCapture}>● Record game</button>}
       {recording&&<button type="button" className="game-record-stop" onClick={stopRecording}>■ Stop &amp; save clip</button>}
       {cameraRef.current&&!recording&&<button type="button" onClick={()=>{stopCamera();setVisible(false);}} disabled={state==='saving'}>Close camera</button>}
     </div>
     <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting' && !recording}>
-      <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview" />
-      {state==='starting'&&<p>Opening camera…</p>}
+      <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview"
+        onClick={()=>{try{videoRef.current?.play()?.catch(()=>setError('Video preview could not play. Try Safari with camera permission enabled.'));}catch{setError('Live preview could not play in this browser.');}}} />
+      {state==='starting'&&<p>Connecting to your camera… You can cancel and retry.</p>}
       {recording&&<span className="game-video-counter">● REC {elapsed}</span>}
     </div>
     {saved?.blob&&<details className="game-video-saved"><summary>Review saved game video · {(saved.blob.size/1048576).toFixed(1)} MB</summary>

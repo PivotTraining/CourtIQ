@@ -4,10 +4,13 @@ import {readFile} from 'node:fs/promises';
 import {loadComponent, reactHarness, findElement} from './helpers/reactHarness.mjs';
 import * as recording from '../src/lib/formIqRecording.mjs';
 
-async function fixture({saved=null, fail=false, recorderSupported=true}={}) {
+async function fixture({saved=null, fail=false, recorderSupported=true, neverPlay=false, pendingCamera=false}={}) {
   const h=reactHarness(), writes=[],busy=[],downloads=[],stopped=[];
+  let allowCamera;
+  const waitForCamera=new Promise(resolve=>{allowCamera=resolve;});
   const stream={getTracks(){return [{stop(){stopped.push('camera');}}];}};
-  const video={srcObject:null,muted:false,playsInline:false,async play(){},pause(){}};
+  const video={srcObject:null,muted:false,playsInline:false,
+    play(){return neverPlay?new Promise(()=>{}):Promise.resolve();},pause(){}};
   class Recorder {
     static isTypeSupported(type){return recorderSupported && type.startsWith('video/mp4');}
     constructor(source,options){this.stream=source;this.mimeType=options.mimeType;this.state='inactive';}
@@ -41,11 +44,11 @@ async function fixture({saved=null, fail=false, recorderSupported=true}={}) {
     {
       navigator:{mediaDevices:{getUserMedia:async constraints=>{
         assert.equal(constraints.audio,false);
-        return stream;
+        return pendingCamera?waitForCamera:stream;
       }}},
       MediaRecorder:Recorder,
       Blob,performance:{now:()=>100},
-      setInterval:()=>1,clearInterval:()=>{},
+      setInterval:()=>1,clearInterval:()=>{},setTimeout:()=>2,clearTimeout:()=>{},
       URL:{createObjectURL:()=> 'blob:game-video',revokeObjectURL(){}},
       document:{hidden:false,addEventListener(){},removeEventListener(){}},
       window:{confirm:()=>true},
@@ -60,7 +63,7 @@ async function fixture({saved=null, fail=false, recorderSupported=true}={}) {
   consent.props.onChange({target:{checked:true}});h.flush();
   const button=label=>findElement(h.output,node=>node.type==='button' &&
     [node.props.children].flat(Infinity).join('')===label);
-  return {h,button,stream,video,writes,busy,downloads,stopped};
+  return {h,button,stream,video,writes,busy,downloads,stopped,allowCamera};
 }
 
 test('in-game recording opens visible preview and captures silent clip while tracking session stays open',async()=>{
@@ -104,4 +107,40 @@ test('in-game view mounts game video outside court and stats conditional',async(
   assert.match(screen,/snapshot\.session\.type==='game'/);
   assert.match(screen,/logShot=\{made =>/);
   assert.match(screen,/logFreeThrow=\{made =>/);
+});
+
+test('a stalled Safari video.play promise does not block recording or stat controls',async()=>{
+  const f=await fixture({neverPlay:true});
+  await f.button('● Record game').props.onClick();await f.h.settle();
+  assert.equal(f.video.srcObject,f.stream);
+  assert.ok(f.button('■ Stop & save clip'),'recording starts without awaiting video.play');
+  f.button('■ Stop & save clip').props.onClick();await f.h.settle();
+  assert.equal(f.writes.length,1);
+  f.h.unmount();
+});
+test('cancel slow camera request releases a late arriving stream and restores controls',async()=>{
+  const f=await fixture({pendingCamera:true});
+  const connect=f.button('● Record game').props.onClick();
+  f.h.flush();
+  assert.ok(f.button('Cancel camera startup'));
+  f.button('Cancel camera startup').props.onClick();
+  f.h.flush();
+  assert.ok(f.button('● Record game'),'user is allowed to try again');
+  f.allowCamera(f.stream);
+  await connect;await f.h.settle();
+  assert.ok(f.stopped.length>0,'cancelled camera request releases late hardware stream');
+  assert.equal(f.video.srcObject,null);
+  f.h.unmount();
+});
+test('fast camera constraints, visible playback effect, and UI recovery are explicit',async()=>{
+  const ui=await readFile(new URL('../src/components/shots/GameTrackerRecorder.jsx',import.meta.url),'utf8');
+  const css=await readFile(new URL('../src/components/shots/game-tracker-recorder.css',import.meta.url),'utf8');
+  assert.match(ui,/width:\{ideal:640\}/);
+  assert.match(ui,/height:\{ideal:480\}/);
+  assert.match(ui,/frameRate:\{ideal:15\}/);
+  assert.doesNotMatch(ui,/await node\.play\(\)/);
+  assert.match(ui,/state!=='preview' && state!=='recording'/);
+  assert.match(ui,/Cancel camera startup/);
+  assert.match(ui,/requestRef\.current/);
+  assert.match(css,/\.game-video-camera\[hidden\]\{display:none!important\}/);
 });
