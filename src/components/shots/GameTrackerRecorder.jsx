@@ -19,7 +19,7 @@ const explain = cause => {
 
 export default function GameTrackerRecorder({ accountId, sessionId, playerName='', events=[], onBusyChange, storeFactory=STORE }) {
   const videoRef=useRef(null),cameraRef=useRef(null),recorderRef=useRef(null),timerRef=useRef(null);
-  const requestRef=useRef(0),cameraTimeoutRef=useRef(null),autoContinueRef=useRef(false),reviewRef=useRef(null);
+  const requestRef=useRef(0),cameraTimeoutRef=useRef(null),autoContinueRef=useRef(false),reviewRef=useRef(null),pendingMetaRef=useRef(null);
   const aliveRef=useRef(false),ownerRef=useRef(JSON.stringify([accountId,sessionId]));
   const workingRef=useRef(false),savingRef=useRef(false);
   const storeRef=useRef(null);
@@ -178,7 +178,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     }
   }
 
-  function startCapture(automatic=false){
+  function startCapture(){
     if(workingRef.current||recorderRef.current?.state==='recording'||!cameraRef.current)return;
     if(!consent){setError('Filming permission is required before recording.');return;}
     setError('');setInfo('');
@@ -212,13 +212,13 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
         try{
           const blob=collector.finish(rec.mimeType||type);
           validateClip(blob);
+          pendingMetaRef.current={recordedAt,endedAt:new Date().toISOString()};
           setPending(blob); // retained if IndexedDB quota prevents attaching
           retainedClip=true;
-          const stored=await storeRef.current.putSegment(accountId,sessionId,blob,
-            {recordedAt,endedAt:new Date().toISOString()});
+          const stored=await storeRef.current.putSegment(accountId,sessionId,blob,pendingMetaRef.current);
           if(!aliveRef.current||ownerRef.current!==JSON.stringify([accountId,sessionId]))return;
           setSaved(stored);setClips(existing=>[...existing,stored]);
-          setPending(null);retainedClip=false;
+          setPending(null);pendingMetaRef.current=null;retainedClip=false;
           setInfo('Game clip saved locally. '+(continueAfterSave?'Starting next clip…':'Review and download a backup.'));
           setError('');
         }catch(cause){
@@ -229,7 +229,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
             setState(retainedClip?'needs-backup':cameraRef.current?'preview':'idle');
             markBusy(retainedClip);
             if(!retainedClip && continueAfterSave && cameraRef.current && !document.hidden){
-              startCapture(true);
+              startCapture();
             }
           }
         }
@@ -260,11 +260,10 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     markBusy(true);setState('saving');setError('');
     let attached=false;
     try{
-      const record=await storeRef.current.putSegment(accountId,sessionId,pending,
-        {recordedAt:new Date().toISOString(),endedAt:new Date().toISOString()});
+      const record=await storeRef.current.putSegment(accountId,sessionId,pending,pendingMetaRef.current||{});
       attached=true;
       if(!aliveRef.current)return;
-      setSaved(record);setClips(existing=>[...existing,record]);setPending(null);
+      setSaved(record);setClips(existing=>[...existing,record]);setPending(null);pendingMetaRef.current=null;
       setInfo('Recovered and saved game segment locally.');
     }catch(cause){if(aliveRef.current)setError('Local video save failed: '+explain(cause));}
     finally{if(aliveRef.current){
@@ -304,7 +303,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       {state==='starting'&&<button type="button" onClick={cancelCameraStartup}>Cancel camera startup</button>}
       {!cameraRef.current&&!recording&&<button type="button" disabled={!consent||state==='starting'||state==='saving'} onClick={()=>enableCamera(false)}>Preview camera</button>}
       {cameraRef.current&&!recording&&<button type="button" className="game-record-primary" disabled={state==='saving'||!consent} onClick={startCapture}>● Record game</button>}
-      {recording&&<button type="button" className="game-record-stop" onClick={stopRecording}>■ Stop &amp; save clip</button>}
+      {recording&&<button type="button" className="game-record-stop" onClick={()=>stopRecording(false)}>■ Stop &amp; save clip</button>}
       {cameraRef.current&&!recording&&<button type="button" onClick={()=>{stopCamera();setVisible(false);}} disabled={state==='saving'}>Close camera</button>}
     </div>
     <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting' && !recording}>
@@ -337,7 +336,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       <button type="button" onClick={retryStorage} disabled={state==='saving'}>Retry video save</button>
       <button type="button" onClick={()=>{
         if(!window.confirm('Only continue if you saved the downloaded video outside CourtIQ. Remove the unsaved device-only recording from this tab?'))return;
-        setPending(null);setError('');setInfo('Unattached local video discarded after backup acknowledgment.');
+        setPending(null);pendingMetaRef.current=null;setError('');setInfo('Unattached local video discarded after backup acknowledgment.');
         setState(cameraRef.current?'preview':'idle');markBusy(false);
       }}>I backed up my clip. Continue</button>
     </div>}
