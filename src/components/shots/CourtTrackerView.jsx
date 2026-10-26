@@ -36,7 +36,9 @@ function StatInputs({ stats, updateStat, busy, compact = false }) {
 
 export default function CourtTrackerView({ sessionType, shots, selectedZone, selectZone, gameStats, updateStat,
   saving, ending, saveError, tab, setTab, darkMode, onToggleTheme, courtTheme, setCourtTheme,
-  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, videoDock, endLabel = 'End session', headerTitle }) {
+  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, videoDock,
+  keepZone=false, setKeepZone=()=>{},period=1,setPeriod=()=>{},clock='00:00',setClock=()=>{},
+  gameContext={},onEditGame=()=>{},endLabel = 'End session', headerTitle }) {
   const busy = saving || ending;
   const selected = COURT_ZONES.find(zone => zone.id === selectedZone);
   const dialogRef = useRef(null);
@@ -73,6 +75,24 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
       <div className={`tracker-workspace${videoDock ? " tracker-workspace-video" : ""}`}>
         {videoDock}
         <div className="tracker-tracking-column">
+      {sessionType==='game'&&<div className="tracker-game-bar" aria-label="Current game controls">
+        <div className="tracker-period-controls">
+          <button type="button" aria-label="Previous period" disabled={busy||period<=1}
+            onClick={()=>setPeriod(Math.max(1,period-1))}>−</button>
+          <strong>{gameContext?.format==='halves'?'H':'Q'}{period}</strong>
+          <button type="button" aria-label="Next period" disabled={busy}
+            onClick={()=>setPeriod(Math.min(99,period+1))}>+</button>
+        </div>
+        <label className="tracker-live-clock">Game clock
+          <input aria-label="Manual game clock" inputMode="numeric" value={clock}
+            disabled={busy} onChange={event=>{
+              if(/^\\d{0,2}:?\\d{0,2}$/.test(event.target.value))setClock(event.target.value);
+            }}/>
+        </label>
+        <button type="button" className="tracker-score-control" onClick={onEditGame}>
+          Team {gameContext?.team_score||'—'} : {gameContext?.opponent_score||'—'} Opp <span>Edit</span>
+        </button>
+      </div>}
       <div className="tracker-tabs" aria-label="Tracking view">
         {['court', 'stats'].map(value => <button key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>
           <Icon name={value === 'court' ? 'basketball' : 'barChart'} size={16} />{value === 'court' ? 'Shot chart' : 'Box score'}
@@ -114,6 +134,13 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
           </section>
           <section className="tracker-controls" aria-label="Stat inputs">
             <div className="tracker-shot-actions">
+              <div className="tracker-quick-zone-controls">
+                <label><input type="checkbox" checked={keepZone} onChange={event=>setKeepZone(event.target.checked)}/>
+                  Keep location</label>
+                <button type="button" disabled={busy} onClick={()=>selectZone(null)}>Free throws</button>
+                {shots.some(shot=>shot.zone_id!=='free-throw')&&<button type="button" disabled={busy}
+                  onClick={()=>selectZone([...shots].reverse().find(shot=>shot.zone_id!=='free-throw')?.zone_id||null)}>Last shot zone</button>}
+              </div>
               <p>{selected ? `${selected.label} · ${selected.pts}PT` : 'Free throws'}<span>{saving ? 'Saving…' : 'Tap a zone, then record the result'}</span></p>
               <div>
                 <button className="tracker-result" data-tone="green" disabled={busy} onClick={() => selected ? logShot(true) : logFreeThrow(true)}><Icon name="check" size={18} />{selected ? 'Made' : 'Made FT'}</button>
