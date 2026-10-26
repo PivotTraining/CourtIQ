@@ -244,6 +244,34 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     }finally{endingRef.current=false;setEnding(false);}
   }
 
+  function correctEvent(target,patch){
+    if(busyRef.current||conflict||endingRef.current||!valueRef.current)return false;
+    try{
+      const current=valueRef.current;
+      const original=current.snapshot.events.find(event=>event.id===target);
+      if(!original||!['stat','shot'].includes(original.payload.kind))throw new Error('Only shot and stat entries can be corrected.');
+      const alreadyReversed=current.snapshot.events.some(event=>
+        event.payload.kind==='reverse'&&event.payload.target===target);
+      if(alreadyReversed)throw new Error('This entry was already reversed.');
+      const now=new Date().toISOString();
+      const reversal={id:crypto.randomUUID(),sessionId:current.snapshot.session.id,
+        version:current.snapshot.session.tracker_version,
+        payload:{kind:'reverse',target,period:original.payload.period,
+          clock:original.payload.clock,recorded_at:now}};
+      const reversed=projectCommand(current.snapshot,reversal);
+      const replacement={id:crypto.randomUUID(),sessionId:current.snapshot.session.id,
+        version:reversed.session.tracker_version,
+        payload:{...original.payload,...patch,kind:original.payload.kind,
+          recorded_at:now,corrects:original.id}};
+      const corrected=projectCommand(reversed,replacement);
+      const next={...current,snapshot:corrected,pending:[...current.pending,reversal,replacement]};
+      persist(next);
+      setStatus('Correction queued locally. Original entry remains in the audit trail.');
+      void sync();
+      return true;
+    }catch(err){setError(err.message||'Correction not recorded.');return false;}
+  }
+
   const snapshot = value?.snapshot;
   const stats = { ...EMPTY_GAME_STATS, ...snapshot?.session.game_stats };
   const shots = snapshot?.shots.filter(shot => shot.zone_id !== 'free-throw') || [];
@@ -299,7 +327,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       <p className="tracker-hint">Manual clock reference; player minutes are recorded separately. Period numbers beyond the selected format represent overtime.</p>
     </div>}
     {showContext && <><GameContextForm value={context} onChange={setContext} /><button style={inputStyle} disabled={busy || conflict} onClick={async () => { if (await entry({ kind: 'context', context })) setShowContext(false); }}>Save game details</button></>}
-    {timeline && <SessionTimeline events={snapshot.events} busy={busy || conflict} reverse={id => entry({ kind: 'reverse', target: id })} />}
+    {timeline && <SessionTimeline events={snapshot.events} busy={conflict || ending} reverse={id => entry({ kind: 'reverse', target: id })} onCorrect={correctEvent} />}
   </section>;
   return <CourtTrackerView sessionType={snapshot.session.type} shots={shots} selectedZone={selectedZone} selectZone={setSelectedZone}
     gameStats={stats} updateStat={(key, delta) => entry({ kind: 'stat', key, delta })}
