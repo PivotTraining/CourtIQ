@@ -266,7 +266,22 @@ export default function TrainScreen() {
         <h3 className="font-bold text-sm">Saved development work</h3>
         {workoutError && <p role="alert">{workoutError}</p>}
         <p className="text-xs text-text-sec mt-2">{workoutResults.length} saved workouts. Reps are self-recorded; completion does not prove skill improvement.</p>
-        {workoutResults.slice(0, 5).map(result => <p key={result.id} className="text-xs mt-2">{new Date(result.completed_at).toLocaleDateString()} · {result.drills.filter(drill => !drill.skipped).length} finished / {result.drills.length} drills · {Math.round(result.elapsed_seconds / 60)} min</p>)}
+        {workoutResults.slice(0, 5).map((result, index) => {
+          // Unsupported historical records remain on the backend, never discarded.
+          if (!result || !Array.isArray(result.drills)) return (
+            <p key={result?.id || 'unavailable-' + index} className="text-xs mt-2" role="status">
+              A saved workout has an unsupported record format. It has not been deleted.
+            </p>
+          );
+          const completed = result.drills.filter(drill => drill && !drill.skipped).length;
+          const date = Number.isFinite(Date.parse(result.completed_at))
+            ? new Date(result.completed_at).toLocaleDateString() : 'Unknown date';
+          const duration = Number.isFinite(Number(result.elapsed_seconds))
+            ? Math.max(0, Math.round(Number(result.elapsed_seconds) / 60)) + ' min' : 'Duration unavailable';
+          return <p key={result.id || 'saved-' + index} className="text-xs mt-2">
+            {date} · {completed} finished / {result.drills.length} drills · {duration}
+          </p>;
+        })}
       </section>}
       {/* Tabs */}
       <div
