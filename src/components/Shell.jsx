@@ -287,7 +287,7 @@ export default function Shell() {
           transition: "opacity 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}>
           {/* A failed screen should not take down navigation or other player views. */}
-          <ErrorBoundary key={String(playerId || 'no-player') + ':' + displayScreen}>
+          <ErrorBoundary contained key={String(playerId || 'no-player') + ':' + displayScreen}>
             {renderScreen()}
           </ErrorBoundary>
         </main>
