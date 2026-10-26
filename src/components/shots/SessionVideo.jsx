@@ -4,6 +4,23 @@ import { createDeviceVideoStore, validateClip, clipKey } from '@/lib/deviceVideo
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 import './report-media.css';
 
+function GameFilmSegment({clip,index,onDelete,busy}){
+  const [url,setUrl]=useState('');
+  useEffect(()=>{
+    const next=URL.createObjectURL(clip.blob);setUrl(next);
+    return ()=>URL.revokeObjectURL(next);
+  },[clip]);
+  const extension=clip.blob.type==='video/webm'?'webm':'mp4';
+  return <article className="report-media-segment">
+    <h4>Game clip {index+1} · {new Date(clip.recordedAt||clip.savedAt).toLocaleTimeString()} · {(clip.blob.size/1048576).toFixed(1)} MB</h4>
+    {url&&<video src={url} controls playsInline preload="metadata" aria-label={`Game film clip ${index+1}`}/>}
+    <div className="report-media-controls">
+      <button type="button" onClick={()=>downloadBlob(clip.blob,`courtiq-game-clip-${index+1}.${extension}`)}>Download game clip</button>
+      <button type="button" disabled={busy} onClick={()=>onDelete(clip.id)}>Delete clip from this device</button>
+    </div>
+  </article>;
+}
+
 export default function SessionVideo({accountId,sessionId}) {
   // Switching accounts/sessions must unmount the previous clip UI, including its
   // pending save callbacks. Never reuse an alive flag for a different owner.
@@ -12,12 +29,16 @@ export default function SessionVideo({accountId,sessionId}) {
 
 export function DeviceSessionVideo({accountId,sessionId}) {
   const store=useMemo(()=>createDeviceVideoStore(),[]);
-  const [record,setRecord]=useState(null),[url,setUrl]=useState(''),[consent,setConsent]=useState(false);
+  const [record,setRecord]=useState(null),[segments,setSegments]=useState([]),[url,setUrl]=useState(''),[consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
   const alive=useRef(false),cameraInput=useRef(null),libraryInput=useRef(null);
   useEffect(()=>{
-    alive.current=true;let current=true;setBusy(true);setRecord(null);setError('');setConsent(false);
-    store.get(accountId,sessionId).then(value=>{if(current)setRecord(value);}).catch(err=>{if(current)setError(err.message);}).finally(()=>{if(current)setBusy(false);});
+    alive.current=true;let current=true;setBusy(true);setRecord(null);setSegments([]);setError('');setConsent(false);
+    Promise.all([store.get(accountId,sessionId),
+      store.listSegments?.(accountId,sessionId)||Promise.resolve([])])
+      .then(([value,parts])=>{if(current){setRecord(value);setSegments(parts);}})
+      .catch(err=>{if(current)setError(err.message);})
+      .finally(()=>{if(current)setBusy(false);});
     return()=>{current=false;alive.current=false;};
   },[accountId,sessionId,store]);
   useEffect(()=>{
@@ -50,9 +71,18 @@ export function DeviceSessionVideo({accountId,sessionId}) {
     catch(err){if(alive.current)setError(err.message);}
     finally{if(alive.current)setBusy(false);}
   }
-  const extension=record?.blob.type==='video/webm'?'webm':record?.blob.type==='video/quicktime'?'mov':'mp4';
+  async function deleteSegment(id){
+    if(!window.confirm('Delete this local game video segment? Download its backup first. Stats will not be removed.'))return;
+    setBusy(true);setError('');
+    try{
+      await store.removeSegment(accountId,sessionId,id);
+      if(alive.current){setSegments(parts=>parts.filter(clip=>clip.id!==id));setMessage('Only the selected local video segment was deleted.');}
+    }catch(err){if(alive.current)setError(err.message);}
+    finally{if(alive.current)setBusy(false);}
+  }
+  const extension=record?.blob.type='video/webm'?'webm':record?.blob.type==='video/quicktime'?'mov':'mp4';
   return <section className="report-media" aria-label="Session video on this device"><h3>Keep a clip with this session</h3>
-    <p className="report-media-note">Device-only · no cloud upload. One MP4, WebM or MOV clip per session, up to 100 MB; 250 MB per account on this device. This is not full-game recording or AI video analysis.</p>
+    <p className="report-media-note">Device-only · no cloud upload. One uploaded MP4/WebM/MOV clip per session, plus multiple separately recorded game segments. Maximum 100 MB per clip and 250 MB per account on this device. Not cloud-synced or AI video analysis.</p>
     <p className="report-media-note">Browser storage can be cleared or evicted and is not encrypted by CourtIQ. Avoid shared devices and download a backup. The clip will not appear on another phone or computer.</p>
     <label className="report-checkbox"><input type="checkbox" checked={consent} onChange={event=>setConsent(event.target.checked)}/>I have permission to store this footage, including people shown.</label>
     <input ref={cameraInput} aria-label="Record session video" type="file" accept="video/*" capture="environment" disabled={!consent||busy} onChange={save} style={{display:'none'}}/>
@@ -60,6 +90,10 @@ export function DeviceSessionVideo({accountId,sessionId}) {
     <div className="report-media-controls"><button type="button" disabled={!consent||busy} onClick={()=>cameraInput.current?.click()}>{record?'Record replacement clip':'Record a clip'}</button><button type="button" disabled={!consent||busy} onClick={()=>libraryInput.current?.click()}>{record?'Choose replacement file':'Choose existing video'}</button></div>
     <p className="report-media-note">On a phone, Record a clip opens the device camera. The resulting clip is still subject to the 100 MB per-session device limit.</p>
     {url&&<><video controls playsInline preload="metadata" src={url} onError={()=>setError('This clip cannot play in this browser. Download it and try another compatible player.')}/><p className="report-media-note">Saved locally · {(record.blob.size/1024/1024).toFixed(1)} MB</p><div className="report-media-controls"><button disabled={busy} onClick={()=>{try{downloadBlob(record.blob,`courtiq-session-video.${extension}`);}catch{setError('Video download did not start. Please try again.');}}}>Download video</button><button disabled={busy} onClick={remove}>Delete device copy</button></div></>}
+    {segments.length>0&&<div className="report-media-segments"><h3>Recorded game film · {segments.length} {segments.length===1?'clip':'clips'}</h3>
+      {segments.map((clip,index)=><GameFilmSegment key={clip.id} clip={clip} index={index}
+        onDelete={deleteSegment} busy={busy}/>)}
+    </div>}
     {busy&&<p role="status">Checking device video storage…</p>}{message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
   </section>;
 }
