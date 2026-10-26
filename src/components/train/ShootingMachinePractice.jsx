@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import SessionVideo from '@/components/shots/SessionVideo';
 import LiveShootingAnalyzer from './LiveShootingAnalyzer';
+import { createDeviceVideoStore, validateClip } from '@/lib/deviceVideo.mjs';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 import {
   FORM_CUES, MACHINE_PLANS, MACHINE_STYLES, MACHINE_ZONES, machineCsv, machineDraftKey,
@@ -25,6 +26,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const { user } = useAuth();
   const accountId = user?.id;
   const key = accountId && playerId ? machineDraftKey(accountId, playerId) : null;
+  const scopeRef=useRef(key);scopeRef.current=key;
   const [draft, setDraft] = useState(null);
   const [ready, setReady] = useState(false);
   const [loadedKey, setLoadedKey] = useState(null);
@@ -37,6 +39,9 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const [detailId, setDetailId] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const pendingFilmRef = useRef(null);
+  const [pendingFilmSize,setPendingFilmSize] = useState(0);
+  const [cameraRecording,setCameraRecording] = useState(false);
 
   const history = useMemo(() => machineHistory(records), [records]);
   const isCurrent = ready && loadedKey === key && !!key;
@@ -51,6 +56,11 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     setSelectedVideoId(null);
     setDetailId(null);
     setExpanded(false);
+    // Never allow a clip recorded for another player or account to be attached.
+    if(pendingFilmRef.current?.key!==key){
+      pendingFilmRef.current=null;setPendingFilmSize(0);
+    }
+    setCameraRecording(false);
     if (!key) { setDraft(null); return; }
     let restored = null;
     try {
@@ -126,6 +136,25 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     }
     record(makes, attempts, 'machine-display');
   };
+  const receiveAnnotatedFilm = blob => {
+    if(!isCurrent || !draft || !key || scopeRef.current!==key || savedId || saving) return;
+    try{
+      validateClip(blob);
+      pendingFilmRef.current={key,draftId:draft.id,blob};
+      setPendingFilmSize(blob.size);
+      setMessage('Annotated video captured on this device. Finish and save to attach it. Download a backup if needed.');
+      setError('');
+    }catch(cause){setError(cause.message || 'Video was not saved.');}
+  };
+  const downloadPendingFilm = () => {
+    const clip=pendingFilmRef.current;
+    if(!clip?.blob || clip.key!==key)return;
+    try{
+      const ext=clip.blob.type==='video/mp4'?'mp4':'webm';
+      downloadBlob(clip.blob,'courtiq-form-iq-'+clip.draftId+'.'+ext);
+      setMessage('Annotated clip download started. Keep the original in Photos or Files.');
+    }catch{setError('Video download did not start. Please try again.');}
+  };
   const captureFormObservation = observation => {
     if (!isCurrent || savedId || saving || pendingConfirmation) throw new Error('Finish or start a new workout before capturing more observations.');
     if (!observation || observation.method !== 'on-device-movenet-v1' ||
@@ -148,6 +177,10 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     }
   };
   const save = async () => {
+    if(cameraRecording){
+      setError('Stop the annotated video recording first so the clip finishes processing.');
+      return;
+    }
     if (!canSave || !playerId || !accountId || saving || savedId || !onSave) {
       setError('Account saving is unavailable. Export your session before leaving.');
       return;
@@ -170,10 +203,22 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
       const stored = await onSave(result);
       if (stored?.id !== result.id || stored.player_id !== playerId)
         throw new Error('The saved result did not confirm this player. Keep your draft and retry.');
+      const filmed=pendingFilmRef.current;
+      let filmSaved=false,filmIssue='';
+      if(filmed && filmed.key===key && filmed.draftId===result.id){
+        try{
+          await createDeviceVideoStore().put(accountId,result.id,filmed.blob);
+          filmSaved=true;
+          pendingFilmRef.current=null;setPendingFilmSize(0);
+        }catch(err){filmIssue=err.message||'Local video storage failed.';}
+      }
       setSavedId(result.id);
-      setSelectedVideoId(result.id);
+      setSelectedVideoId(filmSaved || !filmed ? result.id : null);
       setExpanded(false);
-      setMessage('Shooting practice saved to this player. You can now attach a video clip.');
+      setMessage(filmIssue ?
+        'Practice statistics saved. Annotated video did not save on this device. Download it from this tab before leaving. '+filmIssue :
+        filmSaved ? 'Practice and annotated video saved. Download a backup of the video.' :
+          'Shooting practice saved to this player. You can now attach a video clip.');
     } catch (cause) {
       setError(cause.message || 'Could not save. Your draft remains on this device.');
     } finally {
@@ -181,9 +226,15 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     }
   };
   const newSession = () => {
+    if(cameraRecording){
+      setError('Stop the recording before starting a different practice.');
+      return;
+    }
+    if(pendingFilmRef.current?.key===key && !window.confirm('A local video clip is attached to this draft. Starting a new session will discard the unsaved in-memory clip. Download a backup first. Continue?'))return;
     if (pendingConfirmation && !window.confirm('This save may have reached the server. Starting over will abandon its retry record. Continue?')) return;
     if (!savedId && draft?.entries.length &&
         !window.confirm('Start over? All unsaved attempts in this draft will be lost.')) return;
+    pendingFilmRef.current=null;setPendingFilmSize(0);
     setDraft(newMachineDraft(crypto.randomUUID()));
     setSavedId(null);
     setSelectedVideoId(null);
@@ -203,7 +254,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <p>Log shots, compare locations, review video, and save a measurable practice baseline. This never changes game statistics.</p>
       </div>
       <button className="machine-primary" disabled={!hasPlayer || !isCurrent}
-        onClick={() => savedId ? newSession() : setExpanded(open => !open)}>
+        onClick={() => {if(cameraRecording){setError('Stop the video recording before closing this practice.');return;} savedId ? newSession() : setExpanded(open => !open);}}>
         {savedId ? 'Start another session' : expanded ? 'Close practice' : 'Start machine practice'}
       </button>
     </header>
@@ -234,8 +285,14 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
       <div className="machine-section">
         <h4>2. Analyze form while shooting</h4>
         <p className="machine-hint">See live red/green joint overlays and an optional uncalibrated ball trace. You can still train or save shots without the camera.</p>
-        <LiveShootingAnalyzer onObservation={captureFormObservation} disabled={pendingConfirmation || saving}
+        <LiveShootingAnalyzer onObservation={captureFormObservation} onClipReady={receiveAnnotatedFilm}
+          onRecordingChange={setCameraRecording} disabled={pendingConfirmation || saving}
           remaining={Math.max(0,30-(draft.observations || []).length)} />
+        {pendingFilmSize>0 && <div className="machine-annotated-film" role="status">
+          <strong>Annotated clip ready · {(pendingFilmSize/1024/1024).toFixed(1)} MB</strong>
+          <p>Kept temporarily in this tab until the practice is saved. Stop recording, then save to attach it to this player on this device.</p>
+          <button type="button" onClick={downloadPendingFilm}>Download annotated clip backup</button>
+        </div>}
         <p className="machine-hint">{(draft.observations || []).length}/30 on-device form observations captured with this draft.</p>
       </div>
       <div className="machine-section">
@@ -305,13 +362,18 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         </div>
         <div className="machine-finish-buttons">
           <button type="button" onClick={exportCsv} disabled={!summary.attempts || saving}>Export CSV</button>
-          <button type="button" className="machine-primary" onClick={save} disabled={!canSave || !summary.attempts || saving}>
+          <button type="button" className="machine-primary" onClick={save} disabled={!canSave || !summary.attempts || saving || cameraRecording}>
             {saving ? 'Saving…' : pendingConfirmation ? 'Retry same saved result' : 'Finish and save practice'}
           </button>
-          <button type="button" className="machine-reset" onClick={newSession} disabled={saving}>Discard draft</button>
+          <button type="button" className="machine-reset" onClick={newSession} disabled={saving || cameraRecording}>Discard draft</button>
         </div>
       </footer>
     </>}
+    {draft && savedId === draft.id && pendingFilmSize>0 && <div className="machine-annotated-film" role="status">
+      <strong>Local video is not yet stored</strong>
+      <p>Practice stats were saved, but the clip remains only in this open tab. Download your backup now.</p>
+      <button type="button" onClick={downloadPendingFilm}>Download annotated clip backup</button>
+    </div>}
     {draft && savedId === draft.id && <div className="machine-saved">
       <h4>Session saved</h4><p>{summary.makes} of {summary.attempts} · {valueOrDash(summary.pct)} · {formatTime(draft.elapsed)} active time</p>
       <p>Your shots are saved as practice, not game stats. Add a short clip below or begin another workout.</p>
