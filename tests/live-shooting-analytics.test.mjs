@@ -58,7 +58,7 @@ test('projected ball-rise estimate requires a continuous rising image sequence, 
   assert.equal(observedRiseAngle(path),69);
   assert.equal(observedRiseAngle(path.slice(0,2)),null);
   assert.equal(observedRiseAngle(path.map(p=>({...p,y:150}))),null);
-  assert.equal(observedRiseAngle([{x:1,y:10,time:0},...path.slice(1).map(p=>({...p,time:2000+p.time}))]),null);
+  assert.equal(observedRiseAngle(path.map((p,index)=>({...p,time:index*900}))),null);
 });
 test('only bounded numerical observations persist with a player machine workout, never frames',()=>{
   const stats=poseMetrics(samplePose());
