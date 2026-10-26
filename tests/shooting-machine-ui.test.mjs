@@ -38,7 +38,7 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
     '@/components/shots/SessionVideo': Video,
     '@/lib/deviceVideo.mjs': {
       createDeviceVideoStore:()=>({put:async(...args)=>{clipWrites.push(args);return {};} }),
-      validateClip: blob => {if(!(blob instanceof Blob) || !/^video\\/(?:mp4|webm)$/.test(blob.type))throw new Error('Invalid film.');},
+      validateClip: blob => {if(!(blob instanceof Blob) || !['video/mp4','video/webm'].includes(blob.type))throw new Error('Invalid film.');},
     },
     './LiveShootingAnalyzer': Analyzer,
     '@/lib/browserDownload.mjs': { downloadBlob: () => {} },
