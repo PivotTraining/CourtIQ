@@ -39,6 +39,7 @@ declare
  canonical public.sessions%rowtype;
  source public.sessions%rowtype;
  new_stats jsonb;
+ old_stats jsonb;
  old_shots jsonb;
  field_item record;
  selected text;
@@ -85,7 +86,8 @@ begin
    raise exception 'Previously transferred game cannot be fused' using errcode='22023'; end if;
  select coalesce(jsonb_agg(to_jsonb(l) order by l.created_at,l.id),'[]'::jsonb) into old_shots
    from public.shot_logs l where l.session_id=p_canonical;
- new_stats:=coalesce(canonical.game_stats,'{}'::jsonb);
+ old_stats:=coalesce(canonical.game_stats,'{}'::jsonb);
+ new_stats:=old_stats;
  for field_item in select * from jsonb_each_text(p_fields) loop
    if field_item.value='source' then
      stat_key:=field_item.key;
@@ -126,7 +128,7 @@ begin
   shooting_source,canonical_before_stats,canonical_before_shots,
   canonical_after_version)
  values(p_canonical,p_source,auth.uid(),p_fields,p_shooting,
-  coalesce((select game_stats from public.sessions where id=p_canonical),'{}'::jsonb),old_shots,canonical.tracker_version)
+  old_stats,old_shots,canonical.tracker_version)
  returning id into audit_id;
  return audit_id;
 end $$;
