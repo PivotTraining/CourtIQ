@@ -335,6 +335,13 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
           <span key={style.id}>{style.label}: {style.makes}/{style.attempts} · {valueOrDash(style.pct)}</span>)}</div>
         <strong>Video-review observations</strong>
         <p>{selectedDetail.machine.notes || 'No notes were entered for this session.'}</p>
+        {(selectedDetail.machine.observations || []).length > 0 && <div className="machine-form-history">
+          <strong>Saved on-device form measurements ({selectedDetail.machine.observations.length})</strong>
+          {selectedDetail.machine.observations.slice(-8).map((item, index) => <p key={item.at + index}>
+            {new Date(item.at).toLocaleTimeString()} · {item.phase} · Elbow {item.elbow_angle ?? '—'}° · Knee {item.knee_angle ?? '—'}° · Image-plane ball rise {item.projected_rise_angle ?? '—'}°
+          </p>)}
+          <p>These are uncalibrated camera observations, not verified shooting-form scores or true 3D ball-flight measurements.</p>
+        </div>
         <p>{FORM_CUES.filter(cue => selectedDetail.machine.form?.[cue.id])
           .map(cue => cue.label).join(' · ') || 'No form cues marked as reviewed.'}</p>
       </div>}
