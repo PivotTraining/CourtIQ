@@ -158,10 +158,12 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
       lastTime.current=0;
       // Composite real camera frames independently from TensorFlow inference.
       // If the pose model is slow or a frame estimate fails, the video must keep moving.
-      const compositeFrame=()=>{
+      let lastComposite=0;
+      const compositeFrame=(timestamp)=>{
         if(id!==generation.current)return;
         const active=recorderRef.current?.recorder?.state==='recording';
-        if(active && video.readyState>=2 && !document.hidden){
+        if(active && video.readyState>=2 && !document.hidden && timestamp-lastComposite>=80){
+          lastComposite=timestamp;
           try{
             const canvas=recordCanvasRef.current,context=canvas?.getContext('2d');
             if(!canvas || !context)throw new Error('Camera compositor unavailable');
