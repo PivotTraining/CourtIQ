@@ -335,6 +335,14 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
     }catch(cause){setError(strip(cause?.message));}
   };
   const refs=referenceState(metric,metric?.phase);
+  // Browser support checks are not evidence of successful recording.
+  let recordingMime=null;
+  try {recordingMime=supportedRecordingType(globalThis.MediaRecorder);}catch{}
+  const secureBrowser=typeof window!=='undefined' && window.isSecureContext===true;
+  const cameraApi=typeof navigator!=='undefined' && !!navigator.mediaDevices?.getUserMedia;
+  const recordingApi=typeof HTMLCanvasElement!=='undefined' &&
+    typeof HTMLCanvasElement.prototype.captureStream==='function' && !!recordingMime;
+  const localClipStorage=typeof indexedDB!=='undefined';
   return <section className="formiq" aria-label="Live shooting form analyzer">
     <div className="formiq-heading">
       <div><span className="formiq-kicker">COURTIQ / FORM IQ LIVE</span>
@@ -364,6 +372,22 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
       </select></label>
       {status==='active'&&<button type="button" onClick={()=>{setBallPick(true);setMessage('Tap the orange ball in the camera view while it is still.');}}>⌖ Calibrate ball</button>}
     </div>
+    <details className="formiq-device-check">
+      <summary>Device readiness &amp; troubleshooting</summary>
+      <p>These checks describe this browser and camera, not a completed workout. Verify playback and server saving separately.</p>
+      <dl>
+        <div><dt>Secure camera connection</dt><dd>{secureBrowser?'Available':'Unavailable: open HTTPS'}</dd></div>
+        <div><dt>Browser camera access</dt><dd>{cameraApi?'Supported':'Unavailable'}</dd></div>
+        <div><dt>Live camera</dt><dd>{status==='active'?
+          (videoRef.current?.videoWidth||0)+' × '+(videoRef.current?.videoHeight||0)+' px' :
+          status==='error'?'Failed to start':'Not yet started'}</dd></div>
+        <div><dt>Body landmarks</dt><dd>{metric?.visible?'Visible ('+metric.score+'/6 measured joints)':
+          status==='active'?'Not yet visible: frame the shooter':'Not yet checked'}</dd></div>
+        <div><dt>Annotated recording support</dt><dd>{recordingApi?
+          'Advertised: '+recordingMime+' (test an actual recording)':'Not supported: use the phone Camera app'}</dd></div>
+        <div><dt>Local video storage</dt><dd>{localClipStorage?'Available (quota unverified)':'Unavailable'}</dd></div>
+      </dl>
+    </details>
     <div className="formiq-native-record">
       <label className="formiq-record-consent">
         <input type="checkbox" checked={recordConsent} disabled={recording||disabled||status!=='active'}
