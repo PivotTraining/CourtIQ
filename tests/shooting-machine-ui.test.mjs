@@ -29,13 +29,18 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
   };
   const h = reactHarness();
   let sequence = 0;
+  const clipWrites=[];
   const Video = () => null;
+  const Analyzer = () => null;
   const { default: Component } = await loadComponent(source, {
     react: h.react,
     '@/context/AuthContext': { useAuth: () => ({ user: { id: accountId } }) },
     '@/components/shots/SessionVideo': Video,
-    '@/lib/deviceVideo.mjs': {createDeviceVideoStore:()=>({put: async()=>({})}),validateClip:()=>{}},
-    './LiveShootingAnalyzer': () => null,
+    '@/lib/deviceVideo.mjs': {
+      createDeviceVideoStore:()=>({put:async(...args)=>{clipWrites.push(args);return {};} }),
+      validateClip: blob => {if(!(blob instanceof Blob) || !/^video\\/(?:mp4|webm)$/.test(blob.type))throw new Error('Invalid film.');},
+    },
+    './LiveShootingAnalyzer': Analyzer,
     '@/lib/browserDownload.mjs': { downloadBlob: () => {} },
     '@/lib/shootingMachine.mjs': machine,
   }, {
@@ -44,7 +49,7 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
     setInterval: () => 1, clearInterval: () => {}, Date,
   });
   h.render(Component, { playerId, records: [], canSave: true, onSave }); h.flush();
-  return { h, memory, storage, Component, Video };
+  return { h, memory, storage, Component, Video, Analyzer, clipWrites };
 }
 
 test('gym-side machine screen logs taps, accepts displayed sets and attaches film to a saved practice', async () => {
@@ -115,4 +120,47 @@ test('player switch does not display previous child machine draft', async () => 
   assert.match(visibleText(h.output), /Attempts/);
   assert.equal(button(h, '+ Made').props.disabled, false);
   assert.ok(!visibleText(h.output).includes('1 recorded entries'));
+});
+
+test('annotated in-app video is attached only after authenticated player workout confirms saving', async () => {
+  const { h, Analyzer, clipWrites } = await setup(async result =>
+    ({ ...result, player_id: 'caleb', completed_at: '2026-10-26T13:00:00Z' }));
+  button(h, 'Start machine practice').props.onClick();h.flush();
+  button(h, '+ Made').props.onClick();h.flush();
+  const analysis=findElement(h.output,node=>node.type===Analyzer);
+  assert.ok(analysis,'native live camera must be inside the practice workflow');
+  const video=new Blob(['annotated-frame-sample'],{type:'video/mp4'});
+  analysis.props.onClipReady(video);h.flush();
+  assert.match(visibleText(h.output),/Annotated clip ready/);
+  assert.equal(clipWrites.length,0,'unsaved or incomplete workouts cannot create a video session');
+  await button(h, 'Finish and save practice').props.onClick();await h.settle();
+  assert.equal(clipWrites.length,1);
+  assert.deepEqual(clipWrites[0].slice(0,2),['family-a','uuid-1']);
+  assert.equal(clipWrites[0][2],video);
+  assert.match(visibleText(h.output),/Practice and annotated video saved/);
+  assert.ok(findElement(h.output,node=>node.type===Video));
+  h.unmount();
+});
+test('save remains blocked until annotated camera recording has been finalized', async()=>{
+  let saves=0;
+  const {h,Analyzer}=await setup(async result=>{saves++;return {...result,player_id:'caleb'};});
+  button(h,'Start machine practice').props.onClick();h.flush();
+  button(h,'+ Made').props.onClick();h.flush();
+  findElement(h.output,node=>node.type===Analyzer).props.onRecordingChange(true);h.flush();
+  assert.ok(button(h,'Finish and save practice').props.disabled);
+  findElement(h.output,node=>node.type===Analyzer).props.onRecordingChange(false);h.flush();
+  assert.ok(!button(h,'Finish and save practice').props.disabled);
+  await button(h,'Finish and save practice').props.onClick();await h.settle();
+  assert.equal(saves,1);
+  h.unmount();
+});
+test('late camera recording from first player cannot attach to second player', async()=>{
+  const {h,Analyzer,Component,clipWrites}=await setup(async result=>({...result,player_id:'caleb'}));
+  button(h,'Start machine practice').props.onClick();h.flush();
+  const oldAnalyzer=findElement(h.output,node=>node.type===Analyzer);
+  h.render(Component,{playerId:'jaxon',records:[],canSave:true,onSave:async result=>({...result,player_id:'jaxon'})});h.flush();
+  oldAnalyzer.props.onClipReady(new Blob(['old-child'],{type:'video/mp4'}));h.flush();
+  assert.doesNotMatch(visibleText(h.output),/Annotated clip ready/);
+  assert.equal(clipWrites.length,0);
+  h.unmount();
 });
