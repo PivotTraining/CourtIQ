@@ -55,6 +55,20 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     }
     return saved;
   };
+  const verifySavedMachinePractice = async workoutId => {
+    if(!persistenceEnabled || !playerId || !workoutId || status!=='ready')
+      throw new Error('Sign in and load this player\'s history before verifying.');
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+    let fresh;
+    try{fresh=await loadResults(playerId,{signal:controller.signal});}
+    finally{clearTimeout(timeout);}
+    const row=Array.isArray(fresh) && fresh.find(item => item.id===workoutId && item.player_id===playerId);
+    if(!row || !Array.isArray(row.drills) ||
+      !row.drills.some(item=>item?.drill_id==='shooting-machine-session' && item?.practice_version==='shooting-machine-v1'))
+      throw new Error('The session was not found in this player\'s cloud history. Keep your local backup and retry.');
+    if(mounted.current)setRecords(fresh);
+    return row;
+  };
   const selectDrill = drill => { setSelected(drill); setTab('train'); setNotice(''); };
   return <div className="skills-lab">
     <section className="skill-hero"><p className="skill-eyebrow">COURTIQ SKILL LAB</p><h2>Learn it. Rep it. Track it.</h2><p>See the movement, practice with a purpose, and build your own baseline.</p>
@@ -65,7 +79,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     {status === 'error' && <div className="skill-record-error" role="alert">Your practice history could not be loaded. It has not been cleared. <button onClick={() => setReload(value => value + 1)}>Retry history</button></div>}
     {tab === 'train' && <>
       <ShootingMachinePractice key={playerId || 'no-player'} playerId={playerId} records={records}
-        canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} />
+        canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} onVerify={verifySavedMachinePractice} />
       <FinishingLab playerId={playerId} records={records} status={status}
         canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} />
       <details className="skill-other-drills">
