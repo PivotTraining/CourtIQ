@@ -9,6 +9,7 @@ import DrillWalkthrough from './DrillWalkthrough';
 import SkillPracticeSession from './SkillPracticeSession';
 import PracticeOutlook from './PracticeOutlook';
 import FinishingLab from './FinishingLab';
+import ShootingMachinePractice from './ShootingMachinePractice';
 import { finishingHistory } from '@/lib/adaptiveFinishing.mjs';
 import './skills.css';
 const FEATURED = FEATURED_IDS.map(id => DRILL_BANK.find(drill => drill.id === id));
@@ -52,6 +53,7 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
       setRecords(rows => [saved, ...rows.filter(row => row.id !== saved.id)]);
       setNotice(`Saved ${result.drills[0].practice_version === 'adaptive-finishing-v1' ? 'Finishing Lab mission' : result.drills[0].name}. Your practice result is in Progress.`);
     }
+    return saved;
   };
   const selectDrill = drill => { setSelected(drill); setTab('train'); setNotice(''); };
   return <div className="skills-lab">
@@ -62,6 +64,8 @@ export function SkillsWorkspace({ playerId, preview = false, loadResults = fetch
     {notice && <p className="skill-cue" role="status">{notice}</p>}
     {status === 'error' && <div className="skill-record-error" role="alert">Your practice history could not be loaded. It has not been cleared. <button onClick={() => setReload(value => value + 1)}>Retry history</button></div>}
     {tab === 'train' && <>
+      <ShootingMachinePractice key={playerId || 'no-player'} playerId={playerId} records={records}
+        canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} />
       <FinishingLab playerId={playerId} records={records} status={status}
         canSave={persistenceEnabled && !!playerId && status === 'ready'} onSave={savePractice} />
       <details className="skill-other-drills">

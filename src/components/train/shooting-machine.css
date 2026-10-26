@@ -1,0 +1,73 @@
+.machine-lab{margin:12px 0 22px;color:var(--color-text);border:1px solid var(--color-border);border-radius:20px;overflow:hidden;background:var(--color-card)}
+.machine-lab button,.machine-lab input,.machine-lab select,.machine-lab textarea{font:inherit}
+.machine-lab button{cursor:pointer}
+.machine-lab button:disabled{cursor:not-allowed;opacity:.55}
+.machine-hero{padding:20px;background:linear-gradient(130deg,#111827,#252139);color:#fff;display:grid;gap:16px}
+.machine-eyebrow{font-size:10px;font-weight:900;letter-spacing:1.4px;color:#ffae88;text-transform:uppercase;margin:0 0 6px}
+.machine-hero h3{font-size:23px;font-weight:900;line-height:1.12;margin:0 0 8px}
+.machine-hero p:not(.machine-eyebrow){font-size:12px;line-height:1.6;color:#d1d5db;margin:0}
+.machine-primary{background:#ff6b35;color:#fff;border:0;border-radius:12px;padding:13px 17px;font-size:13px;font-weight:800;min-height:48px}
+.machine-hero .machine-primary{justify-self:start}
+.machine-last,.machine-saved,.machine-video,.machine-history{padding:16px 18px;border-top:1px solid var(--color-border)}
+.machine-last{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px}
+.machine-last span{flex:1;min-width:160px}
+.machine-last button,.machine-history-line button,.machine-section-heading button,.machine-entry-footer button{border:1px solid var(--color-border);background:var(--color-muted);border-radius:9px;padding:8px 10px;font-weight:750;color:var(--color-text)}
+.machine-section{padding:17px 18px;border-top:1px solid var(--color-border);display:grid;gap:13px}
+.machine-section h4,.machine-history h4,.machine-saved h4,.machine-video h4{font-size:15px;font-weight:850;margin:0}
+.machine-hint{color:var(--color-text-sec);font-size:11px;line-height:1.5;margin:0}
+.machine-section-heading{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.machine-section-heading button{font-size:11px}
+.machine-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.machine-settings label,.machine-batch label,.machine-style,.machine-notes{display:grid;gap:6px;font-size:11px;font-weight:800;color:var(--color-text-sec)}
+.machine-settings input,.machine-batch input,.machine-style select,.machine-notes textarea{min-width:0;width:100%;box-sizing:border-box;background:var(--color-input-bg);color:var(--color-text);border:1px solid var(--color-border);border-radius:10px;padding:10px;font-size:13px}
+.machine-settings input,.machine-batch input,.machine-style select{min-height:44px}
+.machine-zones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.machine-zone{min-height:56px;padding:9px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;border-radius:11px;border:1px solid var(--color-border);background:var(--color-muted);color:var(--color-text);text-align:left}
+.machine-zone[aria-pressed=true]{border:2px solid #ff6b35;background:var(--color-accent-light)}
+.machine-zone strong{font-size:11px;font-weight:850}
+.machine-zone small{font-size:10px;color:var(--color-text-sec)}
+.machine-shot-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.machine-shot-buttons button{min-height:72px;border:0;border-radius:15px;color:#fff;font-size:21px;font-weight:900}
+.machine-made{background:#15803d}
+.machine-missed{background:#b91c1c}
+.machine-batch{background:var(--color-muted);padding:12px;display:grid;gap:9px;grid-template-columns:1fr 1fr;border-radius:12px}
+.machine-batch>div{grid-column:1/-1}
+.machine-batch strong{font-size:12px}
+.machine-batch button{min-height:45px;grid-column:1/-1;border:0;border-radius:10px;color:#fff;background:var(--color-accent);font-weight:850}
+.machine-entry-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:11px}
+.machine-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.machine-metrics div{display:grid;gap:4px;text-align:center;border:1px solid var(--color-border);background:var(--color-muted);border-radius:12px;padding:12px 3px}
+.machine-metrics strong{font-size:19px;font-weight:900;overflow-wrap:anywhere}
+.machine-metrics span{font-size:9px;color:var(--color-text-sec)}
+.machine-section progress{width:100%;height:12px;accent-color:#ff6b35}
+.machine-splits{display:flex;gap:8px;flex-wrap:wrap}
+.machine-splits span{font-size:11px;border-radius:12px;padding:7px 9px;background:var(--color-muted)}
+.machine-locations{display:grid;gap:7px}
+.machine-locations div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--color-border);padding:6px 0;font-size:11px}
+.machine-form-cues{display:grid;gap:10px}
+.machine-form-cues label{font-size:12px;display:flex;align-items:center;gap:8px}
+.machine-form-cues input{accent-color:#ff6b35;width:17px;height:17px}
+.machine-finish{padding:18px;display:grid;gap:12px;border-top:1px solid var(--color-border);background:var(--color-muted)}
+.machine-finish strong{font-size:13px}
+.machine-finish p{font-size:11px;color:var(--color-text-sec);line-height:1.5;margin:5px 0 0}
+.machine-finish-buttons{display:flex;flex-wrap:wrap;gap:7px}
+.machine-finish-buttons>button:not(.machine-primary){min-height:46px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-card);color:var(--color-text);padding:9px 13px;font-size:12px;font-weight:800}
+.machine-finish-buttons .machine-reset{font-weight:500!important}
+.machine-message,.machine-error{font-size:11px;padding:11px 18px;margin:0}
+.machine-message{color:var(--color-text)}
+.machine-error{color:#b91c1c}
+.machine-saved{display:grid;gap:7px;font-size:12px}
+.machine-saved p{margin:0;line-height:1.5}
+.machine-history{display:grid;gap:10px}
+.machine-history-line{border-bottom:1px solid var(--color-border);padding:8px 0;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:9px;font-size:11px}
+.machine-history-line div{display:grid;gap:4px;min-width:0}
+.machine-history-line small{color:var(--color-text-sec);overflow-wrap:anywhere}
+.machine-history-line>strong{font-size:12px}
+.machine-video{display:grid;gap:12px}
+@media(min-width:500px){.machine-hero{grid-template-columns:1fr auto;align-items:center}.machine-zones{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:360px){.machine-settings{grid-template-columns:1fr}.machine-history-line{grid-template-columns:1fr auto}.machine-history-line>button{grid-column:1/-1;justify-self:start}.machine-metrics strong{font-size:16px}}
+
+.machine-detail{display:grid;gap:8px;padding:13px;background:var(--color-muted);border-radius:12px;border:1px solid var(--color-border)}
+.machine-detail h4{font-size:13px;font-weight:850;margin:0}
+.machine-detail strong{font-size:11px}
+.machine-detail p{font-size:11px;color:var(--color-text-sec);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;margin:0}

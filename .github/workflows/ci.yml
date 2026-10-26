@@ -26,10 +26,11 @@ jobs:
         run: npm run lint
       - name: Tests
         run: npm test
-      - name: Dependency security audit
-        run: npm audit --audit-level=moderate
       - name: Production build
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'courtiq-ci-placeholder-key' }}
+      - name: Dependency security audit
+        run: npm audit --audit-level=moderate
+

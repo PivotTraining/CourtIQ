@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { randomUUID } from 'node:crypto';
 import { skillResult } from '../src/lib/skillPractice.mjs';
+import { machineWorkoutResult, newMachineDraft } from '../src/lib/shootingMachine.mjs';
 import { DRILL_BANK } from '../src/lib/drillBank.js';
 import * as safety from '../src/lib/dataSafety.mjs';
 import { loadComponent } from './helpers/reactHarness.mjs';
@@ -22,6 +23,31 @@ test('actual workout query recovers same-id skill results with JSONB key order a
   assert.deepEqual(filters, [['id', 'same-id'], ['player_id', 'alice']]);
   assert.deepEqual(signals, [signal, signal]);
   stored.drills[0].successful_reps = 2;
+  await assert.rejects(saveWorkoutResult('alice', result), /different result/);
+});
+
+test('nested machine JSONB result retries reconcile recursively without duplication', async () => {
+  const draft = { ...newMachineDraft('machine-session-id'), elapsed: 123,
+    entries: [{ id: 'entry-1', zone: 'left-wing', style: 'catch-shoot',
+      attempts: 20, makes: 11, source: 'machine-display' }] };
+  const result = machineWorkoutResult(draft);
+  const reverse = value => Array.isArray(value) ? value.map(reverse) :
+    value && typeof value === 'object' ?
+      Object.fromEntries(Object.entries(value).reverse().map(([k, v]) => [k, reverse(v)])) : value;
+  const stored = { ...result, player_id: 'alice', drills: reverse(result.drills) };
+  let stage = 0;
+  const chain = { insert() { stage = 0; return this; }, select() { return this; },
+    eq() { return this; }, single() { return this; },
+    then(resolve, reject) { return Promise.resolve(stage++ === 0 ?
+      { data: null, error: { code: '23505' } } : { data: stored, error: null }).then(resolve, reject); } };
+  const { saveWorkoutResult } = await loadComponent(new URL('../src/lib/queries.js', import.meta.url), {
+    './supabase': { getSupabase: () => ({ from: () => chain }) },
+    './constants': {}, './dataSafety.mjs': safety,
+  });
+  const confirmed = await saveWorkoutResult('alice', result);
+  assert.equal(confirmed.id, 'machine-session-id');
+  assert.equal(confirmed.drills[0].machine.entries[0].makes, 11);
+  stored.drills[0].machine.entries[0].makes = 12;
   await assert.rejects(saveWorkoutResult('alice', result), /different result/);
 });
 
