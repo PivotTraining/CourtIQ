@@ -70,7 +70,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </button>
       </header>
       {saveError && <div className="tracker-error" role="alert">{saveError}</div>}
-      <div className="tracker-workspace">
+      <div className={`tracker-workspace${videoDock ? " tracker-workspace-video" : ""}`}>
         {videoDock}
         <div className="tracker-tracking-column">
       <div className="tracker-tabs" aria-label="Tracking view">
