@@ -69,3 +69,12 @@
 .formiq-record-controls span{font-size:11px;font-weight:900;color:#f4a7a9}
 .formiq-native-record small{color:#a8bac9;font-size:10px;line-height:1.65}
 .formiq-native-record p{color:#d8e9f6;font-size:11px;margin:0;line-height:1.5}
+
+.formiq-device-check{background:#161a20;border:1px solid #323f4b;border-radius:12px;padding:11px 12px}
+.formiq-device-check summary{font-size:12px;font-weight:850;color:#e6edf7;cursor:pointer;min-height:32px}
+.formiq-device-check p{font-size:11px;line-height:1.55;color:#a4b3c3;margin:7px 0}
+.formiq-device-check dl{display:grid;gap:1px;margin:6px 0 0}
+.formiq-device-check dl>div{padding:8px 2px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:9px;border-top:1px solid #343b45}
+.formiq-device-check dt{font-size:11px;color:#c7d2df;line-height:1.5}
+.formiq-device-check dd{font-size:11px;color:#f0bb8d;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.formiq-device-check summary:focus-visible{outline:3px solid #ffb58d;outline-offset:3px}

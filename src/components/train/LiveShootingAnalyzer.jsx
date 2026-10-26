@@ -66,7 +66,7 @@ function drawOverlay(canvas,points,metric,ball,trail,stage) {
 export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRecordingChange, disabled=false, remaining=30 }) {
   const videoRef=useRef(null),overlayRef=useRef(null),frameRef=useRef(null);
   const detectorRef=useRef(null),streamRef=useRef(null),rafRef=useRef(null);
-  const recorderRef=useRef(null),recordCanvasRef=useRef(null),recordLimitRef=useRef(null);
+  const recorderRef=useRef(null),recordCanvasRef=useRef(null),recordLimitRef=useRef(null),compositorRef=useRef(null);
   const generation=useRef(0),observationRef=useRef(null),ballColour=useRef(null);
   const extensionRef=useRef(freshExtensionDetector()),onObservationRef=useRef(onObservation);
   onObservationRef.current=onObservation;
@@ -98,7 +98,8 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
     ++generation.current;
     extensionRef.current=freshExtensionDetector();
     if(rafRef.current!==null)cancelAnimationFrame(rafRef.current);
-    rafRef.current=null;
+    if(compositorRef.current!==null)cancelAnimationFrame(compositorRef.current);
+    rafRef.current=null;compositorRef.current=null;
     const stream=streamRef.current;streamRef.current=null;
     stream?.getTracks().forEach(track=>track.stop());
     const model=detectorRef.current;detectorRef.current=null;
@@ -155,6 +156,27 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
       const frame=document.createElement('canvas');frame.width=320;frame.height=240;frameRef.current=frame;
       setStatus('active');setMessage('Pose tracking runs on this device. Tap Calibrate ball to trace visible ball movement.');
       lastTime.current=0;
+      // Composite real camera frames independently from TensorFlow inference.
+      // If the pose model is slow or a frame estimate fails, the video must keep moving.
+      let lastComposite=0;
+      const compositeFrame=(timestamp)=>{
+        if(id!==generation.current)return;
+        const active=recorderRef.current?.recorder?.state==='recording';
+        if(active && video.readyState>=2 && !document.hidden && timestamp-lastComposite>=80){
+          lastComposite=timestamp;
+          try{
+            const canvas=recordCanvasRef.current,context=canvas?.getContext('2d');
+            if(!canvas || !context)throw new Error('Camera compositor unavailable');
+            context.drawImage(video,0,0,canvas.width,canvas.height);
+            if(overlay)context.drawImage(overlay,0,0,canvas.width,canvas.height);
+          }catch{
+            setError('Annotated video rendering stopped. Your previous frames are retained; download a backup if a clip is created.');
+            stopRecording();
+          }
+        }
+        if(id===generation.current)compositorRef.current=requestAnimationFrame(compositeFrame);
+      };
+      compositorRef.current=requestAnimationFrame(compositeFrame);
       const tick=async(time)=>{
         if(id!==generation.current)return;
         if(time-lastTime.current<110){rafRef.current=requestAnimationFrame(tick);return;}
@@ -204,15 +226,8 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
             }
             const stage={hand:handRef.current,phase:data.phase};
             drawOverlay(overlay,points,data,ball,trail,stage);
-            // A separate off-screen canvas composites camera + Form IQ graphics.
-            // The recording is silent, local and only started by explicit consent.
-            if(recorderRef.current?.recorder?.state==='recording'){
-              const canvas=recordCanvasRef.current,context=canvas?.getContext('2d');
-              if(context && overlay){
-                context.drawImage(video,0,0,canvas.width,canvas.height);
-                context.drawImage(overlay,0,0,canvas.width,canvas.height);
-              }
-            }
+            // The independently scheduled compositor keeps the recorded video live
+            // even if pose estimation stalls or briefly loses landmarks.
           }
         }catch(cause){
           if(id===generation.current){setError('Frame analysis paused: '+strip(cause?.message));}
@@ -320,6 +335,14 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
     }catch(cause){setError(strip(cause?.message));}
   };
   const refs=referenceState(metric,metric?.phase);
+  // Browser support checks are not evidence of successful recording.
+  let recordingMime=null;
+  try {recordingMime=supportedRecordingType(globalThis.MediaRecorder);}catch{}
+  const secureBrowser=typeof window!=='undefined' && window.isSecureContext===true;
+  const cameraApi=typeof navigator!=='undefined' && !!navigator.mediaDevices?.getUserMedia;
+  const recordingApi=typeof HTMLCanvasElement!=='undefined' &&
+    typeof HTMLCanvasElement.prototype.captureStream==='function' && !!recordingMime;
+  const localClipStorage=typeof indexedDB!=='undefined';
   return <section className="formiq" aria-label="Live shooting form analyzer">
     <div className="formiq-heading">
       <div><span className="formiq-kicker">COURTIQ / FORM IQ LIVE</span>
@@ -349,6 +372,22 @@ export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRec
       </select></label>
       {status==='active'&&<button type="button" onClick={()=>{setBallPick(true);setMessage('Tap the orange ball in the camera view while it is still.');}}>⌖ Calibrate ball</button>}
     </div>
+    <details className="formiq-device-check">
+      <summary>Device readiness &amp; troubleshooting</summary>
+      <p>These checks describe this browser and camera, not a completed workout. Verify playback and server saving separately.</p>
+      <dl>
+        <div><dt>Secure camera connection</dt><dd>{secureBrowser?'Available':'Unavailable: open HTTPS'}</dd></div>
+        <div><dt>Browser camera access</dt><dd>{cameraApi?'Supported':'Unavailable'}</dd></div>
+        <div><dt>Live camera</dt><dd>{status==='active'?
+          (videoRef.current?.videoWidth||0)+' × '+(videoRef.current?.videoHeight||0)+' px' :
+          status==='error'?'Failed to start':'Not yet started'}</dd></div>
+        <div><dt>Body landmarks</dt><dd>{metric?.visible?'Visible ('+metric.score+'/6 measured joints)':
+          status==='active'?'Not yet visible: frame the shooter':'Not yet checked'}</dd></div>
+        <div><dt>Annotated recording support</dt><dd>{recordingApi?
+          'Advertised: '+recordingMime+' (test an actual recording)':'Not supported: use the phone Camera app'}</dd></div>
+        <div><dt>Local video storage</dt><dd>{localClipStorage?'Available (quota unverified)':'Unavailable'}</dd></div>
+      </dl>
+    </details>
     <div className="formiq-native-record">
       <label className="formiq-record-consent">
         <input type="checkbox" checked={recordConsent} disabled={recording||disabled||status!=='active'}

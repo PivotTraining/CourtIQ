@@ -187,3 +187,31 @@ test('if the local video write fails after stats save, user can retry the clip w
   assert.match(visibleText(h.output),/Annotated video saved locally/);
   h.unmount();
 });
+
+test('user can independently verify the saved shooting result belongs to the selected player',async()=>{
+  let resultId='';
+  const save=async result=>({...result,player_id:'caleb',completed_at:'2026-10-26T14:20:00Z'});
+  const {h,Component}=await setup(save);
+  button(h,'Start machine practice').props.onClick();h.flush();
+  button(h,'+ Made').props.onClick();h.flush();
+  await button(h,'Finish and save practice').props.onClick();await h.settle();
+  h.render(Component,{playerId:'caleb',records:[],canSave:true,onSave:save,
+    onVerify:async id=>{resultId=id;return {id,player_id:'caleb',drills:[]};}});h.flush();
+  await button(h,'Verify saved workout in cloud').props.onClick();await h.settle();
+  assert.equal(resultId,'uuid-1');
+  assert.match(visibleText(h.output),/Verified: this shooting-machine workout was retrieved/);
+  h.unmount();
+});
+test('cloud verification refuses mismatched player ownership and never claims confirmed',async()=>{
+  const save=async result=>({...result,player_id:'caleb'});
+  const {h,Component}=await setup(save);
+  button(h,'Start machine practice').props.onClick();h.flush();
+  button(h,'+ Missed').props.onClick();h.flush();
+  await button(h,'Finish and save practice').props.onClick();await h.settle();
+  h.render(Component,{playerId:'caleb',records:[],canSave:true,onSave:save,
+    onVerify:async id=>({id,player_id:'another-child'})});h.flush();
+  await button(h,'Verify saved workout in cloud').props.onClick();await h.settle();
+  assert.match(visibleText(h.output),/server did not confirm this player/);
+  assert.doesNotMatch(visibleText(h.output),/Verified: this shooting-machine workout/);
+  h.unmount();
+});
