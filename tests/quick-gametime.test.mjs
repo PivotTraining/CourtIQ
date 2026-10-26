@@ -35,6 +35,7 @@ async function fixture({ active = [], local = null } = {}) {
     './CourtTrackerView': TrackerView,
     './AdvancedSessionReport': () => null, './SessionTimeline': () => null,
     './GameContextForm': GameDetails,
+    './GameTrackerRecorder': () => null,
   };
   const globals = { window: { localStorage: { removeItem() {} }, addEventListener() {}, removeEventListener() {} },
     crypto: { randomUUID: () => 'uuid' } };
@@ -51,7 +52,9 @@ test('Quick Gametime creates one game with blank optional fields then opens cour
   assert.deepEqual(f.calls, ['list', 'create:game']);
   assert.equal(f.stored.get('recovery').snapshot.session.type, 'game');
   assert.equal(f.stored.get('recovery').snapshot.session.tracker_context.opponent, '');
-  assert.ok(findElement(f.h.output, element => element.type === f.TrackerView));
+  const activeView=findElement(f.h.output, element => element.type === f.TrackerView);
+  assert.ok(activeView);
+  assert.ok(activeView.props.videoDock,'Game preview is mounted above stat entry controls.');
   f.h.flush();
   assert.deepEqual(f.calls, ['list', 'create:game'], 'Re-render must not create duplicates');
   f.h.unmount();
