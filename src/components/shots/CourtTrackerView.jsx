@@ -70,7 +70,9 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </button>
       </header>
       {saveError && <div className="tracker-error" role="alert">{saveError}</div>}
-      {videoDock}
+      <div className={`tracker-workspace${videoDock ? " tracker-workspace-video" : ""}`}>
+        {videoDock}
+        <div className="tracker-tracking-column">
       <div className="tracker-tabs" aria-label="Tracking view">
         {['court', 'stats'].map(value => <button key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>
           <Icon name={value === 'court' ? 'basketball' : 'barChart'} size={16} />{value === 'court' ? 'Shot chart' : 'Box score'}
@@ -136,6 +138,8 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
           </div>
           <div className="tracker-report-preview"><h3>Included in your final report</h3><p>Full box score, 2PT / 3PT / FT splits, eFG%, estimated TS%, assist-to-turnover ratio, shot-zone distribution and a downloadable CSV for coach review.</p></div>
         </section>}
+      </div>
+        </div>
       </div>
     </div>
   </div>;

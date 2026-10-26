@@ -135,12 +135,39 @@ test('cancel slow camera request releases a late arriving stream and restores co
 test('fast camera constraints, visible playback effect, and UI recovery are explicit',async()=>{
   const ui=await readFile(new URL('../src/components/shots/GameTrackerRecorder.jsx',import.meta.url),'utf8');
   const css=await readFile(new URL('../src/components/shots/game-tracker-recorder.css',import.meta.url),'utf8');
-  assert.match(ui,/width:\{ideal:640\}/);
-  assert.match(ui,/height:\{ideal:480\}/);
-  assert.match(ui,/frameRate:\{ideal:15\}/);
+  assert.match(ui,/video:\{facingMode:\{ideal:cameraFace\}\},audio:false/);
+  assert.doesNotMatch(ui,/width:\{ideal:|height:\{ideal:|frameRate:\{ideal:/);
+  assert.match(ui,/rec\.start\(\)/);
+  assert.match(ui,/playing=node\.play\(\)/);
   assert.doesNotMatch(ui,/await node\.play\(\)/);
   assert.match(ui,/state!=='preview' && state!=='recording'/);
   assert.match(ui,/Cancel camera startup/);
   assert.match(ui,/requestRef\.current/);
   assert.match(css,/\.game-video-camera\[hidden\]\{display:none!important\}/);
+});
+
+test('unsupported recorder fails before requesting camera or showing a stalled spinner',async()=>{
+  const f=await fixture({recorderSupported:false});
+  await f.button('● Record game').props.onClick();f.h.flush();
+  const errors=findElement(f.h.output,node=>node.props?.role==='alert');
+  assert.ok(errors);
+  assert.match([errors.props.children].flat(Infinity).join(''),/cannot record live MP4\/WebM/);
+  assert.equal(f.video.srcObject,null);
+  assert.equal(f.busy.length,0);
+  f.h.unmount();
+});
+
+test('landscape game tracking uses independently scrollable camera and stat columns',async()=>{
+  const css=await readFile(new URL('../src/components/shots/tracker.css',import.meta.url),'utf8');
+  const view=await readFile(new URL('../src/components/shots/CourtTrackerView.jsx',import.meta.url),'utf8');
+  assert.match(view,/tracker-workspace-video/);
+  assert.match(view,/tracker-tracking-column/);
+  assert.match(view,/\{videoDock\}/);
+  assert.match(css,/@media \(orientation: landscape\) and \(max-height: 600px\)/);
+  assert.match(css,/\.tracker-workspace\.tracker-workspace-video\s*\{/);
+  assert.match(css,/grid-template-columns: minmax\(0, 43%\) minmax\(0, 57%\)/);
+  assert.match(css,/\.tracker-workspace-video > \.game-video-dock\s*\{/);
+  assert.match(css,/\.tracker-content\s*\{\s*flex: 1; min-height: 0; height: 100%;/);
+  assert.match(css,/touch-action: pan-y/);
+  assert.match(css,/-webkit-overflow-scrolling: touch/);
 });

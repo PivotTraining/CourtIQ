@@ -7,6 +7,11 @@ html.dark .stat-tracker {
   --stat-green: #65ffb4; --stat-red: #ff8095; --stat-amber: #ffda72; --stat-teal: #59f4e0; --stat-violet: #c4a0ff;
 }
 .tracker-frame { display: flex; flex-direction: column; width: 100%; max-width: 1040px; height: 100%; margin: auto; min-height: 0; }
+/* The camera and stat sections share a bounded workspace. The stat pane
+   remains the scroll surface in portrait; both panes scroll in landscape. */
+.tracker-workspace { display: flex; flex: 1; min-height: 0; min-width: 0; flex-direction: column; overflow: hidden; }
+.tracker-tracking-column { display: flex; flex: 1; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+
 .stat-tracker button { font: inherit; cursor: pointer; touch-action: manipulation; }
 .stat-tracker button:disabled { opacity: .45; cursor: default; }
 .stat-tracker button:focus-visible, .stat-tracker select:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 3px; }
@@ -96,4 +101,51 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
   .tracker-header button { font-size: 11px; padding: 6px; }
   .tracker-header strong { font-size: 12px; }
   .tracker-content { padding-left: 8px; padding-right: 8px; }
+}
+
+/* iPhone landscape: give the camera and live stat inputs their OWN touch-scroll
+   regions. Previously the tall camera was a non-shrinking sibling, leaving
+   tracker-content with essentially no visible height. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .stat-tracker { height: 100dvh; overflow: hidden; }
+  .tracker-frame { height: 100%; min-height: 0; }
+  .tracker-header { padding-top: 2px; padding-bottom: 2px; }
+  .tracker-workspace.tracker-workspace-video {
+    display: grid; flex: 1; min-height: 0; width: 100%; overflow: hidden;
+    grid-template-columns: minmax(0, 43%) minmax(0, 57%);
+    gap: 0;
+  }
+  .tracker-workspace-video .tracker-tracking-column {
+    grid-column: 2; min-height: 0; min-width: 0; height: 100%;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .tracker-workspace-video > .game-video-dock {
+    grid-column: 1; min-height: 0; min-width: 0; max-height: 100%;
+    width: auto; margin: 0 4px 5px 7px;
+    padding: 7px; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y;
+    align-content: start;
+  }
+  .tracker-tabs { margin: 0 5px 4px; padding: 2px; }
+  .tracker-tabs button { min-height: 39px; }
+  .tracker-content {
+    flex: 1; min-height: 0; height: 100%; padding: 0 7px 12px;
+    overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y;
+  }
+  .tracker-court-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .tracker-court { width: min(100%, 370px); }
+  .tracker-stat-grid.compact .tracker-stat-input {
+    min-height: 48px; flex-direction: row; flex-wrap: wrap; gap: 4px;
+  }
+  .tracker-shot-actions > div { gap: 6px; }
+  .tracker-result { min-height: 44px; }
+  .tracker-controls { gap: 8px; }
+  .tracker-recovery-tools { margin: 3px auto 10px; }
+  .tracker-video-camera { max-height: 38dvh; }
+}
+/* Even on tiny portrait screens, don't let a camera tile consume the whole
+   scrolling region. One-finger pan remains enabled for stat controls. */
+@media (orientation: portrait) and (max-height: 690px) {
+  .tracker-content { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 }

@@ -120,6 +120,12 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   async function enableCamera(recordNow=false){
     if(!accountId||!sessionId||workingRef.current||recorderRef.current)return;
     if(!consent){setError('Confirm you have permission to record everyone visible first.');return;}
+    // Fail immediately without spinning up the iPhone camera if recording is unavailable.
+    if(recordNow && !supportedRecordingType(globalThis.MediaRecorder)){
+      setError('This browser cannot record live MP4/WebM video. Open CourtIQ in Safari, or use Preview camera and record in your phone Camera app.');
+      return;
+    }
+    const startedAt=performance.now();
     const token=++requestRef.current;
     const owner=ownerRef.current;
     setError('');setInfo('Opening the camera… If prompted, allow camera access.');
@@ -134,9 +140,9 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     try{
       if(!navigator.mediaDevices?.getUserMedia)
         throw new Error('Camera access is unavailable here. Open https://app.getcourtiq.com in Safari or Chrome and allow camera access.');
-      // Start light: requesting 720p/30fps can keep Safari busy before the preview appears.
-      const constraints={video:{facingMode:{ideal:cameraFace},width:{ideal:640},
-        height:{ideal:480},frameRate:{ideal:15}},audio:false};
+      // Let mobile Safari choose a supported native camera format immediately.
+      // Even ideal width, height and frame-rate negotiation can delay camera startup.
+      const constraints={video:{facingMode:{ideal:cameraFace}},audio:false};
       try {
         stream=await navigator.mediaDevices.getUserMedia(constraints);
       }catch(cause){
@@ -151,11 +157,14 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       const node=videoRef.current;
       if(!node)throw new Error('Camera preview could not initialize. Close the game camera and try again.');
       node.srcObject=stream;node.muted=true;node.playsInline=true;
-      // Video playback is handled by the effect AFTER the visible camera node renders.
-      // Awaiting node.play() here stalled startup on some mobile browsers.
+      // Trigger inline playback now, during the camera-start interaction, but
+      // do not await Safari's play promise. The visible preview effect can retry.
+      try{const playing=node.play();playing?.catch?.(()=>{
+        if(aliveRef.current)setInfo('Camera connected. Tap the preview if the picture is blank.');
+      });}catch{}
       clearCameraTimeout();setState('preview');markBusy(false);
       if(recordNow)startCapture();
-      else setInfo('Camera connected. The live view should appear above the stat controls.');
+      else setInfo('Camera connected in '+((performance.now()-startedAt)/1000).toFixed(1)+'s. The live view should appear above the stat controls.');
     }catch(cause){
       stream?.getTracks().forEach(track=>track.stop());
       if(!aliveRef.current||token!==requestRef.current)return;
@@ -213,7 +222,9 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
           }
         }
       };
-      rec.start(1000);
+      // Recording is bounded to four minutes. Avoid the repeating one-second
+      // chunk encoding overhead that can stall iOS while logging game stats.
+      rec.start();
       recorderRef.current=rec;
       setSeconds(0);setState('recording');markBusy(true);
       const started=performance.now();
