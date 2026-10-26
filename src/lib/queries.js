@@ -324,13 +324,16 @@ export async function saveWorkoutResult(playerId, result, { signal } = {}) {
   let recovery = getSupabase().from("workout_results").select("*").eq("id", result.id).eq("player_id", playerId).single();
   if (signal) recovery = recovery.abortSignal(signal);
   const existing = requireSavedRow(await recovery, "Workout recovery");
-  if (existing.elapsed_seconds !== row.elapsed_seconds || JSON.stringify(existing.drills) !== JSON.stringify(row.drills)) {
-    // JSONB may reorder object keys. Compare each recorded field explicitly.
-    if (existing.elapsed_seconds !== row.elapsed_seconds || existing.drills.length !== row.drills.length
-      || existing.drills.some((drill, index) => Object.keys(row.drills[index]).some(key => drill[key] !== row.drills[index][key]))) {
-      throw new Error('Workout ID belongs to a different result.');
-    }
-  }
+  // PostgreSQL JSONB reorders nested object keys. Compare canonical JSON rather than
+  // object identity so a response-lost retry works for structured practice sessions.
+  const canonical = value => JSON.stringify(value, function (key, item) {
+    if (item && !Array.isArray(item) && typeof item === 'object')
+      return Object.fromEntries(Object.keys(item).sort().map(name => [name, item[name]]));
+    return item;
+  });
+  if (existing.elapsed_seconds !== row.elapsed_seconds ||
+      canonical(existing.drills) !== canonical(row.drills))
+    throw new Error('Workout ID belongs to a different result.');
   return existing;
 }
 
