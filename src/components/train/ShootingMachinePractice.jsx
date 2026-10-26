@@ -341,7 +341,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
             {new Date(item.at).toLocaleTimeString()} · {item.phase} · Elbow {item.elbow_angle ?? '—'}° · Knee {item.knee_angle ?? '—'}° · Image-plane ball rise {item.projected_rise_angle ?? '—'}°
           </p>)}
           <p>These are uncalibrated camera observations, not verified shooting-form scores or true 3D ball-flight measurements.</p>
-        </div>
+        </div>}
         <p>{FORM_CUES.filter(cue => selectedDetail.machine.form?.[cue.id])
           .map(cue => cue.label).join(' · ') || 'No form cues marked as reviewed.'}</p>
       </div>}
