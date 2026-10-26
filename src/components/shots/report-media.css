@@ -36,3 +36,9 @@
 .report-card-actions > button,.report-card-actions > a {flex:1;justify-content:center;max-width:260px;font-weight:800;}
 .report-card-actions .report-card-download {color:#fff;background:var(--color-accent);border-color:var(--color-accent);}
 @media(max-width:480px) {.report-card-options .report-media-controls > label:not(.report-checkbox) {min-width:130px;} .report-card-actions {flex-wrap:nowrap;} .report-card-actions > button,.report-card-actions > a {padding:10px 8px;font-size:13px;}}
+
+.report-media-segments{display:grid;gap:12px;padding:12px 0}
+.report-media-segments h3{font-size:14px;font-weight:800}
+.report-media-segment{display:grid;gap:8px;padding:12px;border:1px solid var(--color-border);border-radius:12px}
+.report-media-segment h4{font-size:12px;font-weight:800}
+.report-media-segment video{width:100%;max-height:250px;background:#090c13;border-radius:9px}

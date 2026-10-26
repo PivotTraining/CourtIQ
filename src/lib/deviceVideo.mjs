@@ -50,6 +50,51 @@ export function createDeviceVideoStore(factory=globalThis.indexedDB) {
         };
       });
     },
+    // Game video records are additional session-scoped segments, not replacement
+    // files. Legacy 'get/put' records retain their original contract.
+    async listSegments(accountId,sessionId) {
+      clipKey(accountId,sessionId);
+      return transaction('readonly',(store,done)=>{
+        const request=store.getAll();
+        request.onsuccess=()=>done(request.result.filter(row=>
+          row.accountId===accountId&&row.sessionId===sessionId&&row.segment===true)
+          .sort((a,b)=>(a.recordedAt||a.savedAt).localeCompare(b.recordedAt||b.savedAt)));
+      });
+    },
+    async putSegment(accountId,sessionId,blob,metadata={}) {
+      clipKey(accountId,sessionId);validateClip(blob);
+      const id=JSON.stringify([accountId,sessionId,'segment',crypto.randomUUID()]);
+      return transaction('readwrite',(store,done,fail)=>{
+        const request=store.getAll();
+        request.onsuccess=()=>{
+          const used=request.result.filter(row=>row.accountId===accountId)
+            .reduce((sum,row)=>sum+row.blob.size,0);
+          if(used+blob.size>MAX_ACCOUNT_VIDEO_BYTES){
+            fail(new Error('The 250 MB account video storage limit was reached. Download or delete old clips first.'));
+            return;
+          }
+          const record={id,accountId,sessionId,blob,segment:true,
+            recordedAt:metadata.recordedAt||new Date().toISOString(),
+            endedAt:metadata.endedAt||new Date().toISOString(),
+            savedAt:new Date().toISOString()};
+          store.put(record);done(record);
+        };
+      });
+    },
+    async removeSegment(accountId,sessionId,id) {
+      clipKey(accountId,sessionId);
+      if(!id)throw new Error('Video segment ID required.');
+      return transaction('readwrite',(store,done,fail)=>{
+        const request=store.get(id);
+        request.onsuccess=()=>{
+          const item=request.result;
+          if(!item||item.accountId!==accountId||item.sessionId!==sessionId||!item.segment){
+            fail(new Error('This clip does not belong to the selected game.'));return;
+          }
+          store.delete(id);done(true);
+        };
+      });
+    },
     async remove(accountId,sessionId) {
       const id=clipKey(accountId,sessionId);
       return transaction('readwrite',(store,done)=>{store.delete(id);done(true);});

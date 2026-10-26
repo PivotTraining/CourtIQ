@@ -348,6 +348,6 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     logShot={made => { if(entry({ kind: 'shot', zone_id: selectedZone, made }) && !keepZone) setSelectedZone(null); }}
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools}
      videoDock={snapshot.session.type==='game'?
-       <GameTrackerRecorder accountId={accountId} sessionId={snapshot.session.id}
+       <GameTrackerRecorder accountId={accountId} sessionId={snapshot.session.id} events={snapshot.events}
          playerName={recordingPlayerName} onBusyChange={setMediaBusy} />:null} />;
 }

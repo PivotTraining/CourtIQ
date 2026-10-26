@@ -27,3 +27,23 @@ test('base-layer reset cannot override utility padding and modal privacy starts 
   assert.match(css,/@layer base\s*\{\s*\*, \*::before, \*::after \{[^}]*margin: 0; padding: 0;/);
   const source=await readFile(new URL('../src/components/shots/SocialReportCard.jsx',import.meta.url),'utf8');assert.match(source,/\[includeName,\s*setIncludeName\]\s*=\s*useState\(false\)/);
 });
+
+test('timestamped game segments persist independently under their original account and game',async()=>{
+  const store=createDeviceVideoStore(new IDBFactory());
+  const movie=new Blob(['recorded segment'],{type:'video/mp4'});
+  const a=await store.putSegment('parent-a','game-1',movie,
+    {recordedAt:'2026-10-26T18:00:00.000Z',endedAt:'2026-10-26T18:03:55.000Z'});
+  const b=await store.putSegment('parent-a','game-1',movie,
+    {recordedAt:'2026-10-26T18:04:00.000Z',endedAt:'2026-10-26T18:07:55.000Z'});
+  assert.notEqual(a.id,b.id,'segments must never replace previous footage');
+  const segments=await store.listSegments('parent-a','game-1');
+  assert.deepEqual(segments.map(x=>x.id),[a.id,b.id]);
+  assert.equal((await store.listSegments('parent-b','game-1')).length,0);
+  assert.equal((await store.listSegments('parent-a','other-game')).length,0);
+  await assert.rejects(store.removeSegment('parent-b','game-1',a.id),/does not belong/);
+  assert.equal((await store.listSegments('parent-a','game-1')).length,2);
+  await store.removeSegment('parent-a','game-1',a.id);
+  assert.deepEqual((await store.listSegments('parent-a','game-1')).map(x=>x.id),[b.id]);
+  await store.clearAccount('parent-a');
+  assert.equal((await store.listSegments('parent-a','game-1')).length,0);
+});
