@@ -177,3 +177,7 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
  .tracker-quick-zone-controls{gap:4px}
  .tracker-timeline ol{max-height:none}
 }
+
+.tracker-merge-controls{border:1px solid var(--stat-amber);border-radius:12px;background:var(--color-card);padding:12px;margin:8px 0;display:flex;flex-wrap:wrap;gap:8px}
+.tracker-merge-controls p{flex-basis:100%;font-size:12px;line-height:1.55;color:var(--color-text);margin:0}
+.tracker-merge-controls button{flex:1 1 180px}
