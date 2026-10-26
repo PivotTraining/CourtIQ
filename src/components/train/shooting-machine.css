@@ -80,3 +80,10 @@
 .machine-annotated-film strong{font-size:13px;color:var(--color-text)}
 .machine-annotated-film p{font-size:11px;color:var(--color-text-sec);margin:0;line-height:1.5}
 .machine-annotated-film button{min-height:45px;border:0;border-radius:9px;background:#e86635;color:#fff;font-weight:850;padding:10px;font-size:12px}
+
+.machine-cloud-verification{display:grid;gap:7px;border:1px solid var(--color-border);border-radius:12px;padding:11px;background:var(--color-muted)}
+.machine-cloud-verification button{min-height:45px;border:0;border-radius:10px;background:#ff6b35;color:#fff;font-size:12px;font-weight:850;padding:9px 13px}
+.machine-cloud-verification button:disabled{opacity:.55}
+.machine-cloud-verification p{font-size:11px;line-height:1.6;margin:0}
+.machine-verify-status{color:var(--color-text-sec)}
+.machine-verify-failed{color:#b91c1c!important}
