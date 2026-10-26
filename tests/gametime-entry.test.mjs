@@ -31,7 +31,7 @@ async function shellFixture(screen = 'home', billingEnabled = false) {
     '@/lib/useThemePreference': { useThemePreference: () => [false, () => {}] },
     '@/lib/firebase': { signOutUser: async () => {} }, '@/lib/utils': { getGreeting: () => 'Hello' },
     './ui/Icons': Empty, './GametimeAction': Gametime, './shots/ShotLogger': Logger,
-    './GymArrivalMonitor': Empty,
+    './GymArrivalMonitor': Empty, './ErrorBoundary': ({ children }) => children,
     './billing/MembershipOverview': Overview, './billing/BillingScreen': Billing };
   for (const name of ['BottomNav', 'DesktopNav', 'dashboard/HomeDashboard', 'shots/ShotTracking', 'heatmap/HeatMapScreen',
     'journal/JournalScreen', 'train/TrainScreen', 'train/SkillsScreen', 'iq/IQScreen', 'auth/ProfileEditor', 'PlayerSwitcher',
