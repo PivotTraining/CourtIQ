@@ -59,10 +59,15 @@
 .machine-saved{display:grid;gap:7px;font-size:12px}
 .machine-saved p{margin:0;line-height:1.5}
 .machine-history{display:grid;gap:10px}
-.machine-history-line{border-bottom:1px solid var(--color-border);padding:8px 0;display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:9px;font-size:11px}
+.machine-history-line{border-bottom:1px solid var(--color-border);padding:8px 0;display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:9px;font-size:11px}
 .machine-history-line div{display:grid;gap:4px;min-width:0}
 .machine-history-line small{color:var(--color-text-sec);overflow-wrap:anywhere}
 .machine-history-line>strong{font-size:12px}
 .machine-video{display:grid;gap:12px}
 @media(min-width:500px){.machine-hero{grid-template-columns:1fr auto;align-items:center}.machine-zones{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:360px){.machine-settings{grid-template-columns:1fr}.machine-history-line{grid-template-columns:1fr auto}.machine-history-line>button{grid-column:1/-1;justify-self:start}.machine-metrics strong{font-size:16px}}
+
+.machine-detail{display:grid;gap:8px;padding:13px;background:var(--color-muted);border-radius:12px;border:1px solid var(--color-border)}
+.machine-detail h4{font-size:13px;font-weight:850;margin:0}
+.machine-detail strong{font-size:11px}
+.machine-detail p{font-size:11px;color:var(--color-text-sec);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;margin:0}
