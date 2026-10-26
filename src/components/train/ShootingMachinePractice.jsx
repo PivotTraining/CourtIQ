@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import SessionVideo from '@/components/shots/SessionVideo';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 import {
-  FORM_CUES, MACHINE_STYLES, MACHINE_ZONES, machineCsv, machineDraftKey,
+  FORM_CUES, MACHINE_PLANS, MACHINE_STYLES, MACHINE_ZONES, machineCsv, machineDraftKey,
   machineHistory, machineSummary, machineWorkoutResult, newMachineDraft,
 } from '@/lib/shootingMachine.mjs';
 import './shooting-machine.css';
@@ -26,6 +26,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const key = accountId && playerId ? machineDraftKey(accountId, playerId) : null;
   const [draft, setDraft] = useState(null);
   const [ready, setReady] = useState(false);
+  const [loadedKey, setLoadedKey] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [bulkMakes, setBulkMakes] = useState('0');
   const [bulkAttempts, setBulkAttempts] = useState('25');
@@ -36,10 +37,16 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const [message, setMessage] = useState('');
 
   const history = useMemo(() => machineHistory(records), [records]);
-  const summary = useMemo(() => machineSummary(draft?.entries || []), [draft?.entries]);
+  const isCurrent = ready && loadedKey === key && !!key;
+  const summary = useMemo(() => machineSummary(isCurrent ? (draft?.entries || []) : []), [draft?.entries, isCurrent]);
+  const running = isCurrent && expanded && !!draft && !draft.paused && !savedId;
+  const selectedPlan = MACHINE_PLANS.find(plan => plan.id === draft?.plan) || MACHINE_PLANS[0];
 
   useEffect(() => {
     setReady(false);
+    setLoadedKey(null);
+    setSelectedVideoId(null);
+    setExpanded(false);
     if (!key) { setDraft(null); return; }
     let restored = null;
     try {
@@ -57,41 +64,49 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     } catch { /* Start a fresh draft if device storage cannot be read. */ }
     setDraft(restored || newMachineDraft(crypto.randomUUID()));
     setSavedId(null);
+    setLoadedKey(key);
     setReady(true);
   }, [key]);
 
   useEffect(() => {
-    if (!ready || !key || !draft) return;
+    if (!isCurrent || !key || !draft) return;
     try {
       if (savedId === draft.id) window.localStorage.removeItem(key);
       else window.localStorage.setItem(key, JSON.stringify(draft));
     } catch {
       setMessage('Device draft storage is unavailable. Export a CSV before leaving this screen.');
     }
-  }, [key, draft, ready, savedId]);
+  }, [key, draft, isCurrent, savedId]);
 
   useEffect(() => {
-    if (!ready || !expanded || !draft || draft.paused || savedId) return;
+    if (!running) return;
     const timer = setInterval(() => {
       setDraft(current => current && current.elapsed < 86400
         ? { ...current, elapsed: current.elapsed + 1 } : current);
     }, 1000);
     return () => clearInterval(timer);
-  }, [ready, expanded, draft?.paused, savedId, draft?.id]);
+  }, [running]);
 
   const change = (field, value) => {
     if (savedId || saving) return;
     setDraft(current => ({ ...current, [field]: value }));
   };
   const record = (makes, attempts, source) => {
-    if (!ready || !draft || saving || savedId) return;
+    if (!isCurrent || !draft || saving || savedId) return;
     const item = {
       id: crypto.randomUUID(), zone: draft.zone,
       style: draft.zone === 'free-throw' ? 'free-throw' : draft.style,
       makes, attempts, source,
     };
-    setDraft(current => ({ ...current, entries: [...current.entries, item] }));
+    setDraft(current => current.entries.length >= 5000 || current.entries.reduce((sum, e) => sum + e.attempts, 0) + attempts > 100000
+      ? current : ({ ...current, entries: [...current.entries, item] }));
     setError('');
+  };
+  const applyPlan = planId => {
+    if (!draft || summary.attempts || savedId || saving) return;
+    const plan = MACHINE_PLANS.find(item => item.id === planId) || MACHINE_PLANS[0];
+    setDraft(current => ({ ...current, plan: plan.id, target: plan.goal,
+      focus: plan.label, style: plan.style, zone: plan.first }));
   };
   const addBatch = event => {
     event.preventDefault();
@@ -166,7 +181,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <h3>Make every machine rep count.</h3>
         <p>Log shots, compare locations, review video, and save a measurable practice baseline. This never changes game statistics.</p>
       </div>
-      <button className="machine-primary" disabled={!hasPlayer || !ready}
+      <button className="machine-primary" disabled={!hasPlayer || !isCurrent}
         onClick={() => savedId ? newSession() : setExpanded(open => !open)}>
         {savedId ? 'Start another session' : expanded ? 'Close practice' : 'Start machine practice'}
       </button>
@@ -178,14 +193,19 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     {!hasPlayer && <p role="status">Select a player profile before recording practice.</p>}
     {message && <p className="machine-message" role="status">{message}</p>}
     {error && <p className="machine-error" role="alert">{error}</p>}
-    {expanded && draft && ready && !savedId && <>
+    {expanded && draft && isCurrent && !savedId && <>
       <div className="machine-section">
         <div className="machine-section-heading"><h4>1. Set up the workout</h4>
           <button type="button" onClick={() => change('paused', !draft.paused)}>{draft.paused ? 'Resume timer' : 'Pause timer'} · {formatTime(draft.elapsed)}</button></div>
+        <label className="machine-style">Quick shooting plan<select value={draft.plan || 'custom'}
+          disabled={summary.attempts > 0} onChange={event => applyPlan(event.target.value)}>
+          {MACHINE_PLANS.map(plan => <option key={plan.id} value={plan.id}>{plan.label}</option>)}
+        </select></label>
+        <p className="machine-hint">{selectedPlan.instruction} These are practice guides; CourtIQ does not program the shooting machine.</p>
         <div className="machine-settings">
           <label>Workout focus<input maxLength={100} value={draft.focus} onChange={event => change('focus', event.target.value)} placeholder="e.g. five-spot catch and shoot" /></label>
           <label>Machine (optional)<input maxLength={80} value={draft.machine} onChange={event => change('machine', event.target.value)} placeholder="e.g. The Gun 12K" /></label>
-          <label>Shot goal<input type="number" inputMode="numeric" min="1" max="10000" value={draft.target} onChange={event => change('target', Number(event.target.value))} /></label>
+          <label>Shot goal<input type="number" inputMode="numeric" min="1" max="10000" value={draft.target} onChange={event => setDraft(current => ({ ...current, plan: 'custom', target: Number(event.target.value) }))} /></label>
           <label>Feed interval, seconds (optional)<input type="number" min="0.5" max="30" step="0.5" inputMode="decimal" value={draft.feedSeconds} onChange={event => change('feedSeconds', event.target.value)} placeholder="e.g. 4.0" /></label>
         </div>
       </div>
@@ -246,7 +266,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
             setDraft(current => ({ ...current, form: { ...current.form, [cue.id]: event.target.checked } }))} />{cue.label}</label>)}</div>
         <label className="machine-notes">Coaching observations<textarea maxLength={1500} rows={3} value={draft.notes}
           onChange={event => change('notes', event.target.value)} placeholder="What improved? What did you notice about footwork, release, rhythm, and fatigue?" /></label>
-        <p className="machine-hint">After saving, attach a short video to this workout on this device. Keep the original camera footage in Photos or another backup.</p>
+        <p className="machine-hint">Film with the phone Camera, then save a short clip here after the workout. If using one phone for filming, enter the machine's shot totals when filming is done. Keep the original recording in Photos or another backup.</p>
       </div>
       <footer className="machine-finish">
         <div><strong>Save to this player's Practice history</strong>
@@ -273,7 +293,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <button type="button" onClick={() => setSelectedVideoId(row.id)}>Video</button>
       </div>)}
     </section>}
-    {!!accountId && !!selectedVideoId && <section className="machine-video">
+    {isCurrent && !!accountId && !!selectedVideoId && <section className="machine-video">
       <div className="machine-section-heading"><h4>Saved workout video</h4><button type="button" onClick={() => setSelectedVideoId(null)}>Close video</button></div>
       <SessionVideo key={selectedVideoId} accountId={accountId} sessionId={selectedVideoId} />
       <p className="machine-hint">The clip is stored only on this device and will not sync to a second phone. Download the original for a permanent backup.</p>
