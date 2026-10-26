@@ -41,6 +41,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   const [courtTheme, setCourtTheme] = useState('tan');
   const [timeline, setTimeline] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [videoBusy, setVideoBusy] = useState(false);
 
   const persist = next => {
     if (identity.current !== `${accountId}:${playerId}`) throw new Error('Account changed.');
@@ -190,6 +191,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     finally { busyRef.current = false; setBusy(false); }
   }
   async function finish() {
+    if (videoBusy) { setError('Stop and save the video before ending your session. Stats are still being tracked.'); return; }
     if (valueRef.current?.pending.length && !await sync()) return;
     if (await entry({ kind: 'end' })) {
       window.localStorage.removeItem(recoveryKey(accountId, playerId));
@@ -228,7 +230,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
 
   const tools = <section className="tracker-recovery-tools">
     {teamControls && <div className="tracker-tool-row">
-      <label>Recording player <select style={{ ...inputStyle, maxWidth: '100%' }} value={playerId} disabled={busy} onChange={event => teamControls.onPlayerChange(event.target.value)}>
+      <label>Recording player <select style={{ ...inputStyle, maxWidth: '100%' }} value={playerId} disabled={busy || videoBusy} title={videoBusy ? "Stop and save your video before switching the recording player" : undefined} onChange={event => teamControls.onPlayerChange(event.target.value)}>
         {teamControls.roster.map(player => <option key={player.id} value={player.id}>#{player.jersey_number ?? '—'} {player.name}</option>)}
       </select></label>
       <span>Period {teamControls.period} · {teamControls.clock}</span>
@@ -239,7 +241,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       {value.pending.length > 0 && <button style={inputStyle} disabled={busy || conflict} onClick={() => sync()}>Retry sync ({value.pending.length})</button>}
       <button style={inputStyle} onClick={() => setTimeline(!timeline)} aria-expanded={timeline}>Entries</button>
       {!teamControls && <button style={inputStyle} onClick={() => { setContext(snapshot.session.tracker_context); setShowContext(!showContext); }} aria-expanded={showContext}>Game details</button>}
-      <button style={inputStyle} onClick={() => { onClose(); }}>Save for later</button>
+      <button style={inputStyle} disabled={videoBusy} title={videoBusy ? "Stop and save your video first" : undefined} onClick={() => { onClose(); }}>Save for later</button>
     </div>
     {value.pending.length > 0 && <button style={inputStyle} onClick={downloadPending}>Download unsynced entries</button>}
     {conflict && <button style={inputStyle} disabled={busyRef.current} onClick={resolveConflict}>Resolve with saved account version</button>}
@@ -256,6 +258,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     saving={busy || conflict} ending={false} saveError={error} tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
     courtTheme={courtTheme} setCourtTheme={setCourtTheme} undoCount={reversible.length}
     undoLast={() => entry({ kind: 'reverse', target: reversible.at(-1)?.id })} endSession={teamControls ? onClose : finish}
+    videoSession={snapshot.session?.id ? { accountId, sessionId: snapshot.session.id } : null} videoBusy={videoBusy} onVideoBusyChange={setVideoBusy}
     endLabel={teamControls ? 'Back to team' : 'End session'} headerTitle={teamControls?.roster.find(player => player.id === playerId)?.name}
     logShot={made => { entry({ kind: 'shot', zone_id: selectedZone, made }); setSelectedZone(null); }}
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools} />;

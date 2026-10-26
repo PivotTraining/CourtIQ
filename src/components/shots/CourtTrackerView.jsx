@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import LiveSessionRecorder from "./LiveSessionRecorder";
 import Icon from '@/components/ui/Icons';
 import { COURT_ZONES } from '@/lib/constants';
 import { getHeatColor } from '@/lib/utils';
@@ -36,7 +37,7 @@ function StatInputs({ stats, updateStat, busy, compact = false }) {
 
 export default function CourtTrackerView({ sessionType, shots, selectedZone, selectZone, gameStats, updateStat,
   saving, ending, saveError, tab, setTab, darkMode, onToggleTheme, courtTheme, setCourtTheme,
-  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, endLabel = 'End session', headerTitle }) {
+  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, videoSession, onVideoBusyChange, videoBusy = false, endLabel = 'End session', headerTitle }) {
   const busy = saving || ending;
   const selected = COURT_ZONES.find(zone => zone.id === selectedZone);
   const dialogRef = useRef(null);
@@ -62,7 +63,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
   return <div ref={dialogRef} tabIndex={-1} className="stat-tracker" role="dialog" aria-modal="true" aria-label="Basketball stat tracker">
     <div className="tracker-frame">
       <header className="tracker-header">
-        <button className="tracker-end" onClick={endSession} disabled={busy}>{ending ? 'Saving…' : endLabel}</button>
+        <button className="tracker-end" onClick={endSession} disabled={busy || videoBusy} title={videoBusy ? "Stop and save your video before ending this session" : undefined}>{ending ? 'Saving…' : endLabel}</button>
         <strong>{headerTitle || (sessionType === 'game' ? 'Gametime' : 'Practice')}</strong>
         <button onClick={undoLast} disabled={busy || undoCount === 0}><Icon name="undo" size={16} /> Undo</button>
         <button className="tracker-theme" onClick={onToggleTheme} aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`} title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}>
@@ -76,6 +77,11 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </button>)}
       </div>
       <div className="tracker-content">
+        {videoSession?.accountId && videoSession?.sessionId && <LiveSessionRecorder
+          key={`${videoSession.accountId}:${videoSession.sessionId}`}
+          accountId={videoSession.accountId} sessionId={videoSession.sessionId}
+          onBusyChange={onVideoBusyChange} />}
+        {videoBusy && <p role="status" className="tracker-hint">Stop and save your video before ending or leaving the session. You can keep entering stats.</p>}
         {ticker}
         {tab === 'court' ? <div className="tracker-court-layout">
           <section className="tracker-court-panel" aria-label="Shot location">

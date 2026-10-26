@@ -27,6 +27,7 @@ const Icon = ({ name }) => React.createElement('span', { 'aria-hidden': true }, 
 const Tracker = (await loadComponent('../src/components/shots/CourtTrackerView.jsx', {
   '@/components/ui/Icons': { __esModule: true, default: Icon }, '@/lib/constants': constants,
   '@/lib/utils': { getHeatColor: () => '#22c55e' },
+  './LiveSessionRecorder': { __esModule: true, default: () => React.createElement('div', { 'data-test-recorder': true }, 'Record video') },
 })).default;
 const Report = (await loadComponent('../src/components/shots/AdvancedSessionReport.jsx', {
   '@/lib/constants': constants, '@/lib/sessionReport.mjs': reports,
@@ -106,4 +107,16 @@ test('season and monthly per-game averages exclude practice and do not double-co
   assert.equal(month.fgPct, 10);
   assert.equal(month.totalPts, 3);
   assert.equal(intelligence.computeCoachReport(sessions, {}).length, 0);
+});
+
+
+test('camera recording controls live alongside usable make/miss and box-score inputs', () => {
+  const streaming = render(Tracker, { ...props, videoSession: { accountId: 'parent', sessionId: 'game' },
+    videoBusy: true, onVideoBusyChange: noop });
+  assert.match(streaming, /Record video/);
+  assert.match(streaming, /Stop and save your video before ending/);
+  assert.match(streaming, /class="tracker-end"[^>]*disabled=""/);
+  assert.match(streaming, />Made FT</);
+  assert.match(streaming, /Add assist, current count 0/);
+  assert.doesNotMatch(streaming, /class="tracker-result" data-tone="green" disabled=""/);
 });

@@ -97,3 +97,19 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
   .tracker-header strong { font-size: 12px; }
   .tracker-content { padding-left: 8px; padding-right: 8px; }
 }
+
+/* Foreground, opt-in camera recording remains in view while stat buttons work. */
+.tracker-live-video {max-width:980px;margin:8px auto 12px;background:var(--color-card);border:1px solid var(--color-border);border-radius:15px;padding:12px 13px;}
+.tracker-video-topline {display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.tracker-video-topline > div {display:flex;flex-direction:column;gap:3px;min-width:0;}
+.tracker-video-topline strong {font-size:13px;font-weight:850;}
+.tracker-video-topline > div span {color:var(--color-text-sec);font-size:11px;line-height:1.4;}
+.tracker-record-indicator {color:#dc2626;font-size:12px;font-weight:900;white-space:nowrap;letter-spacing:.4px;}
+.tracker-video-actions {display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:11px;font-size:12px;}
+.tracker-video-actions button {border:1px solid var(--color-border);border-radius:10px;background:var(--color-muted);color:var(--color-text);padding:10px 13px;min-height:44px;font-weight:850;font-size:12px;}
+.tracker-video-actions button:first-child {background:var(--color-accent);color:#fff;border-color:var(--color-accent);}
+.tracker-video-preview {width:100%;max-width:350px;max-height:220px;display:block;object-fit:contain;aspect-ratio:16/9;background:#050606;margin:10px 0;border-radius:12px;}
+.tracker-video-note {font-size:10px;line-height:1.5;color:var(--color-text-sec);margin:8px 0 0;}
+.tracker-video-saved {font-size:11px;color:var(--stat-green);font-weight:800;}
+.tracker-video-error {color:var(--stat-red);font-size:12px;line-height:1.5;margin:8px 0 0;}
+@media (min-width:720px){.tracker-live-video {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);column-gap:16px;align-items:center;}.tracker-live-video .tracker-video-preview {grid-column:1/-1;}.tracker-live-video .tracker-video-note,.tracker-live-video .tracker-video-error {grid-column:1/-1;}}

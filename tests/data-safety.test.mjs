@@ -96,7 +96,7 @@ test('failed session completion keeps the tracker open and does not show a saved
   let error;
   const pendingWrite = { current: false };
   const fn = vm.runInNewContext(`(async () => {${handler}})`, {
-    pendingWrite, saving: false, ending: false, playWhistle() {}, setEnding() {},
+    pendingWrite, saving: false, ending: false, videoBusy: false, playWhistle() {}, setEnding() {},
     session: { id: 'session' }, shots: [], freeThrows: [], COURT_ZONES: [], gameStats: {}, focus: '',
     updateSessionStats: async () => { throw new Error('Denied'); },
     refreshData: async () => transitions.push('refresh'), setStep: () => transitions.push('summary'),
