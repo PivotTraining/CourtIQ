@@ -39,7 +39,8 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const history = useMemo(() => machineHistory(records), [records]);
   const isCurrent = ready && loadedKey === key && !!key;
   const summary = useMemo(() => machineSummary(isCurrent ? (draft?.entries || []) : []), [draft?.entries, isCurrent]);
-  const running = isCurrent && expanded && !!draft && !draft.paused && !savedId;
+  const pendingConfirmation = !!draft?.frozenResult && !savedId;
+  const running = isCurrent && expanded && !!draft && !draft.paused && !savedId && !pendingConfirmation;
   const selectedPlan = MACHINE_PLANS.find(plan => plan.id === draft?.plan) || MACHINE_PLANS[0];
 
   useEffect(() => {
@@ -88,11 +89,11 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   }, [running]);
 
   const change = (field, value) => {
-    if (savedId || saving) return;
+    if (savedId || saving || pendingConfirmation) return;
     setDraft(current => ({ ...current, [field]: value }));
   };
   const record = (makes, attempts, source) => {
-    if (!isCurrent || !draft || saving || savedId) return;
+    if (!isCurrent || !draft || saving || savedId || pendingConfirmation) return;
     const item = {
       id: crypto.randomUUID(), zone: draft.zone,
       style: draft.zone === 'free-throw' ? 'free-throw' : draft.style,
@@ -103,7 +104,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     setError('');
   };
   const applyPlan = planId => {
-    if (!draft || summary.attempts || savedId || saving) return;
+    if (!draft || summary.attempts || savedId || saving || pendingConfirmation) return;
     const plan = MACHINE_PLANS.find(item => item.id === planId) || MACHINE_PLANS[0];
     setDraft(current => ({ ...current, plan: plan.id, target: plan.goal,
       focus: plan.label, style: plan.style, zone: plan.first }));
@@ -123,7 +124,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     record(makes, attempts, 'machine-display');
   };
   const undo = () => {
-    if (!draft || savedId || saving) return;
+    if (!draft || savedId || saving || pendingConfirmation) return;
     setDraft(current => ({ ...current, entries: current.entries.slice(0, -1) }));
     setError('');
   };
@@ -142,8 +143,16 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
       return;
     }
     let result;
-    try { result = machineWorkoutResult(draft); }
+    try { result = draft.frozenResult || machineWorkoutResult(draft); }
     catch (cause) { setError(cause.message); return; }
+    // Freeze the exact payload before the network write. A lost response must retry
+    // the same UUID and the same JSONB, even after browser refresh or timer changes.
+    if (!draft.frozenResult) {
+      const frozen = { ...draft, paused: true, frozenResult: result };
+      setDraft(frozen);
+      try { window.localStorage.setItem(key, JSON.stringify(frozen)); }
+      catch { setMessage('Device recovery storage is unavailable. Do not close this tab before confirming the save.'); }
+    }
     setSaving(true);
     setError('');
     setMessage('');
@@ -162,6 +171,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     }
   };
   const newSession = () => {
+    if (pendingConfirmation && !window.confirm('This save may have reached the server. Starting over will abandon its retry record. Continue?')) return;
     if (!savedId && draft?.entries.length &&
         !window.confirm('Start over? All unsaved attempts in this draft will be lost.')) return;
     setDraft(newMachineDraft(crypto.randomUUID()));
@@ -196,12 +206,13 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     {expanded && draft && isCurrent && !savedId && <>
       <div className="machine-section">
         <div className="machine-section-heading"><h4>1. Set up the workout</h4>
-          <button type="button" onClick={() => change('paused', !draft.paused)}>{draft.paused ? 'Resume timer' : 'Pause timer'} · {formatTime(draft.elapsed)}</button></div>
+          <button type="button" disabled={pendingConfirmation} onClick={() => change('paused', !draft.paused)}>{draft.paused ? 'Resume timer' : 'Pause timer'} · {formatTime(draft.elapsed)}</button></div>
         <label className="machine-style">Quick shooting plan<select value={draft.plan || 'custom'}
-          disabled={summary.attempts > 0} onChange={event => applyPlan(event.target.value)}>
+          disabled={summary.attempts > 0 || pendingConfirmation} onChange={event => applyPlan(event.target.value)}>
           {MACHINE_PLANS.map(plan => <option key={plan.id} value={plan.id}>{plan.label}</option>)}
         </select></label>
         <p className="machine-hint">{selectedPlan.instruction} These are practice guides; CourtIQ does not program the shooting machine.</p>
+        {pendingConfirmation && <p className="machine-hint" role="status">Save confirmation is pending. Entries and duration are frozen so retry cannot create a conflicting workout. Retry using the same result ID.</p>}
         <div className="machine-settings">
           <label>Workout focus<input maxLength={100} value={draft.focus} onChange={event => change('focus', event.target.value)} placeholder="e.g. five-spot catch and shoot" /></label>
           <label>Machine (optional)<input maxLength={80} value={draft.machine} onChange={event => change('machine', event.target.value)} placeholder="e.g. The Gun 12K" /></label>
@@ -214,30 +225,30 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <div className="machine-zones" role="group" aria-label="Shooting location">
           {MACHINE_ZONES.map(zone => {
             const line = summary.perZone.find(item => item.id === zone.id);
-            return <button type="button" key={zone.id} aria-pressed={draft.zone === zone.id} className="machine-zone"
+            return <button type="button" key={zone.id} disabled={pendingConfirmation} aria-pressed={draft.zone === zone.id} className="machine-zone"
               onClick={() => change('zone', zone.id)}>
               <strong>{zone.label}</strong><small>{line.attempts ? line.makes + '/' + line.attempts + ' · ' + line.pct + '%' : 'No shots'}</small>
             </button>;
           })}
         </div>
-        <label className="machine-style">Shot style<select value={draft.style} onChange={event => change('style', event.target.value)}>
+        <label className="machine-style">Shot style<select value={draft.style} disabled={pendingConfirmation} onChange={event => change('style', event.target.value)}>
           {MACHINE_STYLES.map(style => <option value={style.id} key={style.id}>{style.label}</option>)}
         </select></label>
       </div>
       <div className="machine-section">
         <h4>3. Record shots</h4><p className="machine-hint">Choose one method. Tap each make/miss, or enter the total shown by the machine for this spot. Do not record the same shots twice.</p>
         <div className="machine-shot-buttons">
-          <button type="button" className="machine-made" disabled={saving || draft.entries.length >= 5000} onClick={() => record(1, 1, 'tap')}>+ Made</button>
-          <button type="button" className="machine-missed" disabled={saving || draft.entries.length >= 5000} onClick={() => record(0, 1, 'tap')}>+ Missed</button>
+          <button type="button" className="machine-made" disabled={saving || pendingConfirmation || draft.entries.length >= 5000} onClick={() => record(1, 1, 'tap')}>+ Made</button>
+          <button type="button" className="machine-missed" disabled={saving || pendingConfirmation || draft.entries.length >= 5000} onClick={() => record(0, 1, 'tap')}>+ Missed</button>
         </div>
         <form className="machine-batch" onSubmit={addBatch}>
           <div><strong>Enter machine display totals</strong><p className="machine-hint">One batch per shooting location, maximum 500 attempts.</p></div>
           <label>Made<input value={bulkMakes} type="number" min="0" max="500" inputMode="numeric" onChange={event => setBulkMakes(event.target.value)} /></label>
           <label>Attempts<input value={bulkAttempts} type="number" min="1" max="500" inputMode="numeric" onChange={event => setBulkAttempts(event.target.value)} /></label>
-          <button type="submit" disabled={saving || draft.entries.length >= 5000}>Add set</button>
+          <button type="submit" disabled={saving || pendingConfirmation || draft.entries.length >= 5000}>Add set</button>
         </form>
         <div className="machine-entry-footer"><span>{draft.entries.length} recorded entries (individual shots or machine sets)</span>
-          <button type="button" onClick={undo} disabled={!draft.entries.length || saving}>Undo last entry</button></div>
+          <button type="button" onClick={undo} disabled={!draft.entries.length || saving || pendingConfirmation}>Undo last entry</button></div>
       </div>
       <div className="machine-section">
         <h4>4. Live session measurements</h4>
@@ -262,9 +273,9 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <h4>5. Video-review checklist and notes</h4>
         <p className="machine-hint">Use these cues while watching film. Checking a box means someone reviewed it; CourtIQ is not estimating release angle, arc, or mechanical quality.</p>
         <div className="machine-form-cues">{FORM_CUES.map(cue =>
-          <label key={cue.id}><input type="checkbox" checked={draft.form?.[cue.id] === true} onChange={event =>
-            setDraft(current => ({ ...current, form: { ...current.form, [cue.id]: event.target.checked } }))} />{cue.label}</label>)}</div>
-        <label className="machine-notes">Coaching observations<textarea maxLength={1500} rows={3} value={draft.notes}
+          <label key={cue.id}><input type="checkbox" disabled={pendingConfirmation} checked={draft.form?.[cue.id] === true} onChange={event =>
+            setDraft(current => current.frozenResult ? current : ({ ...current, form: { ...current.form, [cue.id]: event.target.checked } }))} />{cue.label}</label>)}</div>
+        <label className="machine-notes">Coaching observations<textarea disabled={pendingConfirmation} maxLength={1500} rows={3} value={draft.notes}
           onChange={event => change('notes', event.target.value)} placeholder="What improved? What did you notice about footwork, release, rhythm, and fatigue?" /></label>
         <p className="machine-hint">Film with the phone Camera, then save a short clip here after the workout. If using one phone for filming, enter the machine&apos;s shot totals when filming is done. Keep the original recording in Photos or another backup.</p>
       </div>
@@ -275,7 +286,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <div className="machine-finish-buttons">
           <button type="button" onClick={exportCsv} disabled={!summary.attempts || saving}>Export CSV</button>
           <button type="button" className="machine-primary" onClick={save} disabled={!canSave || !summary.attempts || saving}>
-            {saving ? 'Saving…' : 'Finish and save practice'}
+            {saving ? 'Saving…' : pendingConfirmation ? 'Retry same saved result' : 'Finish and save practice'}
           </button>
           <button type="button" className="machine-reset" onClick={newSession} disabled={saving}>Discard draft</button>
         </div>
