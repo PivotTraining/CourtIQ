@@ -145,6 +145,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     let result;
     try { result = draft.frozenResult || machineWorkoutResult(draft); }
     catch (cause) { setError(cause.message); return; }
+    setMessage('');
     // Freeze the exact payload before the network write. A lost response must retry
     // the same UUID and the same JSONB, even after browser refresh or timer changes.
     if (!draft.frozenResult) {
@@ -155,7 +156,6 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     }
     setSaving(true);
     setError('');
-    setMessage('');
     try {
       const stored = await onSave(result);
       if (stored?.id !== result.id || stored.player_id !== playerId)
@@ -214,10 +214,10 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         <p className="machine-hint">{selectedPlan.instruction} These are practice guides; CourtIQ does not program the shooting machine.</p>
         {pendingConfirmation && <p className="machine-hint" role="status">Save confirmation is pending. Entries and duration are frozen so retry cannot create a conflicting workout. Retry using the same result ID.</p>}
         <div className="machine-settings">
-          <label>Workout focus<input maxLength={100} value={draft.focus} onChange={event => change('focus', event.target.value)} placeholder="e.g. five-spot catch and shoot" /></label>
-          <label>Machine (optional)<input maxLength={80} value={draft.machine} onChange={event => change('machine', event.target.value)} placeholder="e.g. The Gun 12K" /></label>
-          <label>Shot goal<input type="number" inputMode="numeric" min="1" max="10000" value={draft.target} onChange={event => setDraft(current => ({ ...current, plan: 'custom', target: Number(event.target.value) }))} /></label>
-          <label>Feed interval, seconds (optional)<input type="number" min="0.5" max="30" step="0.5" inputMode="decimal" value={draft.feedSeconds} onChange={event => change('feedSeconds', event.target.value)} placeholder="e.g. 4.0" /></label>
+          <label>Workout focus<input disabled={pendingConfirmation} maxLength={100} value={draft.focus} onChange={event => change('focus', event.target.value)} placeholder="e.g. five-spot catch and shoot" /></label>
+          <label>Machine (optional)<input disabled={pendingConfirmation} maxLength={80} value={draft.machine} onChange={event => change('machine', event.target.value)} placeholder="e.g. The Gun 12K" /></label>
+          <label>Shot goal<input disabled={pendingConfirmation} type="number" inputMode="numeric" min="1" max="10000" value={draft.target} onChange={event => setDraft(current => current.frozenResult ? current : ({ ...current, plan: 'custom', target: Number(event.target.value) }))} /></label>
+          <label>Feed interval, seconds (optional)<input disabled={pendingConfirmation} type="number" min="0.5" max="30" step="0.5" inputMode="decimal" value={draft.feedSeconds} onChange={event => change('feedSeconds', event.target.value)} placeholder="e.g. 4.0" /></label>
         </div>
       </div>
       <div className="machine-section">
@@ -243,8 +243,8 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         </div>
         <form className="machine-batch" onSubmit={addBatch}>
           <div><strong>Enter machine display totals</strong><p className="machine-hint">One batch per shooting location, maximum 500 attempts.</p></div>
-          <label>Made<input value={bulkMakes} type="number" min="0" max="500" inputMode="numeric" onChange={event => setBulkMakes(event.target.value)} /></label>
-          <label>Attempts<input value={bulkAttempts} type="number" min="1" max="500" inputMode="numeric" onChange={event => setBulkAttempts(event.target.value)} /></label>
+          <label>Made<input disabled={pendingConfirmation} value={bulkMakes} type="number" min="0" max="500" inputMode="numeric" onChange={event => setBulkMakes(event.target.value)} /></label>
+          <label>Attempts<input disabled={pendingConfirmation} value={bulkAttempts} type="number" min="1" max="500" inputMode="numeric" onChange={event => setBulkAttempts(event.target.value)} /></label>
           <button type="submit" disabled={saving || pendingConfirmation || draft.entries.length >= 5000}>Add set</button>
         </form>
         <div className="machine-entry-footer"><span>{draft.entries.length} recorded entries (individual shots or machine sets)</span>
