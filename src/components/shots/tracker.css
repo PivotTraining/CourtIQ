@@ -110,16 +110,16 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
   .stat-tracker { height: 100dvh; overflow: hidden; }
   .tracker-frame { height: 100%; min-height: 0; }
   .tracker-header { padding-top: 2px; padding-bottom: 2px; }
-  .tracker-workspace {
+  .tracker-workspace.tracker-workspace-video {
     display: grid; flex: 1; min-height: 0; width: 100%; overflow: hidden;
     grid-template-columns: minmax(0, 43%) minmax(0, 57%);
     gap: 0;
   }
-  .tracker-tracking-column {
+  .tracker-workspace-video .tracker-tracking-column {
     grid-column: 2; min-height: 0; min-width: 0; height: 100%;
     overflow: hidden; display: flex; flex-direction: column;
   }
-  .tracker-workspace > .game-video-dock {
+  .tracker-workspace-video > .game-video-dock {
     grid-column: 1; min-height: 0; min-width: 0; max-height: 100%;
     width: auto; margin: 0 4px 5px 7px;
     padding: 7px; overflow-y: auto; overflow-x: hidden;
