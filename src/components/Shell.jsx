@@ -26,6 +26,7 @@ import BillingScreen from './billing/BillingScreen';
 import MembershipOverview from './billing/MembershipOverview';
 import GametimeAction from './GametimeAction';
 import GymArrivalMonitor from './GymArrivalMonitor';
+import ErrorBoundary from './ErrorBoundary';
 import { getGreeting } from "@/lib/utils";
 import { signOutUser } from "@/lib/firebase";
 import { useThemePreference } from "@/lib/useThemePreference";
@@ -285,7 +286,10 @@ export default function Shell() {
           transform: transitioning ? "translateY(6px)" : "translateY(0)",
           transition: "opacity 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}>
-          {renderScreen()}
+          {/* A failed screen should not take down navigation or other player views. */}
+          <ErrorBoundary key={String(playerId || 'no-player') + ':' + displayScreen}>
+            {renderScreen()}
+          </ErrorBoundary>
         </main>
       </div>
 
