@@ -123,7 +123,7 @@ test('player switch does not display previous child machine draft', async () => 
 });
 
 test('annotated in-app video is attached only after authenticated player workout confirms saving', async () => {
-  const { h, Analyzer, clipWrites } = await setup(async result =>
+  const { h, Analyzer, Video, clipWrites } = await setup(async result =>
     ({ ...result, player_id: 'caleb', completed_at: '2026-10-26T13:00:00Z' }));
   button(h, 'Start machine practice').props.onClick();h.flush();
   button(h, '+ Made').props.onClick();h.flush();
