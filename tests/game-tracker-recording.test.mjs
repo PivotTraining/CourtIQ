@@ -24,10 +24,12 @@ async function fixture({saved=null, fail=false, recorderSupported=true, neverPla
   }
   const store={
     async get(){return saved;},
-    async put(account,session,blob){
-      writes.push([account,session,blob]);
+    async listSegments(){return [];},
+    async putSegment(account,session,blob,meta){
+      writes.push([account,session,blob,meta]);
       if(fail)throw new Error('Quota reached');
-      return {accountId:account,sessionId:session,blob};
+      return {id:'clip-'+writes.length,accountId:account,sessionId:session,blob,
+        recordedAt:meta?.recordedAt,endedAt:meta?.endedAt,savedAt:new Date().toISOString(),segment:true};
     },
   };
   const {default: RecorderDock}=await loadComponent(
@@ -79,7 +81,7 @@ test('in-game recording opens visible preview and captures silent clip while tra
   await f.h.settle();
   assert.equal(f.writes.length,1,'video is saved under active account and game');
   assert.deepEqual(f.writes[0].slice(0,2),['parent-1','session-1']);
-  assert.ok(f.button('Download saved video backup'));
+  assert.ok(f.button('Download selected clip backup'));
   assert.equal(f.busy.at(-1),false,'the parent can finish the game after the video save resolves');
   f.h.unmount();
   assert.ok(f.stopped.length>0,'leaving the tracker releases camera tracks');
@@ -170,4 +172,27 @@ test('landscape game tracking uses independently scrollable camera and stat colu
   assert.match(css,/\.tracker-content\s*\{\s*flex: 1; min-height: 0; height: 100%;/);
   assert.match(css,/touch-action: pan-y/);
   assert.match(css,/-webkit-overflow-scrolling: touch/);
+});
+
+test('game recording saves separate timestamped clips and preserves previous footage',async()=>{
+  const f=await fixture();
+  await f.button('● Record game').props.onClick();await f.h.settle();
+  f.button('■ Stop & save clip').props.onClick();await f.h.settle();
+  assert.equal(f.writes.length,1);
+  f.button('● Record game').props.onClick();f.h.flush();
+  f.button('■ Stop & save clip').props.onClick();await f.h.settle();
+  assert.equal(f.writes.length,2);
+  assert.match(JSON.stringify(f.h.output),/2 saved clips/);
+  assert.ok(f.writes.every(row=>typeof row[3].recordedAt==='string'));
+  f.h.unmount();
+});
+test('clip timeline is available on game-recording preview and saved session',async()=>{
+  const source=await readFile(new URL('../src/components/shots/GameTrackerRecorder.jsx',import.meta.url),'utf8');
+  const report=await readFile(new URL('../src/components/shots/SessionVideo.jsx',import.meta.url),'utf8');
+  assert.match(source,/events\.filter\(event=>\['shot','stat'\]/);
+  assert.match(source,/Date\.parse\(event\.payload\.recorded_at\)/);
+  assert.match(source,/stopRecording\(true\)/);
+  assert.match(source,/startCapture\(\)/);
+  assert.match(report,/store\.listSegments\?\.\(accountId,sessionId\)/);
+  assert.match(report,/removeSegment\(accountId,sessionId,id\)/);
 });
