@@ -32,6 +32,7 @@ async function fixture({ active = [], local = null } = {}) {
     },
     '@/lib/constants': { COURT_ZONES: [] },
     '@/lib/sessionReport.mjs': { buildSessionReport: () => ({ pts: 0, fgm: 0, fga: 0, ftm: 0, fta: 0 }) },
+    '@/lib/liveEntryQueue.mjs': {drainLiveEntries:async()=>true},
     './CourtTrackerView': TrackerView,
     './AdvancedSessionReport': () => null, './SessionTimeline': () => null,
     './GameContextForm': GameDetails,
