@@ -47,3 +47,14 @@
 .formiq-tip p{font-size:12px;line-height:1.6;color:#a2a3ae;margin:0}
 @media(min-width:500px){.formiq{padding:18px}.formiq-measures{grid-template-columns:repeat(4,minmax(0,1fr))}.formiq-measures strong{font-size:23px}}
 @media(max-width:340px){.formiq-badge{font-size:8px}.formiq-controls button{flex:1 1 100%}.formiq-camera{min-height:155px}}
+
+/* Auto-capture remains opt-in and visually distinct from the official shot totals. */
+.formiq-autocapture{display:grid;gap:7px;background:#1c2026;border:1px solid #3c424d;border-radius:13px;padding:12px}
+.formiq-autocapture>label{display:flex;align-items:flex-start;gap:11px;min-width:0}
+.formiq-autocapture input{accent-color:#ff885c;width:21px;height:21px;min-width:21px;margin:1px 0 0}
+.formiq-autocapture label span{display:grid;gap:5px;min-width:0}
+.formiq-autocapture label strong{font-size:12px;line-height:1.45;color:#f3f4f6}
+.formiq-autocapture label small{font-size:10px;line-height:1.55;color:#abb1be}
+.formiq-capacity{color:#f7c4a8;font-size:11px;font-weight:750}
+.formiq-autocapture p{color:#c6e9d9;margin:0;font-size:11px;line-height:1.5}
+.formiq-controls button:focus-visible,.formiq-controls select:focus-visible,.formiq-capture button:focus-visible,.formiq-autocapture input:focus-visible{outline:3px solid #ffb58d;outline-offset:3px}

@@ -101,3 +101,44 @@ export function makeFormObservation(metric,angle,now=new Date().toISOString()){
     method:'on-device-movenet-v1',arc_method:angle===null?null:'2d-colour-track-uncalibrated',
   };
 }
+
+/**
+ * Opt-in release-like movement detector for automatic form snapshots.
+ * Recognizes a visible set-arm posture followed by extension and a high wrist.
+ * This is NOT a basketball shot detector; there is no ball/hoop/make evidence.
+ * Two confirmed frames in each phase and a cooldown reduce obvious duplicates.
+ */
+export function freshExtensionDetector() {
+  return { mode: 'ready', setFrames: 0, extendFrames: 0, armedAt: 0, cooldownUntil: 0 };
+}
+export function trackExtensionPattern(previous, metric, time) {
+  const current = previous && typeof previous === 'object' ? previous : freshExtensionDetector();
+  if (!Number.isFinite(time) || time < 0) return { state: freshExtensionDetector(), capture: false };
+  if (time < current.cooldownUntil) return { state: current, capture: false };
+  const eligible = !!metric?.visible && metric.score >= 5 &&
+    Number.isFinite(metric.elbow) && Number.isFinite(metric.knee) &&
+    metric.knee >= 85 && metric.knee <= 180;
+  if (!eligible) return { state: freshExtensionDetector(), capture: false };
+  const set = metric.phase === 'set' && metric.elbow >= 65 && metric.elbow <= 135;
+  const extended = metric.phase === 'extension' && metric.elbow >= 155 && metric.wristHigh === true;
+  if (current.mode === 'ready') {
+    const setFrames = set ? current.setFrames + 1 : 0;
+    if (setFrames >= 2) return {
+      state: { mode: 'armed', setFrames: 2, extendFrames: 0, armedAt: time, cooldownUntil: 0 },
+      capture: false,
+    };
+    return { state: { ...current, setFrames, extendFrames: 0 }, capture: false };
+  }
+  if (current.mode === 'armed') {
+    if (time - current.armedAt > 2200) return { state: freshExtensionDetector(), capture: false };
+    if (set) return { state: { ...current, extendFrames: 0 }, capture: false };
+    if (!extended) return { state: { ...current, extendFrames: 0 }, capture: false };
+    const extendFrames = current.extendFrames + 1;
+    if (extendFrames < 2) return { state: { ...current, extendFrames }, capture: false };
+    return {
+      state: { ...freshExtensionDetector(), cooldownUntil: time + 1600 },
+      capture: true,
+    };
+  }
+  return { state: freshExtensionDetector(), capture: false };
+}

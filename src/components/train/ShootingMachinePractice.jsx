@@ -234,7 +234,8 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
       <div className="machine-section">
         <h4>2. Analyze form while shooting</h4>
         <p className="machine-hint">See live red/green joint overlays and an optional uncalibrated ball trace. You can still train or save shots without the camera.</p>
-        <LiveShootingAnalyzer onObservation={captureFormObservation} disabled={pendingConfirmation || saving} />
+        <LiveShootingAnalyzer onObservation={captureFormObservation} disabled={pendingConfirmation || saving}
+          remaining={Math.max(0,30-(draft.observations || []).length)} />
         <p className="machine-hint">{(draft.observations || []).length}/30 on-device form observations captured with this draft.</p>
       </div>
       <div className="machine-section">
@@ -338,7 +339,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
         {(selectedDetail.machine.observations || []).length > 0 && <div className="machine-form-history">
           <strong>Saved on-device form measurements ({selectedDetail.machine.observations.length})</strong>
           {selectedDetail.machine.observations.slice(-8).map((item, index) => <p key={item.at + index}>
-            {new Date(item.at).toLocaleTimeString()} · {item.phase} · Elbow {item.elbow_angle ?? '—'}° · Knee {item.knee_angle ?? '—'}° · Image-plane ball rise {item.projected_rise_angle ?? '—'}°
+            {new Date(item.at).toLocaleTimeString()} · {item.trigger === 'extension-pattern-v1' ? 'Auto: arm extension (not shot-confirmed)' : 'Manual frame'} · {item.phase} · Elbow {item.elbow_angle ?? '—'}° · Knee {item.knee_angle ?? '—'}° · Image-plane ball rise {item.projected_rise_angle ?? '—'}°
           </p>)}
           <p>These are uncalibrated camera observations, not verified shooting-form scores or true 3D ball-flight measurements.</p>
         </div>}
