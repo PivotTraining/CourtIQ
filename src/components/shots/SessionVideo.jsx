@@ -80,7 +80,7 @@ export function DeviceSessionVideo({accountId,sessionId}) {
     }catch(err){if(alive.current)setError(err.message);}
     finally{if(alive.current)setBusy(false);}
   }
-  const extension=record?.blob.type='video/webm'?'webm':record?.blob.type==='video/quicktime'?'mov':'mp4';
+  const extension=record?.blob.type==='video/webm'?'webm':record?.blob.type==='video/quicktime'?'mov':'mp4';
   return <section className="report-media" aria-label="Session video on this device"><h3>Keep a clip with this session</h3>
     <p className="report-media-note">Device-only · no cloud upload. One uploaded MP4/WebM/MOV clip per session, plus multiple separately recorded game segments. Maximum 100 MB per clip and 250 MB per account on this device. Not cloud-synced or AI video analysis.</p>
     <p className="report-media-note">Browser storage can be cleared or evicted and is not encrypted by CourtIQ. Avoid shared devices and download a backup. The clip will not appear on another phone or computer.</p>
