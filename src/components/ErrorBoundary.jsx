@@ -19,9 +19,19 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      // Local troubleshooting details help identify client-only Safari errors.
+      const error = this.state.error;
+      const errorName = typeof error?.name === "string" ? error.name.slice(0, 80) : "ClientError";
+      const errorMessage = typeof error?.message === "string"
+        ? error.message.slice(0, 240)
+            .replace(/https?:\/\/\S+/g, "[url]")
+            .replace(/eyJ[A-Za-z0-9_-]{20,}(?:\.[A-Za-z0-9_-]+){1,2}/g, "[token]")
+        : "Unexpected browser error.";
+      const pageUrl = typeof window !== "undefined" ? window.location.pathname : "";
+
       return (
         <div style={{
-          minHeight: "100vh",
+          minHeight: this.props.contained ? 320 : "100vh",
           background: "var(--color-bg)",
           display: "flex",
           flexDirection: "column",
@@ -57,6 +67,16 @@ export default class ErrorBoundary extends Component {
           >
             Refresh App
           </button>
+          <button type="button" onClick={() => window.location.assign("/dashboard")}
+            style={{ border: "1px solid var(--color-border)", background: "var(--color-card)", color: "var(--color-text)",
+              borderRadius: 12, minHeight: 44, padding: "10px 20px", marginTop: 12, fontWeight: 700, cursor: "pointer" }}>
+            Return to dashboard
+          </button>
+          <details style={{ marginTop: 20, maxWidth: 360, fontSize: 12, textAlign: "left", color: "var(--color-text-sec)" }}>
+            <summary style={{ cursor: "pointer" }}>Troubleshooting details</summary>
+            <p style={{ overflowWrap: "anywhere", marginTop: 8 }}>{errorName}: {errorMessage} · {pageUrl}</p>
+            <p>No workout or profile data is deleted by this error screen.</p>
+          </details>
           {process.env.NODE_ENV === "development" && this.state.error && (
             <pre style={{
               marginTop: 24,
