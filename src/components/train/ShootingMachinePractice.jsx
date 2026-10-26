@@ -26,6 +26,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const { user } = useAuth();
   const accountId = user?.id;
   const key = accountId && playerId ? machineDraftKey(accountId, playerId) : null;
+  const scopeRef=useRef(key);scopeRef.current=key;
   const [draft, setDraft] = useState(null);
   const [ready, setReady] = useState(false);
   const [loadedKey, setLoadedKey] = useState(null);
@@ -136,7 +137,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     record(makes, attempts, 'machine-display');
   };
   const receiveAnnotatedFilm = blob => {
-    if(!isCurrent || !draft || !key || savedId || saving) return;
+    if(!isCurrent || !draft || !key || scopeRef.current!==key || savedId || saving) return;
     try{
       validateClip(blob);
       pendingFilmRef.current={key,draftId:draft.id,blob};
