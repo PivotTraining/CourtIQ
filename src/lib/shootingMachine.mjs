@@ -120,7 +120,8 @@ export function machineWorkoutResult(draft) {
     !['set', 'extension'].includes(item.phase) ||
     !['elbow_angle', 'knee_angle', 'projected_rise_angle'].every(key =>
       item[key] === null || (Number.isInteger(item[key]) && item[key] >= 0 && item[key] <= 180)) ||
-    (item.wrist_above_shoulder !== null && typeof item.wrist_above_shoulder !== 'boolean')
+    (item.wrist_above_shoulder !== null && typeof item.wrist_above_shoulder !== 'boolean') ||
+    (item.trigger !== undefined && !['manual', 'extension-pattern-v1'].includes(item.trigger))
   )) throw new Error('Camera observations are invalid. Remove and recapture the affected form data.');
   const elapsed = Number(draft.elapsed);
   if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 86400) throw new Error('Practice duration is invalid.');
@@ -138,6 +139,7 @@ export function machineWorkoutResult(draft) {
         at: item.at, phase: item.phase, elbow_angle: item.elbow_angle,
         knee_angle: item.knee_angle, wrist_above_shoulder: item.wrist_above_shoulder,
         projected_rise_angle: item.projected_rise_angle, method: 'on-device-movenet-v1',
+        trigger: item.trigger || 'manual',
         arc_method: item.projected_rise_angle === null ? null : '2d-colour-track-uncalibrated',
       })),
       form: Object.fromEntries(
