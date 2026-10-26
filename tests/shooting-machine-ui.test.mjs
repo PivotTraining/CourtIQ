@@ -34,6 +34,7 @@ async function setup(onSave, accountId = 'family-a', playerId = 'caleb') {
     react: h.react,
     '@/context/AuthContext': { useAuth: () => ({ user: { id: accountId } }) },
     '@/components/shots/SessionVideo': Video,
+    '@/lib/deviceVideo.mjs': {createDeviceVideoStore:()=>({put: async()=>({})}),validateClip:()=>{}},
     './LiveShootingAnalyzer': () => null,
     '@/lib/browserDownload.mjs': { downloadBlob: () => {} },
     '@/lib/shootingMachine.mjs': machine,
