@@ -4,10 +4,16 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { fetchManagedPlayers, addManagedPlayer, deleteManagedPlayer,
   createPlayerShareInvite, joinSharedPlayer, getPlayerCollaborators,
-  revokePlayerShare, fetchSessionHistory, importSharedGame } from "@/lib/queries";
+  revokePlayerShare, fetchSessionHistory, importSharedGame,
+  fuseSharedGame, undoSharedGameFusion, fetchSharedGameFusions } from "@/lib/queries";
 import Icon from "@/components/ui/Icons";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
+const FUSION_STATS = [["ast","Assists"],["reb","Rebounds (including splits)"],["stl","Steals"],
+  ["blk","Blocks"],["to","Turnovers"],["pf","Fouls"],["min","Minutes"]];
+const sameGame = (source,canonical) => source?.date === canonical?.date
+  && (!source?.tracker_context?.opponent || !canonical?.tracker_context?.opponent
+    || source.tracker_context.opponent.trim().toLowerCase() === canonical.tracker_context.opponent.trim().toLowerCase());
 
 const inputStyle = {
   width: "100%",
@@ -40,6 +46,12 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   const [importSource, setImportSource] = useState("");
   const [importTarget, setImportTarget] = useState("");
   const [importGames, setImportGames] = useState([]);
+  const [canonicalGames, setCanonicalGames] = useState([]);
+  const [fusionSourceId, setFusionSourceId] = useState("");
+  const [fusionTargetId, setFusionTargetId] = useState("");
+  const [fieldSources, setFieldSources] = useState({});
+  const [shootingSource, setShootingSource] = useState("canonical");
+  const [lastFusionId, setLastFusionId] = useState("");
   const [importBusy, setImportBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -166,13 +178,55 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   };
 
   const handleLoadGames = async (sourceId) => {
-    setImportSource(sourceId); setImportGames([]); setError("");
-    if (!sourceId) return;
+    setImportSource(sourceId); setImportGames([]); setCanonicalGames([]);
+    setFusionSourceId(""); setFusionTargetId(""); setLastFusionId(""); setError("");
+    if (!sourceId || !importTarget) return;
     try {
-      const history = await fetchSessionHistory(sourceId);
-      setImportGames(history.filter(g => g.type === "game"
+      const [sourceHistory,targetHistory] = await Promise.all([
+        fetchSessionHistory(sourceId),fetchSessionHistory(importTarget),
+      ]);
+      const oldGames = sourceHistory.filter(g => g.type === "game"
+        && g.mode === "individual" && g.tracker_status !== "active");
+      const alreadyFused = await fetchSharedGameFusions(oldGames.map(g => g.id));
+      const fusedSourceIds = new Set(alreadyFused.map(x => x.source_session_id));
+      setImportGames(oldGames.filter(g => !fusedSourceIds.has(g.id)));
+      setCanonicalGames(targetHistory.filter(g => g.type === "game"
         && g.mode === "individual" && g.tracker_status !== "active"));
-    } catch { setError("Couldn't load the original games. Your existing records are unchanged."); }
+    } catch { setError("Couldn't load both game histories. Your existing records are unchanged."); }
+  };
+
+  const handleFuse = async () => {
+    if (importBusy || !fusionSourceId || !fusionTargetId) return;
+    const source = importGames.find(g => g.id === fusionSourceId);
+    const target = canonicalGames.find(g => g.id === fusionTargetId);
+    if (!source || !target || !sameGame(source,target)) {
+      setError("Both recordings must refer to the same game date and opponent."); return;
+    }
+    if (!window.confirm("Fuse these two recordings into one official game? The original recording is retained for audit and Undo. Selected fields and one complete shot chart replace the existing game values, never add to them.")) return;
+    setImportBusy(true); setError(""); setMessage("");
+    try {
+      const fusionId = await fuseSharedGame(target.id,source.id,fieldSources,shootingSource);
+      setLastFusionId(fusionId);
+      setImportGames(prev => prev.filter(g => g.id !== source.id));
+      setFusionSourceId(""); setFusionTargetId("");
+      setMessage("Game fusion saved. The shared player now uses the selected box-score fields and one authoritative shot chart. Refresh game history on either phone.");
+    } catch {
+      setError("Fusion wasn't saved. Check that both games are completed, the date/opponent match, and no other parent fused them first. Both records are preserved.");
+    } finally { setImportBusy(false); }
+  };
+
+  const handleUndoFusion = async () => {
+    if (!lastFusionId || importBusy || !window.confirm("Undo the latest game fusion and restore the exact previous shared-game stats and shots?")) return;
+    setImportBusy(true);setError("");
+    try {
+      await undoSharedGameFusion(lastFusionId);
+      setLastFusionId("");
+      setFusionSourceId("");setFusionTargetId("");
+      setMessage("Fusion undone. Previous shared-game values were restored. Select the original player again to reload eligible games.");
+      await handleLoadGames(importSource);
+    } catch {
+      setError("Undo could not be completed. The game may have changed or sharing access may have been revoked.");
+    } finally {setImportBusy(false);}
   };
 
   const handleImport = async (game) => {
@@ -380,12 +434,13 @@ This transfers the record, not a copy. If both phones tracked the same game, can
             padding: 16, border: "1px solid var(--color-border)" }}>
             <h3 style={{ fontSize: 15, margin: 0, color: "var(--color-text)" }}>Review older game records</h3>
             <p style={{ fontSize: 12, margin: 0, color: "var(--color-text-sec)", lineHeight: 1.5 }}>
-              Migrate separately saved games one by one after checking the date and opponent. If both phones tracked
-              the same game, CourtIQ blocks likely duplicates instead of adding them together.
+              Two recordings of the same game can be fused into a single authoritative box score.
+              Choose the source for each stat and one complete shot chart. CourtIQ never blindly adds two full-game totals.
+              Games recorded on separate dates can be moved individually.
             </p>
             <label style={{ fontSize: 12 }}>Shared destination
               <select aria-label="Shared destination player" style={inputStyle} value={importTarget}
-                onChange={e => { setImportTarget(e.target.value); setImportGames([]); setImportSource(""); }}>
+                onChange={e => { setImportTarget(e.target.value); setImportGames([]); setCanonicalGames([]); setImportSource(""); setFusionSourceId(""); setFusionTargetId(""); setLastFusionId(""); }}>
                 <option value="">Choose a shared player</option>
                 {players.filter(p => p.manager_uid !== user?.id).map(p =>
                   <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -399,18 +454,88 @@ This transfers the record, not a copy. If both phones tracked the same game, can
                   <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </label>}
-            {importSource && importGames.map(g => <div key={g.id}
-              style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between",
-                borderBottom: "1px solid var(--color-border)", paddingBottom: 9 }}>
-              <span style={{ fontSize: 12 }}>{g.date || g.created_at?.slice(0, 10)}
-                {g.tracker_context?.opponent ? ` · ${g.tracker_context.opponent}` : " · opponent not saved"}</span>
-              <button type="button" disabled={importBusy} onClick={() => handleImport(g)}
-                style={{ minHeight: 44, padding: "8px 12px", fontSize: 12,
-                  borderRadius: 9, border: "none", fontWeight: 700,
-                  background: "var(--color-accent-light)", color: "var(--color-accent)" }}>
-                {importBusy ? "Moving…" : "Move game"}
-              </button>
-            </div>)}
+            {importSource && importGames.map(g => {
+              const matches = canonicalGames.filter(c => sameGame(g,c));
+              return <div key={g.id} style={{ display: "flex", gap: 10, alignItems: "center",
+                justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: 9 }}>
+                <span style={{ fontSize: 12 }}>{g.date || g.created_at?.slice(0, 10)}
+                  {g.tracker_context?.opponent ? ` · ${g.tracker_context.opponent}` : " · opponent not saved"}
+                </span>
+                {matches.length ? <button type="button" disabled={importBusy}
+                    onClick={() => { setFusionSourceId(g.id); setFusionTargetId(matches[0].id);
+                      setFieldSources({}); setShootingSource("canonical"); setLastFusionId(""); }}
+                    style={{ minHeight: 44, padding: "8px 12px", fontSize: 12, borderRadius: 9, border: "none",
+                      fontWeight: 700, background: "var(--color-accent-light)", color: "var(--color-accent)" }}>
+                    Review &amp; fuse
+                  </button> :
+                  <button type="button" disabled={importBusy} onClick={() => handleImport(g)}
+                    style={{ minHeight: 44, padding: "8px 12px", fontSize: 12, borderRadius: 9, border: "none",
+                      fontWeight: 700, background: "var(--color-accent-light)", color: "var(--color-accent)" }}>
+                    {importBusy ? "Moving…" : "Move game"}
+                  </button>}
+              </div>;
+            })}
+            {fusionSourceId && fusionTargetId && (() => {
+              const source = importGames.find(g => g.id === fusionSourceId);
+              const target = canonicalGames.find(g => g.id === fusionTargetId);
+              if (!source || !target) return null;
+              const options = canonicalGames.filter(c => sameGame(source,c));
+              return <div style={{ padding: 14, borderRadius: 14, border: "1px solid var(--color-accent)",
+                display: "grid", gap: 11, background: "var(--color-card)" }}>
+                <h4 style={{ margin: 0, fontSize: 14 }}>Fuse this game: {source.date}</h4>
+                <label style={{ fontSize: 12 }}>Official game to update
+                  <select aria-label="Canonical game" value={fusionTargetId}
+                    onChange={e => setFusionTargetId(e.target.value)} style={inputStyle}>
+                    {options.map(c => <option key={c.id} value={c.id}>
+                      {c.date} · {c.tracker_context?.opponent || "Opponent not recorded"} · {c.id.slice(-6)}
+                    </option>)}
+                  </select>
+                </label>
+                <p style={{ fontSize: 12, margin: 0, lineHeight: 1.55, color: "var(--color-text-sec)" }}>
+                  Select whose recording is authoritative for each field. Existing values remain selected
+                  unless you switch them. Rebound splits follow the rebound choice. Never add both totals.
+                </p>
+                {FUSION_STATS.map(([key,label]) => {
+                  const current = target.game_stats?.[key];
+                  const other = source.game_stats?.[key];
+                  return <label key={key} style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                    <strong>{label}</strong>
+                    <select aria-label={`Authoritative ${label}`} style={inputStyle}
+                      value={fieldSources[key] || "canonical"}
+                      onChange={e => setFieldSources(prev => ({ ...prev, [key]: e.target.value }))}>
+                      <option value="canonical">Main phone: {current ?? "Not recorded"}</option>
+                      <option value="source">Other phone: {other ?? "Not recorded"}</option>
+                    </select>
+                  </label>;
+                })}
+                <label style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                  <strong>Authoritative shot chart and shooting percentages</strong>
+                  <select aria-label="Authoritative shooting record" value={shootingSource}
+                    onChange={e => setShootingSource(e.target.value)} style={inputStyle}>
+                    <option value="canonical">Main phone: {target.shot_logs?.length || 0} shot attempts</option>
+                    <option value="source">Other phone: {source.shot_logs?.length || 0} shot attempts</option>
+                  </select>
+                </label>
+                <p style={{ fontSize: 11, lineHeight: 1.5, margin: 0, color: "var(--color-text-sec)" }}>
+                  Only one shot ledger is used; overlapping shots are not added together. The original is
+                  preserved for review. Stats can be restored using Undo after saving.
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" disabled={importBusy} onClick={() => {setFusionSourceId("");setFusionTargetId("");}}
+                    style={{ minHeight: 44, padding: 10, flex: 1 }}>Cancel</button>
+                  <button type="button" disabled={importBusy} onClick={handleFuse}
+                    style={{ minHeight: 44, border: "none", borderRadius: 10, flex: 2, fontWeight: 800,
+                      background: "var(--color-accent)", color: "white" }}>
+                    {importBusy ? "Saving…" : "Save fused game"}
+                  </button>
+                </div>
+              </div>;
+            })()}
+            {lastFusionId && <button type="button" onClick={handleUndoFusion} disabled={importBusy}
+              style={{ minHeight: 44, border: "1px solid var(--color-border)", borderRadius: 10,
+                padding: 10, background: "var(--color-card)", fontWeight: 700 }}>
+              Undo latest game fusion
+            </button>}
             {importSource && importGames.length === 0 && <p role="status" style={{ fontSize: 12 }}>
               No eligible saved individual games remain on that source profile.
             </p>}
