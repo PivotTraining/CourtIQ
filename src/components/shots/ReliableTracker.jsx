@@ -13,6 +13,7 @@ import GameContextForm from './GameContextForm';
 import GameTrackerRecorder from './GameTrackerRecorder';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 import { drainLiveEntries } from '@/lib/liveEntryQueue.mjs';
+import { rebasePendingGame } from '@/lib/rebasePendingGame.mjs';
 
 export default function ReliableTracker({ onClose, darkMode, onToggleTheme, quickStart = false }) {
   const { playerId, player, refreshData } = useApp();
@@ -125,10 +126,10 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     return () => window.removeEventListener('beforeunload', warn);
   }, []);
 
-  async function sync() {
+  async function sync(allowConflict=false) {
     if(syncPromiseRef.current)return syncPromiseRef.current;
     if(!valueRef.current?.pending.length)return true;
-    if(busyRef.current || conflict)return false;
+    if(busyRef.current || (conflict&&!allowConflict))return false;
     const expected=`${accountId}:${playerId}`;
     const work=(async()=>{
       setBusy(true);
@@ -169,6 +170,33 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
         // not continuously in a tight loop.
       }
     }
+  }
+
+  async function mergeDeviceEntries(){
+    if(!conflict||busyRef.current||!valueRef.current?.pending?.length)return;
+    if(!window.confirm('Merge this device\'s unsynced entries with the newer cloud game? If both phones tracked the same real shot or rebound, totals may double-count. Download the local pending ledger before merging if you are unsure.'))return;
+    const expected=`${accountId}:${playerId}`;
+    busyRef.current=true;setBusy(true);setError('');
+    try{
+      const current=valueRef.current;
+      const remote=await backend.fetchTrackerSession(current.snapshot.session.id,playerId);
+      if(identity.current!==expected)return;
+      if(remote.session.player_id&&remote.session.player_id!==playerId)
+        throw new Error('The cloud session belongs to a different player.');
+      const rebased=rebasePendingGame({local:current,remote,projectCommand});
+      persist(rebased);setConflict(false);
+      setStatus(`${rebased.pending.length} locally tracked events merged with cloud history; syncing…`);
+    }catch(err){
+      if(identity.current===expected){
+        setError('Merge was not applied: '+(err.message||'Unable to compare server history')+
+          '. Pending entries remain saved on this device.');
+      }
+      return;
+    }finally{
+      busyRef.current=false;
+      if(identity.current===expected)setBusy(false);
+    }
+    if(identity.current===expected)void sync(true);
   }
 
   function entry(payload,permitEnding=false) {
@@ -320,7 +348,15 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       }}>Save for later</button>
     </div>
     {value.pending.length > 0 && <button style={inputStyle} onClick={downloadPending}>Download unsynced entries</button>}
-    {conflict && <button style={inputStyle} disabled={busyRef.current} onClick={resolveConflict}>Resolve with saved account version</button>}
+    {conflict && <div className="tracker-merge-controls">
+      <p>Another phone or device changed this game. Your entries are still on this device. Review before combining to avoid double-counting.</p>
+      <button style={inputStyle} disabled={busyRef.current||!value.pending.length} onClick={mergeDeviceEntries}>
+        Merge my queued events with cloud game
+      </button>
+      <button style={inputStyle} disabled={busyRef.current} onClick={resolveConflict}>
+        Discard my pending copy and reload cloud game
+      </button>
+    </div>}
     {showContext && snapshot.session.type === 'game' && <div className="tracker-tool-row">
       <label>Period <input style={{ ...inputStyle, width: 70 }} type="number" min="1" max="99" value={period} onChange={event => setPeriod(Math.min(99, Math.max(1, Number(event.target.value))))} /></label>
       <label>Game clock <input style={{ ...inputStyle, width: 100 }} inputMode="numeric" value={clock} onChange={event => { if (/^\d{0,2}:?\d{0,2}$/.test(event.target.value)) setClock(event.target.value); }} onBlur={() => { if (!/^\d{1,2}:[0-5]\d$/.test(clock)) setClock('00:00'); }} /></label>
