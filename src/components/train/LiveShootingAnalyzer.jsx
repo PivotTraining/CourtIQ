@@ -5,6 +5,10 @@ import {
   makeFormObservation, observedRiseAngle, poseMetrics, referenceState,
   sampleBallColour, trackExtensionPattern,
 } from '@/lib/liveShootingAnalytics.mjs';
+import {
+  createRecordingCollector, supportedRecordingType, FORM_IQ_RECORD_MAX_MS,
+  FORM_IQ_RECORD_LIMIT,
+} from '@/lib/formIqRecording.mjs';
 import './live-shooting.css';
 
 const show = value => Number.isFinite(value) ? value + '°' : '—';
@@ -59,13 +63,16 @@ function drawOverlay(canvas,points,metric,ball,trail,stage) {
   }
 }
 
-export default function LiveShootingAnalyzer({ onObservation, disabled=false, remaining=30 }) {
+export default function LiveShootingAnalyzer({ onObservation, onClipReady, onRecordingChange, disabled=false, remaining=30 }) {
   const videoRef=useRef(null),overlayRef=useRef(null),frameRef=useRef(null);
   const detectorRef=useRef(null),streamRef=useRef(null),rafRef=useRef(null);
+  const recorderRef=useRef(null),recordCanvasRef=useRef(null),recordLimitRef=useRef(null);
   const generation=useRef(0),observationRef=useRef(null),ballColour=useRef(null);
   const extensionRef=useRef(freshExtensionDetector()),onObservationRef=useRef(onObservation);
   onObservationRef.current=onObservation;
   const remainingRef=useRef(remaining),autoRef=useRef(false);
+  const clipReadyRef=useRef(onClipReady),recordingChangedRef=useRef(onRecordingChange);
+  clipReadyRef.current=onClipReady;recordingChangedRef.current=onRecordingChange;
   remainingRef.current=remaining;
   const disabledRef=useRef(disabled);disabledRef.current=disabled;
   const ballPosition=useRef(null),trailRef=useRef([]),lastTime=useRef(0),lastBallAt=useRef(0),lastRiseAt=useRef(0);
@@ -75,11 +82,19 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false, re
   const [ballStatus,setBallStatus]=useState('not-calibrated'),[observations,setObservations]=useState(0);
   const [message,setMessage]=useState('');
   const [autoCapture,setAutoCapture]=useState(false),[facing,setFacing]=useState('environment');
+  const [recording,setRecording]=useState(false),[recordConsent,setRecordConsent]=useState(false);
+  const [recordSeconds,setRecordSeconds]=useState(0),[recordNote,setRecordNote]=useState('');
   const [lastCapture,setLastCapture]=useState(null);autoRef.current=autoCapture;
   const handRef=useRef(hand);handRef.current=hand;
   const statusRef=useRef(status);statusRef.current=status;
 
+  const stopRecording=useCallback(()=>{
+    const item=recorderRef.current;
+    if(!item || item.recorder.state==='inactive')return;
+    try{item.recorder.stop();}catch{}
+  },[]);
   const release=useCallback((reset=true)=>{
+    stopRecording();
     ++generation.current;
     extensionRef.current=freshExtensionDetector();
     if(rafRef.current!==null)cancelAnimationFrame(rafRef.current);
@@ -91,8 +106,9 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false, re
     if(videoRef.current){videoRef.current.pause();videoRef.current.srcObject=null;}
     const canvas=overlayRef.current;
     if(canvas)canvas.getContext('2d')?.clearRect(0,0,canvas.width,canvas.height);
+    setRecordConsent(false);
     if(reset){setStatus('idle');setBallPick(false);setMessage('Live camera stopped. Nothing was uploaded.');}
-  },[]);
+  },[stopRecording]);
   useEffect(()=>()=>release(false),[release]);
   useEffect(()=>{if(disabled && streamRef.current)release();},[disabled,release]);
   useEffect(()=>{
@@ -188,6 +204,15 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false, re
             }
             const stage={hand:handRef.current,phase:data.phase};
             drawOverlay(overlay,points,data,ball,trail,stage);
+            // A separate off-screen canvas composites camera + Form IQ graphics.
+            // The recording is silent, local and only started by explicit consent.
+            if(recorderRef.current?.recorder?.state==='recording'){
+              const canvas=recordCanvasRef.current,context=canvas?.getContext('2d');
+              if(context && overlay){
+                context.drawImage(video,0,0,canvas.width,canvas.height);
+                context.drawImage(overlay,0,0,canvas.width,canvas.height);
+              }
+            }
           }
         }catch(cause){
           if(id===generation.current){setError('Frame analysis paused: '+strip(cause?.message));}
@@ -201,6 +226,70 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false, re
       const message=cause?.name==='NotAllowedError'?'Camera access was denied. Allow camera permission in Safari and try again.':
         cause?.name==='NotFoundError'?'No usable camera was found.':strip(cause?.message);
       setError(message);
+    }
+  };
+  const beginRecording=()=>{
+    if(disabled || statusRef.current!=='active'||!recordConsent||recorderRef.current)return;
+    try{
+      const Recording=globalThis.MediaRecorder;
+      const mime=supportedRecordingType(Recording);
+      if(!mime || !HTMLCanvasElement.prototype.captureStream){
+        throw new Error('This browser cannot record annotated video. Use the built-in Camera app, then attach the clip after saving the workout.');
+      }
+      const source=videoRef.current,overlay=overlayRef.current;
+      if(!source?.videoWidth||!overlay)throw new Error('Camera frames are not ready. Try again.');
+      const canvas=document.createElement('canvas');
+      canvas.width=overlay.width;canvas.height=overlay.height;
+      const ctx=canvas.getContext('2d');
+      if(!ctx)throw new Error('Video composition is unavailable.');
+      ctx.drawImage(source,0,0,canvas.width,canvas.height);
+      ctx.drawImage(overlay,0,0,canvas.width,canvas.height);
+      const stream=canvas.captureStream(12);
+      const recorder=new Recording(stream,{mimeType:mime,videoBitsPerSecond:1500000});
+      const collector=createRecordingCollector();
+      const item={recorder,stream,collector,startedAt:performance.now(),mime,stopped:false};
+      recorderRef.current=item;
+      recordCanvasRef.current=canvas;
+      const finish=()=>{
+        if(item.stopped)return;item.stopped=true;
+        if(recordLimitRef.current!==null)clearInterval(recordLimitRef.current);
+        recordLimitRef.current=null;
+        stream.getTracks().forEach(track=>track.stop());
+        if(recorderRef.current===item){recorderRef.current=null;recordCanvasRef.current=null;}
+        setRecording(false);recordingChangedRef.current?.(false);
+        try{
+          const blob=collector.finish(recorder.mimeType||mime);
+          if(blob.size>FORM_IQ_RECORD_LIMIT)throw new Error('Clip exceeded the 100 MB local limit.');
+          clipReadyRef.current?.(blob);
+          setRecordNote('Annotated clip ready. Save the workout to attach it to this session. Download a backup after saving.');
+          setError('');
+        }catch(cause){setError(strip(cause?.message));}
+      };
+      recorder.ondataavailable=event=>{
+        if(!collector.push(event.data)){
+          setRecordNote('Recording reached the 100 MB size limit.');
+          stopRecording();
+        }
+      };
+      recorder.onerror=event=>{
+        setError('Video recording failed. '+strip(event?.error?.message));
+        stopRecording();
+      };
+      recorder.onstop=finish;
+      recorder.start(1000);
+      setRecording(true);recordingChangedRef.current?.(true);
+      setRecordSeconds(0);setRecordNote('Recording annotated video locally. No microphone or cloud transfer.');
+      recordLimitRef.current=setInterval(()=>{
+        const seconds=Math.max(0,Math.floor((performance.now()-item.startedAt)/1000));
+        setRecordSeconds(seconds);
+        if(seconds*1000>=FORM_IQ_RECORD_MAX_MS)stopRecording();
+      },1000);
+    }catch(cause){
+      setError(strip(cause?.message));
+      const item=recorderRef.current;
+      if(item){try{item.recorder.stop();}catch{}item.stream.getTracks().forEach(track=>track.stop());}
+      recorderRef.current=null;recordCanvasRef.current=null;
+      setRecording(false);recordingChangedRef.current?.(false);
     }
   };
   const calibrate=event=>{
@@ -259,6 +348,21 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false, re
         <option value="environment">Rear</option><option value="user">Front</option>
       </select></label>
       {status==='active'&&<button type="button" onClick={()=>{setBallPick(true);setMessage('Tap the orange ball in the camera view while it is still.');}}>⌖ Calibrate ball</button>}
+    </div>
+    <div className="formiq-native-record">
+      <label className="formiq-record-consent">
+        <input type="checkbox" checked={recordConsent} disabled={recording||disabled||status!=='active'}
+          onChange={event=>setRecordConsent(event.target.checked)} />
+        I have permission to record everyone visible (video only, no audio).
+      </label>
+      <div className="formiq-record-controls">
+        {!recording?
+          <button type="button" onClick={beginRecording} disabled={disabled||status!=='active'||!recordConsent}>● Record annotated clip</button>:
+          <button type="button" onClick={stopRecording} className="formiq-record-stop">■ Stop & keep clip</button>}
+        <span role="status">{recording?'● REC '+Math.floor(recordSeconds/60)+':'+String(recordSeconds%60).padStart(2,'0'):'Video recording OFF'}</span>
+      </div>
+      {recordNote&&<p role="status">{recordNote}</p>}
+      <small>Local device recording requires browser support and explicit consent. Limited to 4 minutes / 100 MB. Stop recording before saving the workout. Saving will attach the clip only to this player's workout on this device.</small>
     </div>
     <div className="formiq-autocapture">
       <label><input type="checkbox" checked={autoCapture} onChange={event=>{setAutoCapture(event.target.checked);extensionRef.current=freshExtensionDetector();}} disabled={disabled||remaining<=0} />
