@@ -18,7 +18,7 @@ function drawOverlay(canvas,points,metric,ball,trail,stage) {
   const width=canvas.width,height=canvas.height;
   ctx.clearRect(0,0,width,height);
   if(points?.length===17){
-    const right=stage.hand==='right',armIndex=right?6:5,legIndex=right?12:11;
+    const right=stage.hand==='right';
     const reference=referenceState(metric,stage.phase);
     ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=Math.max(3,width/180);
     for(const [a,b] of JOINT_LINKS){
@@ -62,7 +62,7 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
   const videoRef=useRef(null),overlayRef=useRef(null),frameRef=useRef(null);
   const detectorRef=useRef(null),streamRef=useRef(null),rafRef=useRef(null);
   const generation=useRef(0),observationRef=useRef(null),ballColour=useRef(null);
-  const ballPosition=useRef(null),trailRef=useRef([]),lastTime=useRef(0);
+  const ballPosition=useRef(null),trailRef=useRef([]),lastTime=useRef(0),lastBallAt=useRef(0),lastRiseAt=useRef(0);
   const [status,setStatus]=useState('idle'),[error,setError]=useState('');
   const [hand,setHand]=useState('right'),[metric,setMetric]=useState(null);
   const [rise,setRise]=useState(null),[ballPick,setBallPick]=useState(false);
@@ -97,7 +97,7 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
     const id=++generation.current;
     setStatus('starting');setError('');setMessage('Requesting camera and preparing pose tracking…');
     observationRef.current=null;ballColour.current=null;ballPosition.current=null;
-    trailRef.current=[];setRise(null);setBallStatus('not-calibrated');
+    trailRef.current=[];lastBallAt.current=0;lastRiseAt.current=0;setRise(null);setBallStatus('not-calibrated');
     let stream;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser does not expose camera access.');
@@ -148,16 +148,20 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
               const guess=findBallInFrame(pixels,old,ballColour.current,old?58:44);
               if(guess){
                 ball={x:guess.x,y:guess.y};
-                ballPosition.current=ball;
+                ballPosition.current=ball;lastBallAt.current=time;
                 const previous=trail.at(-1);
                 if(!previous||Math.hypot(previous.x-ball.x,previous.y-ball.y)>2){
                   trail=[...trail,{...ball,time}].filter(p=>time-p.time<2600).slice(-32);
                   trailRef.current=trail;
                 }
                 const angle=observedRiseAngle(trail);
-                if(angle!==null)setRise(angle);
+                if(angle!==null){setRise(angle);lastRiseAt.current=time;}
+                else if(time-lastRiseAt.current>3000)setRise(null);
                 setBallStatus('tracking');
-              }else setBallStatus('lost');
+              }else{
+                setBallStatus('lost');
+                if(time-lastBallAt.current>1000){setRise(null);trailRef.current=[];}
+              }
             }
             const stage={hand:handRef.current,phase:data.phase};
             drawOverlay(overlay,points,data,ball,trail,stage);
@@ -188,7 +192,7 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
     const colour=sampleBallColour(ctx.getImageData(0,0,320,240),x,y);
     if(!colour){setError('Tap directly on the orange basketball in clear light. Try a side view.');return;}
     ballColour.current=colour;ballPosition.current={x,y};trailRef.current=[];
-    setRise(null);setBallPick(false);setBallStatus('calibrated');
+    setRise(null);lastRiseAt.current=0;lastBallAt.current=0;setBallPick(false);setBallStatus('calibrated');
     setError('');setMessage('Ball colour sampled. CourtIQ is tracing screen-space movement; it cannot verify shot makes.');
   };
   const snapshot=()=>{
@@ -219,7 +223,7 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
       {ballPick&&status==='active'&&<div className="formiq-target-instruction">Tap the basketball to calibrate its colour</div>}
     </div>
     <div className="formiq-controls">
-      {status==='active'?<button type="button" className="formiq-stop" onClick={()=>release()}>Stop camera</button>:
+      {status==='active'||status==='starting'?<button type="button" className="formiq-stop" onClick={()=>release()}>Stop camera</button>:
         <button type="button" className="formiq-start" disabled={disabled||status==='starting'} onClick={start}>
           {status==='starting'?'Loading pose model…':'Start camera & live analysis'}</button>}
       <label>Shot hand <select value={hand} onChange={event=>setHand(event.target.value)} disabled={disabled}>
