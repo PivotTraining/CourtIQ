@@ -17,9 +17,9 @@ const explain = cause => {
   return (cause?.message || 'Unable to start the game camera.').slice(0,200);
 };
 
-export default function GameTrackerRecorder({ accountId, sessionId, playerName='', onBusyChange, storeFactory=STORE }) {
+export default function GameTrackerRecorder({ accountId, sessionId, playerName='', events=[], onBusyChange, storeFactory=STORE }) {
   const videoRef=useRef(null),cameraRef=useRef(null),recorderRef=useRef(null),timerRef=useRef(null);
-  const requestRef=useRef(0),cameraTimeoutRef=useRef(null);
+  const requestRef=useRef(0),cameraTimeoutRef=useRef(null),autoContinueRef=useRef(false),reviewRef=useRef(null);
   const aliveRef=useRef(false),ownerRef=useRef(JSON.stringify([accountId,sessionId]));
   const workingRef=useRef(false),savingRef=useRef(false);
   const storeRef=useRef(null);
@@ -28,7 +28,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
   onBusyRef.current=onBusyChange;
   const [state,setState]=useState('idle'),[seconds,setSeconds]=useState(0),[cameraFace,setCameraFace]=useState('environment');
   const [consent,setConsent]=useState(false),[error,setError]=useState(''),[info,setInfo]=useState('');
-  const [saved,setSaved]=useState(null),[pending,setPending]=useState(null),[videoUrl,setVideoUrl]=useState('');
+  const [saved,setSaved]=useState(null),[clips,setClips]=useState([]),[pending,setPending]=useState(null),[videoUrl,setVideoUrl]=useState('');
   const [visible,setVisible]=useState(false);
   const clearCameraTimeout=useCallback(()=>{
     if(cameraTimeoutRef.current!==null)clearTimeout(cameraTimeoutRef.current);
@@ -47,7 +47,8 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     if(aliveRef.current)setState(previous=>previous==='recording'||previous==='saving'?previous:'idle');
   },[]);
 
-  const stopRecording=useCallback(()=>{
+  const stopRecording=useCallback((continueRecording=false)=>{
+    autoContinueRef.current=continueRecording;
     if(timerRef.current!==null){clearInterval(timerRef.current);timerRef.current=null;}
     const rec=recorderRef.current;
     if(rec?.state==='recording'){
@@ -88,8 +89,12 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     aliveRef.current=true;
     const owner=ownerRef.current;
     let live=true;
-    storeRef.current.get(accountId,sessionId).then(record=>{
-      if(live&&ownerRef.current===owner)setSaved(record);
+    Promise.all([storeRef.current.get(accountId,sessionId),
+      storeRef.current.listSegments(accountId,sessionId)]).then(([legacy,segments])=>{
+      if(live&&ownerRef.current===owner){
+        const videos=[...(legacy?[legacy]:[]),...segments];
+        setClips(videos);setSaved(videos.at(-1)||null);
+      }
     }).catch(cause=>{
       if(live)setError('Could not check previously saved game video: '+explain(cause));
     });
@@ -173,15 +178,15 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     }
   }
 
-  function startCapture(){
+  function startCapture(automatic=false){
     if(workingRef.current||recorderRef.current?.state==='recording'||!cameraRef.current)return;
     if(!consent){setError('Filming permission is required before recording.');return;}
-    if(saved&&!window.confirm('A game video is already saved here. Download it before replacing it. Replace this copy after a successful new recording?'))return;
     setError('');setInfo('');
     const MediaRecorderCtor=globalThis.MediaRecorder;
     const type=supportedRecordingType(MediaRecorderCtor);
     if(!type){setError('This browser cannot record MP4 or WebM here. Use the phone camera and attach the clip to the finished game report.');return;}
     const collector=createRecordingCollector();
+    const recordedAt=new Date().toISOString();
     let rec;
     try{
       rec=new MediaRecorderCtor(cameraRef.current,{mimeType:type,videoBitsPerSecond:900000});
@@ -198,19 +203,23 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       rec.onstop=async()=>{
         if(timerRef.current!==null){clearInterval(timerRef.current);timerRef.current=null;}
         recorderRef.current=null;
+        const continueAfterSave=autoContinueRef.current;
+        autoContinueRef.current=false;
         if(!aliveRef.current)return;
         setState('saving');savingRef.current=true;
-        setInfo('Finishing game recording…');
+        setInfo('Finishing game clip…');
         let retainedClip=false;
         try{
           const blob=collector.finish(rec.mimeType||type);
           validateClip(blob);
           setPending(blob); // retained if IndexedDB quota prevents attaching
           retainedClip=true;
-          const stored=await storeRef.current.put(accountId,sessionId,blob);
+          const stored=await storeRef.current.putSegment(accountId,sessionId,blob,
+            {recordedAt,endedAt:new Date().toISOString()});
           if(!aliveRef.current||ownerRef.current!==JSON.stringify([accountId,sessionId]))return;
-          setSaved(stored);setPending(null);retainedClip=false;
-          setInfo('Game clip saved locally with this session. Review it and download a backup. Stats remain separate.');
+          setSaved(stored);setClips(existing=>[...existing,stored]);
+          setPending(null);retainedClip=false;
+          setInfo('Game clip saved locally. '+(continueAfterSave?'Starting next clip…':'Review and download a backup.'));
           setError('');
         }catch(cause){
           if(aliveRef.current)setError('Game video could not be stored: '+explain(cause)+' The finished clip is kept in this open tab; download it before leaving.');
@@ -219,6 +228,9 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
           if(aliveRef.current){
             setState(retainedClip?'needs-backup':cameraRef.current?'preview':'idle');
             markBusy(retainedClip);
+            if(!retainedClip && continueAfterSave && cameraRef.current && !document.hidden){
+              startCapture(true);
+            }
           }
         }
       };
@@ -232,8 +244,8 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
         const elapsed=Math.floor((performance.now()-started)/1000);
         setSeconds(elapsed);
         if(elapsed>=RECORDING_LIMIT_SECONDS){
-          setInfo('Four-minute game clip limit reached. Stop/save completed; press Record game again for the next segment.');
-          stopRecording();
+          setInfo('Four-minute segment complete. Saving clip and automatically continuing when storage succeeds.');
+          stopRecording(true);
         }
       },1000);
     }catch(cause){
@@ -248,11 +260,12 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     markBusy(true);setState('saving');setError('');
     let attached=false;
     try{
-      const record=await storeRef.current.put(accountId,sessionId,pending);
+      const record=await storeRef.current.putSegment(accountId,sessionId,pending,
+        {recordedAt:new Date().toISOString(),endedAt:new Date().toISOString()});
       attached=true;
       if(!aliveRef.current)return;
-      setSaved(record);setPending(null);
-      setInfo('Recovered and saved game video locally.');
+      setSaved(record);setClips(existing=>[...existing,record]);setPending(null);
+      setInfo('Recovered and saved game segment locally.');
     }catch(cause){if(aliveRef.current)setError('Local video save failed: '+explain(cause));}
     finally{if(aliveRef.current){
       setState(attached?(cameraRef.current?'preview':'idle'):'needs-backup');
@@ -269,6 +282,10 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     }catch{setError('Download could not start. Keep this browser tab open and retry.');}
   };
 
+  const reviewEvents=saved?.recordedAt&&saved?.endedAt?
+    events.filter(event=>['shot','stat'].includes(event.payload?.kind) &&
+      event.payload?.recorded_at>=saved.recordedAt&&
+      event.payload?.recorded_at<=saved.endedAt):[];
   const recording=state==='recording';
   const elapsed=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
 
@@ -296,9 +313,23 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       {state==='starting'&&<p>Connecting to your camera… You can cancel and retry.</p>}
       {recording&&<span className="game-video-counter">● REC {elapsed}</span>}
     </div>
-    {saved?.blob&&<details className="game-video-saved"><summary>Review saved game video · {(saved.blob.size/1048576).toFixed(1)} MB</summary>
-      {videoUrl&&<video src={videoUrl} controls playsInline preload="metadata" aria-label="Saved game clip playback" />}
-      <button type="button" onClick={()=>download(saved.blob)}>Download saved video backup</button>
+    {clips.length>0&&<details className="game-video-saved"><summary>Review game footage · {clips.length} saved {clips.length===1?'clip':'clips'}</summary>
+      <label className="game-video-clip-select">Selected clip
+        <select value={saved?.id||''} onChange={event=>setSaved(clips.find(item=>item.id===event.target.value)||null)}>
+          {clips.map((clip,index)=><option key={clip.id} value={clip.id}>Clip {index+1} · {new Date(clip.recordedAt||clip.savedAt).toLocaleTimeString()} · {(clip.blob.size/1048576).toFixed(1)} MB</option>)}
+        </select>
+      </label>
+      {videoUrl&&<video ref={reviewRef} src={videoUrl} controls playsInline preload="metadata" aria-label="Saved game clip playback" />}
+      {reviewEvents.length>0&&<div className="game-video-events"><strong>Stats recorded during this clip</strong>
+        {reviewEvents.map(event=><button type="button" key={event.id} onClick={()=>{
+          const node=reviewRef.current;if(!node)return;
+          const offset=(Date.parse(event.payload.recorded_at)-Date.parse(saved.recordedAt))/1000;
+          if(Number.isFinite(offset))node.currentTime=Math.max(0,offset);
+          node.play()?.catch?.(()=>{});
+        }}>{event.payload.kind==='shot'?(event.payload.made?'Made':'Missed')+' '+event.payload.zone_id:
+          event.payload.key.toUpperCase()+' +'+event.payload.delta} · {new Date(event.payload.recorded_at).toLocaleTimeString()}</button>)}
+      </div>}
+      <button type="button" onClick={()=>download(saved?.blob)}>Download selected clip backup</button>
     </details>}
     {pending&&<div className="game-video-pending" role="alert"><strong>Video is in this tab only</strong>
       <p>Do not close the tracker until you download this clip or retry saving it.</p>
@@ -312,6 +343,6 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     </div>}
     {error&&<p className="game-video-error" role="alert">{error}</p>}
     {info&&<p className="game-video-info" role="status">{info}</p>}
-    <p className="game-video-note">Live video is visible while shot-chart and box-score buttons remain usable. Recording is silent and device-only (4-minute clips, 100 MB each, 250 MB account total). One locally saved clip per game; recording again replaces that copy only after a successful save. Save longer footage externally. Not a cloud recording or automatic stat analysis.</p>
+    <p className="game-video-note">Live video is visible while shot-chart and box-score buttons remain usable. Recording is silent and device-only (4-minute clips, 100 MB each, 250 MB account total). Four-minute clips auto-continue when the device successfully saves each segment. Recordings stay on this device (100 MB per segment, 250 MB per account). Review timestamped game events beside saved clips. Download footage regularly; device storage may fill and is not cloud backup or automatic stat analysis.</p>
   </section>;
 }
