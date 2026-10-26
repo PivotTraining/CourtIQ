@@ -33,8 +33,67 @@ export async function createPlayerProfile(profile) {
 // ─── MULTI-PLAYER ───
 
 export async function fetchManagedPlayers(firebaseUid) {
-  return readAll(() => getSupabase().from("players").select("*")
-    .eq("manager_uid", firebaseUid).order("created_at").order("id"));
+  if (!firebaseUid) throw new Error("Sign in to load player profiles.");
+  // RLS returns only this account's managed profiles and explicitly shared
+  // players. Do not hard-filter manager_uid or invited players disappear.
+  const accessible = await readAll(() => getSupabase().from("players").select("*")
+    .order("created_at").order("id"));
+  return accessible;
+}
+
+export async function createPlayerShareInvite(playerId, recipientEmail, role = "editor") {
+  return checked(await getSupabase().rpc("create_player_share_invite", {
+    p_player: playerId, p_recipient_email: recipientEmail.trim().toLowerCase(), p_role: role,
+  }));
+}
+
+export async function joinSharedPlayer(code) {
+  return checked(await getSupabase().rpc("join_shared_player", {
+    p_code: code.trim().toLowerCase(),
+  }));
+}
+
+export async function getPlayerCollaborators(playerId) {
+  return readAll(() => getSupabase().from("player_collaborators")
+    .select("account_id,role,created_at").eq("player_id", playerId).order("created_at"));
+}
+
+export async function revokePlayerShare(playerId, accountId) {
+  return checked(await getSupabase().rpc("revoke_shared_player", {
+    p_player: playerId, p_account: accountId,
+  }));
+}
+
+export async function importSharedGame(sourcePlayerId, destinationPlayerId, sessionId) {
+  return checked(await getSupabase().rpc("import_shared_game", {
+    p_source_player: sourcePlayerId,
+    p_destination_player: destinationPlayerId,
+    p_session: sessionId,
+  }));
+}
+
+// A fusion never adds two copies of the same basket. The chosen shot
+// ledger is authoritative; individual box-score fields select their source.
+export async function fuseSharedGame(canonicalSessionId, sourceSessionId, fieldSources, shootingSource) {
+  return checked(await getSupabase().rpc("fuse_shared_game", {
+    p_canonical: canonicalSessionId,
+    p_source: sourceSessionId,
+    p_fields: fieldSources,
+    p_shooting: shootingSource,
+  }));
+}
+
+export async function undoSharedGameFusion(fusionId) {
+  return checked(await getSupabase().rpc("undo_shared_game_fusion", {
+    p_fusion: fusionId,
+  }));
+}
+
+export async function fetchSharedGameFusions(sessionIds) {
+  if (!sessionIds?.length) return [];
+  return readAll(() => getSupabase().from("shared_game_fusions")
+    .select("id,canonical_session_id,source_session_id,field_sources,shooting_source,created_at,reversed_at")
+    .in("source_session_id",sessionIds).is("reversed_at",null));
 }
 
 export async function addManagedPlayer(firebaseUid, player) {

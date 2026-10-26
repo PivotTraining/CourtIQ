@@ -115,6 +115,29 @@ export function AppProvider({ children }) {
     refreshData();
     return () => { loadVersion.current += 1; };
   }, [refreshData]);
+  // Shared parents may save completed games from separate devices. Reconcile
+  // the selected player's aggregates whenever this device is foregrounded,
+  // without restarting the app or displaying another player's stale totals.
+  useEffect(() => {
+    if (!playerId || typeof window === "undefined" || typeof document === "undefined"
+      || typeof window.addEventListener !== "function"
+      || typeof document.addEventListener !== "function") return;
+    let lastRefresh = 0;
+    const onForeground = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefresh < 1500) return;
+      lastRefresh = now;
+      refreshData();
+    };
+    window.addEventListener("focus", onForeground);
+    document.addEventListener("visibilitychange", onForeground);
+    return () => {
+      window.removeEventListener("focus", onForeground);
+      document.removeEventListener("visibilitychange", onForeground);
+    };
+  }, [playerId, refreshData]);
+
 
   const addJournalEntry = async (entry) => {
     if (!playerId) throw new Error("Select a player before saving a journal entry.");
