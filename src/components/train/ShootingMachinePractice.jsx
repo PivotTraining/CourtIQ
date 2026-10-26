@@ -347,6 +347,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
           {filmPreviewUrl && <div className="machine-film-preview">
             <video playsInline controls preload="metadata" src={filmPreviewUrl}
               onLoadedMetadata={()=>setFilmPlayback('metadata-loaded')}
+              onTimeUpdate={event=>{if(event.currentTarget.currentTime>0.15)setFilmPlayback('played');}}
               onError={()=>setFilmPlayback('unplayable')}
               aria-label="Review annotated shooting video before saving" />
             <p role="status">{filmPlayback==='unplayable'
