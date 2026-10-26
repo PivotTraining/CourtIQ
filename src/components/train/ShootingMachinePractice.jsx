@@ -33,6 +33,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState(null);
   const [selectedVideoId, setSelectedVideoId] = useState(null);
+  const [detailId, setDetailId] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -47,6 +48,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     setReady(false);
     setLoadedKey(null);
     setSelectedVideoId(null);
+    setDetailId(null);
     setExpanded(false);
     if (!key) { setDraft(null); return; }
     let restored = null;
@@ -184,6 +186,7 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
     setExpanded(true);
   };
   const latest = history[0];
+  const selectedDetail = history.find(row => row.id === detailId);
   const hasPlayer = !!key;
   return <section className="machine-lab" aria-label="Shooting machine practice">
     <header className="machine-hero">
@@ -264,6 +267,8 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
           <span>2PT {summary.twos.makes}/{summary.twos.attempts} · {valueOrDash(summary.twos.pct)}</span>
           <span>FT {summary.freeThrows.makes}/{summary.freeThrows.attempts} · {valueOrDash(summary.freeThrows.pct)}</span>
         </div>
+        <div className="machine-splits">{summary.perStyle.filter(style => style.attempts > 0).map(style =>
+          <span key={style.id}>{style.label}: {style.makes}/{style.attempts} · {valueOrDash(style.pct)}</span>)}</div>
         <div className="machine-locations">
           {summary.populatedZones.map(zone => <div key={zone.id}><span>{zone.label}</span><strong>{zone.makes}/{zone.attempts} · {valueOrDash(zone.pct)}</strong></div>)}
         </div>
@@ -301,8 +306,24 @@ export default function ShootingMachinePractice({ playerId, records = [], canSav
       {history.slice(0, 6).map(row => <div className="machine-history-line" key={row.id}>
         <div><strong>{formatDate(row.date)}</strong><small>{row.machine.focus || 'Shooting machine'} · {row.attempts} attempts</small></div>
         <strong>{row.makes}/{row.attempts} · {valueOrDash(row.pct)}</strong>
+        <button type="button" aria-expanded={detailId === row.id}
+          onClick={() => setDetailId(current => current === row.id ? null : row.id)}>Details</button>
         <button type="button" onClick={() => setSelectedVideoId(row.id)}>Video</button>
       </div>)}
+      {selectedDetail && <div className="machine-detail">
+        <h4>{formatDate(selectedDetail.date)} · Workout details</h4>
+        <p>{selectedDetail.machine.name || 'Shooting machine'} · {selectedDetail.machine.focus || 'Practice'}
+          {selectedDetail.machine.feed_seconds ? ' · ' + selectedDetail.machine.feed_seconds + 's machine interval' : ''}
+          {' · ' + formatTime(selectedDetail.elapsed) + ' logged practice time'}</p>
+        <div className="machine-locations">{selectedDetail.populatedZones.map(zone =>
+          <div key={zone.id}><span>{zone.label}</span><strong>{zone.makes}/{zone.attempts} · {valueOrDash(zone.pct)}</strong></div>)}</div>
+        <div className="machine-splits">{selectedDetail.perStyle.filter(style => style.attempts > 0).map(style =>
+          <span key={style.id}>{style.label}: {style.makes}/{style.attempts} · {valueOrDash(style.pct)}</span>)}</div>
+        <strong>Video-review observations</strong>
+        <p>{selectedDetail.machine.notes || 'No notes were entered for this session.'}</p>
+        <p>{FORM_CUES.filter(cue => selectedDetail.machine.form?.[cue.id])
+          .map(cue => cue.label).join(' · ') || 'No form cues marked as reviewed.'}</p>
+      </div>}
     </section>}
     {isCurrent && !!accountId && !!selectedVideoId && <section className="machine-video">
       <div className="machine-section-heading"><h4>Saved workout video</h4><button type="button" onClick={() => setSelectedVideoId(null)}>Close video</button></div>
