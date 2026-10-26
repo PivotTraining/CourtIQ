@@ -159,5 +159,12 @@ test("same-game fusion selects one authoritative shot ledger and field sources, 
   assert.equal(restored.tracker_version,2);
   assert.equal((await user(db,alice,`select count(*)::int n from shot_logs where session_id='${target}' and id='${originalShot}'`)).rows[0].n,1);
   await assert.rejects(user(db,bob,`select public.undo_shared_game_fusion('${fusionId}')`));
+  const newAudit=(await user(db,bob,`select public.fuse_shared_game('${target}','${source}',
+    '{"ast":"source"}'::jsonb,'canonical') id`)).rows[0].id;
+  assert.ok(newAudit);
+  await db.exec(`reset role;delete from auth.users where id='${bob}';`);
+  assert.equal((await db.query("select count(*)::int n from shared_game_fusions")).rows[0].n,0);
+  assert.equal((await db.query(`select count(*)::int n from sessions where id='${target}'`)).rows[0].n,1);
+
  } finally { await db.close(); }
 });
