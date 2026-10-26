@@ -149,3 +149,31 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
 @media (orientation: portrait) and (max-height: 690px) {
   .tracker-content { -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 }
+
+/* High-frequency game controls remain above the scrolling stat pane. */
+.tracker-game-bar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:0 12px 6px;padding:6px 9px;background:var(--color-card);border:1px solid var(--color-border);border-radius:12px;flex-shrink:0;flex-wrap:wrap}
+.tracker-period-controls{display:flex;align-items:center;gap:6px}
+.tracker-period-controls button{border:1px solid var(--color-border);border-radius:8px;background:var(--color-muted);color:var(--color-text);min-width:36px;min-height:42px;font-size:20px}
+.tracker-period-controls strong{font-size:14px;min-width:28px;text-align:center}
+.tracker-live-clock{display:flex;gap:5px;align-items:center;font-size:10px;font-weight:750;color:var(--color-text-sec)}
+.tracker-live-clock input{font-size:16px;font-weight:850;max-width:64px;min-height:42px;border:1px solid var(--color-border);background:var(--color-muted);border-radius:9px;text-align:center;color:var(--color-text)}
+.tracker-score-control{min-height:42px;border:1px solid var(--color-border);background:var(--color-muted);border-radius:9px;padding:7px 10px;font-size:11px;font-weight:800;color:var(--color-text)}
+.tracker-score-control span{font-size:10px;color:var(--color-accent);text-decoration:underline;margin-left:3px}
+.tracker-quick-zone-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:8px}
+.tracker-quick-zone-controls label{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:750;color:var(--color-text)}
+.tracker-quick-zone-controls input{accent-color:var(--color-accent);height:18px;width:18px}
+.tracker-quick-zone-controls button{min-height:40px;border:1px solid var(--color-border);border-radius:9px;background:var(--color-muted);color:var(--color-text);padding:7px 10px;font-size:11px;font-weight:750}
+.tracker-timeline ol{max-height:300px;overflow-y:auto;overscroll-behavior:contain;padding:0;list-style:none}
+.tracker-event{padding:9px 8px;border-bottom:1px solid var(--color-border);font-size:11px;line-height:1.6}
+.tracker-event-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
+.tracker-event-actions button{min-height:40px;border:1px solid var(--color-border);background:var(--color-card);color:var(--color-text);border-radius:9px;padding:8px 10px;font-weight:750;font-size:11px}
+.tracker-correction-form{padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:var(--color-muted);border-radius:12px;margin-top:8px}
+.tracker-correction-form label{font-size:11px;display:grid;gap:5px}
+.tracker-correction-form select,.tracker-correction-form input{min-width:0;min-height:44px;border:1px solid var(--color-border);border-radius:9px;color:var(--color-text);background:var(--color-card);padding:7px}
+.tracker-correction-form .tracker-event-actions{grid-column:1/-1}
+@media (orientation:landscape) and (max-height:600px){
+ .tracker-game-bar{padding:3px 6px;margin:0 6px 4px;gap:5px}
+ .tracker-score-control,.tracker-live-clock input,.tracker-period-controls button{min-height:38px}
+ .tracker-quick-zone-controls{gap:4px}
+ .tracker-timeline ol{max-height:none}
+}
