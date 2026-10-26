@@ -132,7 +132,7 @@ export function machineHistory(rows) {
   const found = [];
   const seen = new Set();
   for (const row of rows) {
-    if (!row?.id || seen.has(row.id)) continue;
+    if (!row?.id || seen.has(row.id) || !Array.isArray(row.drills)) continue;
     const drill = row.drills?.find(item =>
       item?.drill_id === MACHINE_DRILL_ID && item?.practice_version === MACHINE_VERSION &&
       item?.machine?.version === MACHINE_VERSION);
