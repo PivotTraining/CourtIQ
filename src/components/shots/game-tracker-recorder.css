@@ -33,3 +33,9 @@
 /* Do not reserve camera height until the user requests a preview. */
 .game-video-camera[hidden]{display:none!important}
 .game-video-camera video{touch-action:manipulation}
+
+.game-video-clip-select{display:grid;gap:6px;font-size:11px;color:#e9eef6;padding:6px 0}
+.game-video-clip-select select{width:100%;min-height:44px;background:#192530;color:#f9fbff;border:1px solid #526273;border-radius:8px;padding:8px}
+.game-video-events{display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:8px 0}
+.game-video-events strong{flex:1 1 100%;font-size:11px;color:#f0f4fa}
+.game-video-events button{min-height:38px;padding:7px 9px;background:#344556;color:white;border:1px solid #64798e;border-radius:8px;font-size:10px}
