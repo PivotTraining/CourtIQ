@@ -85,6 +85,7 @@ export default function LiveShootingAnalyzer({ onObservation, disabled=false }) 
     if(reset){setStatus('idle');setBallPick(false);setMessage('Live camera stopped. Nothing was uploaded.');}
   },[]);
   useEffect(()=>()=>release(false),[release]);
+  useEffect(()=>{if(disabled && streamRef.current)release();},[disabled,release]);
   useEffect(()=>{
     const hide=()=>{if(document.hidden && streamRef.current)release();};
     document.addEventListener('visibilitychange',hide);
