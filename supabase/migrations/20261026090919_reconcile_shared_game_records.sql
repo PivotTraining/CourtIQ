@@ -5,8 +5,8 @@ begin;
 
 create table public.shared_game_fusions (
   id uuid primary key default gen_random_uuid(),
-  canonical_session_id uuid not null references public.sessions(id) on delete restrict,
-  source_session_id uuid not null references public.sessions(id) on delete restrict,
+  canonical_session_id uuid not null references public.sessions(id) on delete cascade,
+  source_session_id uuid not null references public.sessions(id) on delete cascade,
   approved_by uuid references auth.users(id) on delete set null,
   field_sources jsonb not null,
   shooting_source text not null check (shooting_source in ('canonical','source')),
