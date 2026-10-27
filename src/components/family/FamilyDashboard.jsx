@@ -9,6 +9,7 @@ import { computeSkillRatings, computeSeasonStats } from "@/lib/intelligence";
 import { computeNextMove } from "@/lib/nextMove.mjs";
 import Icon from "@/components/ui/Icons";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
+import "./family-sharing.css";
 
 export default function FamilyDashboard({ onManagePlayers }) {
   const { user, playerProfile, switchToManagedPlayer } = useAuth();
