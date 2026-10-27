@@ -40,14 +40,16 @@ export async function listFamilyGameClips({playerId,sessionId}) {
     .map(file=>({...file,path:prefix+'/'+file.name}));
 }
 export async function getFamilyGameClipUrl(path) {
-  if(typeof path!=='string'||!path.startsWith(''))throw new Error('Choose a saved clip.');
+  if(typeof path!=='string'||!/^([0-9a-f-]{36}\\/){2}[0-9a-f-]{36}\\.(mp4|webm|mov)$/i.test(path))
+    throw new Error('Choose a video from a saved player game.');
   const record=requireResult(await getSupabase().storage.from(GAME_FILM_BUCKET)
     .createSignedUrl(path,15*60),'Could not open family clip');
   if(!record?.signedUrl)throw new Error('Cloud playback URL unavailable.');
   return record.signedUrl;
 }
 export async function removeFamilyGameClip(path) {
-  if(!path)throw new Error('Choose a saved clip.');
+  if(typeof path!=='string'||!/^([0-9a-f-]{36}\\/){2}[0-9a-f-]{36}\\.(mp4|webm|mov)$/i.test(path))
+    throw new Error('Choose a video from a saved player game.');
   requireResult(await getSupabase().storage.from(GAME_FILM_BUCKET).remove([path]),
     'Could not remove the cloud clip');
 }
