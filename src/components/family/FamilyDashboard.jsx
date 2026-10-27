@@ -26,6 +26,7 @@ export default function FamilyDashboard({ onManagePlayers }) {
   const [shareMessage,setShareMessage]=useState('');
   const [inviteCode,setInviteCode]=useState('');
   const [sharePlayer,setSharePlayer]=useState(null);
+  const [sharePanelOpen,setSharePanelOpen]=useState(false);
   const [sharedMembers,setSharedMembers]=useState([]);
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function FamilyDashboard({ onManagePlayers }) {
     setShareBusy(true);setShareError('');setShareMessage('');setInviteCode('');
     try{
       const [code,members]=await Promise.all([issuePlayerInvite(player.id),fetchPlayerShares(player.id)]);
-      setSharePlayer(player);setSharedMembers(members);setInviteCode(code);
+      setSharePlayer(player);setSharedMembers(members);setInviteCode(code);setSharePanelOpen(true);
       setShareMessage('Share the one-time code privately. It expires in 48 hours. Only the player manager can revoke access.');
     }catch(err){setShareError(err?.message||'Could not issue invitation.');}
     finally{setShareBusy(false);}
@@ -122,7 +123,7 @@ export default function FamilyDashboard({ onManagePlayers }) {
       </section>
 
       {switchError && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{switchError}</p>}
-      <details className="family-share-panel">
+      <details className="family-share-panel" open={sharePanelOpen} onToggle={event=>setSharePanelOpen(event.currentTarget.open)}>
         <summary>Share a player across parent accounts</summary>
         <p>Each parent signs in separately. The player manager provides a one-time private code. Both accounts then use the same player profile and game history.</p>
         <form onSubmit={joinFamilyPlayer} className="family-share-join">
