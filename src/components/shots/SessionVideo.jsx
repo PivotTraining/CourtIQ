@@ -95,7 +95,7 @@ export function DeviceSessionVideo({accountId,sessionId,sessionType='game'}) {
       {segments.map((clip,index)=><GameFilmSegment key={clip.id} clip={clip} index={index}
         onDelete={deleteSegment} busy={busy}/>)}
     </div>}
-    <FamilyCloudVideo sessionId={sessionId} localClip={record}/>
+    {sessionType==='game'&&<FamilyCloudVideo sessionId={sessionId} localClip={record}/>}
     {busy&&<p role="status">Checking device video storage…</p>}{message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
   </section>;
 }
