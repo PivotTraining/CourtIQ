@@ -49,7 +49,7 @@ export default function AdvancedSessionReport({ shots, gameStats = {}, freeThrow
       </details>
       {report.unknownShots > 0 && <p role="status" className="report-note">{report.unknownShots} unknown-zone shot(s) excluded. Review the source records.</p>}
       {exportError && <p role="alert">{exportError}</p>}
-      {accountId&&sessionId&&<SessionVideo key={`${accountId}:${sessionId}`} accountId={accountId} sessionId={sessionId}/>}
+      {accountId&&sessionId&&<SessionVideo key={`${accountId}:${sessionId}`} accountId={accountId} sessionId={sessionId} sessionType={sessionType}/>}
       {showCard&&<SocialReportCard report={report} playerName={playerName} date={date} opponent={opponent} sessionType={sessionType} onClose={()=>setShowCard(false)}/>}
     </section>
   );

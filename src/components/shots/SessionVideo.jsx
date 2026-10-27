@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createDeviceVideoStore, validateClip, clipKey } from '@/lib/deviceVideo.mjs';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
+import FamilyCloudVideo from './FamilyCloudVideo';
 import './report-media.css';
 
 function GameFilmSegment({clip,index,onDelete,busy}){
@@ -21,13 +22,13 @@ function GameFilmSegment({clip,index,onDelete,busy}){
   </article>;
 }
 
-export default function SessionVideo({accountId,sessionId}) {
+export default function SessionVideo({accountId,sessionId,sessionType='game'}) {
   // Switching accounts/sessions must unmount the previous clip UI, including its
   // pending save callbacks. Never reuse an alive flag for a different owner.
-  return <DeviceSessionVideo key={clipKey(accountId,sessionId)} accountId={accountId} sessionId={sessionId} />;
+  return <DeviceSessionVideo key={clipKey(accountId,sessionId)} accountId={accountId} sessionId={sessionId} sessionType={sessionType} />;
 }
 
-export function DeviceSessionVideo({accountId,sessionId}) {
+export function DeviceSessionVideo({accountId,sessionId,sessionType='game'}) {
   const store=useMemo(()=>createDeviceVideoStore(),[]);
   const [record,setRecord]=useState(null),[segments,setSegments]=useState([]),[url,setUrl]=useState(''),[consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
@@ -94,6 +95,7 @@ export function DeviceSessionVideo({accountId,sessionId}) {
       {segments.map((clip,index)=><GameFilmSegment key={clip.id} clip={clip} index={index}
         onDelete={deleteSegment} busy={busy}/>)}
     </div>}
+    {sessionType==='game'&&<FamilyCloudVideo sessionId={sessionId} localClip={record}/>}
     {busy&&<p role="status">Checking device video storage…</p>}{message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
   </section>;
 }
