@@ -19,6 +19,7 @@ async function videoFixture(metadata = Promise.resolve()) {
     react: h.react,
     '@/lib/deviceVideo.mjs': { createDeviceVideoStore: () => store, validateClip() {}, clipKey: (owner, session) => JSON.stringify([owner, session]) },
     '@/lib/browserDownload.mjs': { downloadBlob() {} },
+    './FamilyCloudVideo':()=>null,
   }, globals);
   return { h, Video, View, write, requests };
 }
