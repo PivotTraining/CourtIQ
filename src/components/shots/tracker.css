@@ -181,3 +181,32 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
 .tracker-merge-controls{border:1px solid var(--stat-amber);border-radius:12px;background:var(--color-card);padding:12px;margin:8px 0;display:flex;flex-wrap:wrap;gap:8px}
 .tracker-merge-controls p{flex-basis:100%;font-size:12px;line-height:1.55;color:var(--color-text);margin:0}
 .tracker-merge-controls button{flex:1 1 180px}
+
+/* Live-first interface: totals, main action buttons and camera remain visible;
+   secondary settings, backups and correction history live in disclosures. */
+.tracker-score-summary{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 6px;padding:3px 2px}
+.tracker-score-summary strong{font-size:22px;line-height:1.1;color:var(--color-text)}
+.tracker-score-summary small{font-size:11px;font-weight:750;color:var(--color-text-sec)}
+.tracker-score-summary span{font-size:11px;font-weight:800;color:var(--color-text-sec)}
+.tracker-score-summary span:last-child{margin-left:auto}
+.tracker-sync-ok{color:var(--stat-green)!important}
+.tracker-sync-pending{color:var(--stat-amber)!important}
+.tracker-sync-warning{color:var(--stat-red)!important}
+.tracker-more-tools{border-top:1px solid var(--color-border);padding-top:5px;margin-top:3px}
+.tracker-more-tools summary{min-height:38px;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:800;color:var(--color-text)}
+.tracker-more-tools summary span{font-size:10px;font-weight:500;color:var(--color-text-sec)}
+.tracker-more-tools[open]{padding-bottom:10px}
+.tracker-sync-shortcut{border:1px solid var(--stat-amber);border-radius:9px;min-height:36px;background:var(--color-card);color:var(--color-text);font-size:11px;padding:6px 10px}
+.tracker-quick-zone-controls{justify-content:space-between}
+.tracker-shot-options{position:relative;font-size:11px}
+.tracker-shot-options summary{min-height:40px;display:flex;align-items:center;cursor:pointer;font-weight:750;color:var(--color-text-sec);padding:6px}
+.tracker-shot-options[open]{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
+.tracker-shot-options[open] summary{flex-basis:100%}
+.tracker-quick-zone-controls .tracker-free-throw-active{border-color:var(--color-accent)}
+.tracker-tracking-tip{font-size:10px!important}
+@media(orientation:landscape) and (max-height:600px){
+ .tracker-recovery-tools{margin:2px auto 6px}
+ .tracker-score-summary{gap:6px;margin-bottom:1px}
+ .tracker-score-summary strong{font-size:17px}
+ .tracker-more-tools summary{min-height:31px}
+}
