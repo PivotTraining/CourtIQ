@@ -33,8 +33,28 @@ export async function createPlayerProfile(profile) {
 // ─── MULTI-PLAYER ───
 
 export async function fetchManagedPlayers(firebaseUid) {
+  if(!firebaseUid)throw new Error('Sign in before loading your players.');
+  // RLS returns owned and explicitly invited player records, never arbitrary
+  // profiles. The caller supplied ID is not an authorization credential.
   return readAll(() => getSupabase().from("players").select("*")
-    .eq("manager_uid", firebaseUid).order("created_at").order("id"));
+    .order("created_at").order("id"));
+}
+
+export async function issuePlayerInvite(playerId) {
+  if(!playerId)throw new Error('Select a player to share.');
+  return checked(await getSupabase().rpc('courtiq_issue_player_invite',{p_player:playerId}));
+}
+export async function acceptPlayerInvite(code) {
+  if(!/^CI-[a-f0-9]{48}$/.test((code||'').trim()))
+    throw new Error('Enter the complete invitation code from the other parent.');
+  return checked(await getSupabase().rpc('courtiq_accept_player_invite',{p_code:code.trim()}));
+}
+export async function fetchPlayerShares(playerId) {
+  return checked(await getSupabase().rpc('courtiq_list_player_shares',{p_player:playerId})) || [];
+}
+export async function revokePlayerShare(playerId,memberUid) {
+  return checked(await getSupabase().rpc('courtiq_revoke_player_share',
+    {p_player:playerId,p_member:memberUid}));
 }
 
 export async function addManagedPlayer(firebaseUid, player) {

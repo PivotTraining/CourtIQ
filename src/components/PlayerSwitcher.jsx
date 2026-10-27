@@ -121,7 +121,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
       }} role="dialog" aria-modal="true" aria-label="Choose a family player" onClick={(e) => e.stopPropagation()}>
         <div style={{ width: 40, height: 4, background: "var(--color-muted)", borderRadius: 2, margin: "0 auto 16px" }} />
         <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text)", margin: "0 0 4px" }}>Who is playing?</h2>
-        <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>One parent account. Separate game stats and training history for each player.</p>
+        <p style={{ fontSize: 13, color: "var(--color-text-sec)", margin: "0 0 16px" }}>Owned and explicitly shared players. Choose who you are tracking.</p>
         {error && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{error}</p>}
 
         {loading ? (
@@ -181,7 +181,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                     {isActive && (
                       <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-accent)" }}>Selected</span>
                     )}
-                    {players.length > 1 && !isActive && p.firebase_uid !== user?.id && (
+                    {players.length > 1 && !isActive && p.manager_uid === user?.id && p.firebase_uid !== user?.id && (
                       <button onClick={() => handleDelete(p.id)} disabled={saving || !!switchingId} aria-label={`Permanently delete ${p.name} and all records`}
                         style={{
                           width: 32,
