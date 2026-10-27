@@ -285,6 +285,28 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     events.filter(event=>['shot','stat'].includes(event.payload?.kind) &&
       event.payload?.recorded_at>=saved.recordedAt&&
       event.payload?.recorded_at<=saved.endedAt):[];
+  async function shareSelectedClip(){
+    const blob=saved?.blob;
+    if(!blob)return;
+    const extension=blob.type==='video/mp4'?'mp4':blob.type==='video/quicktime'?'mov':'webm';
+    const name='courtiq-game-'+sessionId.slice(0,8)+'-clip.'+extension;
+    try{
+      if(typeof File==='undefined' || !navigator.share){
+        setInfo('This browser cannot share video files directly. Download the clip and send it privately to the other parent.');
+        return;
+      }
+      const movie=new File([blob],name,{type:blob.type});
+      if(navigator.canShare && !navigator.canShare({files:[movie]})){
+        setInfo('Your phone cannot share this video file. Download it and send the saved file privately.');
+        return;
+      }
+      await navigator.share({files:[movie],title:'CourtIQ game footage'});
+      setInfo('Sharing opened. Confirm the video was received on the other phone. This is not automatic cloud synchronization.');
+    }catch(error){
+      if(error?.name!=='AbortError')setError('Could not share this video. Download a copy and transfer it privately.');
+    }
+  }
+
   const recording=state==='recording';
   const elapsed=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
 
@@ -339,6 +361,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
           event.payload.key.toUpperCase()+' +'+event.payload.delta} · {new Date(event.payload.recorded_at).toLocaleTimeString()}</button>)}
       </div>}
       <button type="button" onClick={()=>download(saved?.blob)}>Download selected clip backup</button>
+      <button type="button" onClick={shareSelectedClip}>Send clip to another parent</button>
     </details>}
     {pending&&<div className="game-video-pending" role="alert"><strong>Video is in this tab only</strong>
       <p>Do not close the tracker until you download this clip or retry saving it.</p>
