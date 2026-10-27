@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createDeviceVideoStore, validateClip } from '@/lib/deviceVideo.mjs';
 import { createRecordingCollector, supportedRecordingType, FORM_IQ_RECORD_MAX_MS } from '@/lib/formIqRecording.mjs';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
+import FamilyCloudVideo from './FamilyCloudVideo';
 import './game-tracker-recorder.css';
 
 // A parent/coach films from the same phone that is logging stats. Media is
@@ -17,7 +18,7 @@ const explain = cause => {
   return (cause?.message || 'Unable to start the game camera.').slice(0,200);
 };
 
-export default function GameTrackerRecorder({ accountId, sessionId, playerName='', events=[], onBusyChange, storeFactory=STORE }) {
+export default function GameTrackerRecorder({ accountId, playerId, sessionId, playerName='', events=[], onBusyChange, storeFactory=STORE }) {
   const videoRef=useRef(null),cameraRef=useRef(null),recorderRef=useRef(null),timerRef=useRef(null);
   const requestRef=useRef(0),cameraTimeoutRef=useRef(null),autoContinueRef=useRef(false),reviewRef=useRef(null),pendingMetaRef=useRef(null);
   const aliveRef=useRef(false),ownerRef=useRef(JSON.stringify([accountId,sessionId]));
@@ -362,6 +363,7 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
       </div>}
       <button type="button" onClick={()=>download(saved?.blob)}>Download selected clip backup</button>
       <button type="button" onClick={shareSelectedClip}>Send clip to another parent</button>
+      <FamilyCloudVideo playerId={playerId} sessionId={sessionId} localClip={recording?null:saved} onBusyChange={markBusy}/>
     </details>}
     {pending&&<div className="game-video-pending" role="alert"><strong>Video is in this tab only</strong>
       <p>Do not close the tracker until you download this clip or retry saving it.</p>
