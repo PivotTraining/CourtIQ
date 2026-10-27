@@ -312,6 +312,7 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
   const elapsed=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
 
   return <section className="game-video-dock" aria-label="Live game recording and video preview">
+    <div className={`game-video-live-controls${visible||recording?' is-active':''}`}>
     <div className="game-video-heading">
       <div><strong>GAME VIDEO</strong><span>{playerName||'Your player'} · {clips.length} saved {clips.length===1?'clip':'clips'}</span></div>
       <span className={recording?'game-video-live':''} role="status">{recording?'● REC '+elapsed:state==='saving'?'Saving clip…':cameraRef.current?'● CAMERA ON':'Camera off'}</span>
@@ -326,6 +327,13 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
       {cameraRef.current&&!recording&&<button type="button" className="game-record-primary" disabled={state==='saving'||!consent} onClick={startCapture}>● Record game</button>}
       {recording&&<button type="button" className="game-record-stop" onClick={()=>stopRecording(false)}>■ Stop &amp; save clip</button>}
     </div>
+    <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting' && !recording}>
+      <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview"
+        onClick={()=>{try{videoRef.current?.play()?.catch(()=>setError('Video preview could not play. Try Safari with camera permission enabled.'));}catch{setError('Live preview could not play in this browser.');}}} />
+      {state==='starting'&&<p>Connecting to your camera… You can cancel and retry.</p>}
+      {recording&&<span className="game-video-counter">● REC {elapsed}</span>}
+    </div>
+    </div>
     <details className="game-video-extra">
       <summary>Camera options</summary>
       <div className="game-video-actions">
@@ -339,12 +347,6 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
           onClick={()=>{stopCamera();setVisible(false);}}>Close camera</button>}
       </div>
     </details>
-    <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting' && !recording}>
-      <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview"
-        onClick={()=>{try{videoRef.current?.play()?.catch(()=>setError('Video preview could not play. Try Safari with camera permission enabled.'));}catch{setError('Live preview could not play in this browser.');}}} />
-      {state==='starting'&&<p>Connecting to your camera… You can cancel and retry.</p>}
-      {recording&&<span className="game-video-counter">● REC {elapsed}</span>}
-    </div>
     {clips.length>0&&<details className="game-video-saved"><summary>Review game footage · {clips.length} saved {clips.length===1?'clip':'clips'}</summary>
       <label className="game-video-clip-select">Selected clip
         <select value={saved?.id||''} onChange={event=>setSaved(clips.find(item=>item.id===event.target.value)||null)}>
