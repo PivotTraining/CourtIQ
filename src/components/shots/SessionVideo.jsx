@@ -22,7 +22,7 @@ function GameFilmSegment({clip,index,onDelete,busy}){
   </article>;
 }
 
-export default function SessionVideo({accountId,sessionId}) {
+export default function SessionVideo({accountId,sessionId,sessionType='game'}) {
   // Switching accounts/sessions must unmount the previous clip UI, including its
   // pending save callbacks. Never reuse an alive flag for a different owner.
   return <DeviceSessionVideo key={clipKey(accountId,sessionId)} accountId={accountId} sessionId={sessionId} />;
