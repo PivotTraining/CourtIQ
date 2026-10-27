@@ -330,40 +330,48 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     <button style={inputStyle} onClick={onClose}>Done</button></div></div>;
 
   const tools = <section className="tracker-recovery-tools">
-    {teamControls && <div className="tracker-tool-row">
-      <label>Recording player <select style={{ ...inputStyle, maxWidth: '100%' }} value={playerId} disabled={busy} onChange={event => teamControls.onPlayerChange(event.target.value)}>
-        {teamControls.roster.map(player => <option key={player.id} value={player.id}>#{player.jersey_number ?? '—'} {player.name}</option>)}
-      </select></label>
-      <span>Period {teamControls.period} · {teamControls.clock}</span>
-    </div>}
-    <div className="tracker-tool-row" aria-label="Live player totals"><strong>{liveReport.pts} PTS</strong><span>FG {liveReport.fgm}/{liveReport.fga}</span><span>FT {liveReport.ftm}/{liveReport.fta}</span></div>
-    <div role="status" aria-live="polite">{status}</div>
-    <div className="tracker-tool-row">
-      {value.pending.length > 0 && <button style={inputStyle} disabled={busy || conflict} onClick={() => sync()}>Retry sync ({value.pending.length})</button>}
-      <button style={inputStyle} onClick={() => setTimeline(!timeline)} aria-expanded={timeline}>Entries & corrections</button>
-      {!teamControls && <button style={inputStyle} onClick={() => { setContext(snapshot.session.tracker_context); setShowContext(!showContext); }} aria-expanded={showContext}>Game details</button>}
-      <button style={inputStyle} onClick={() => {
-        if(mediaBusy){setError('Stop and save the game video before leaving the stat tracker.');return;}
-        onClose();
-      }}>Save for later</button>
+    <div className="tracker-score-summary" aria-label="Live player totals">
+      <strong>{liveReport.pts} <small>PTS</small></strong>
+      <span>{liveReport.fgm}/{liveReport.fga} FG</span>
+      <span>{liveReport.ftm}/{liveReport.fta} FT</span>
+      <span className={conflict?'tracker-sync-warning':value.pending.length?'tracker-sync-pending':'tracker-sync-ok'} role="status" aria-live="polite">
+        {conflict?'⚠ Sync conflict':value.pending.length?`${value.pending.length} queued`:'✓ Saved'}
+      </span>
     </div>
-    {value.pending.length > 0 && <button style={inputStyle} onClick={downloadPending}>Download unsynced entries</button>}
-    {conflict && <div className="tracker-merge-controls">
-      <p>Another phone or device changed this game. Your entries are still on this device. Review before combining to avoid double-counting.</p>
-      <button style={inputStyle} disabled={busyRef.current||!value.pending.length} onClick={mergeDeviceEntries}>
-        Merge my queued events with cloud game
-      </button>
-      <button style={inputStyle} disabled={busyRef.current} onClick={resolveConflict}>
-        Discard my pending copy and reload cloud game
-      </button>
+    {value.pending.length>0&&!conflict&&<button className="tracker-sync-shortcut" type="button" onClick={()=>sync()} disabled={busy}>
+      Retry sync ({value.pending.length})
+    </button>}
+    {conflict&&<div className="tracker-merge-controls">
+      <p>Another device changed this game. Your events are still saved locally. Review before combining to avoid double-counting.</p>
+      <button style={inputStyle} disabled={busyRef.current||!value.pending.length} onClick={mergeDeviceEntries}>Merge queued events with cloud</button>
+      <button style={inputStyle} onClick={downloadPending}>Download unsynced entries</button>
+      <button style={inputStyle} disabled={busyRef.current} onClick={resolveConflict}>Discard pending copy after review</button>
     </div>}
-    {showContext && snapshot.session.type === 'game' && <div className="tracker-tool-row">
-      <label>Period <input style={{ ...inputStyle, width: 70 }} type="number" min="1" max="99" value={period} onChange={event => setPeriod(Math.min(99, Math.max(1, Number(event.target.value))))} /></label>
-      <label>Game clock <input style={{ ...inputStyle, width: 100 }} inputMode="numeric" value={clock} onChange={event => { if (/^\d{0,2}:?\d{0,2}$/.test(event.target.value)) setClock(event.target.value); }} onBlur={() => { if (!/^\d{1,2}:[0-5]\d$/.test(clock)) setClock('00:00'); }} /></label>
-      <p className="tracker-hint">Manual clock reference; player minutes are recorded separately. Period numbers beyond the selected format represent overtime.</p>
-    </div>}
-    {showContext && <><GameContextForm value={context} onChange={setContext} /><button style={inputStyle} disabled={busy || conflict} onClick={async () => { if (await entry({ kind: 'context', context })) setShowContext(false); }}>Save game details</button></>}
-    {timeline && <SessionTimeline events={snapshot.events} busy={conflict || ending} reverse={id => entry({ kind: 'reverse', target: id })} onCorrect={correctEvent} />}
+    <details className="tracker-more-tools">
+      <summary>More game tools <span>Corrections · Game details · Backup</span></summary>
+      {teamControls&&<label>Recording player <select style={{...inputStyle,maxWidth:'100%'}}
+        value={playerId} disabled={busy} onChange={event=>teamControls.onPlayerChange(event.target.value)}>
+        {teamControls.roster.map(row=><option key={row.id} value={row.id}>#{row.jersey_number??'—'} {row.name}</option>)}
+      </select></label>}
+      <div className="tracker-tool-row">
+        <button style={inputStyle} type="button" onClick={()=>setTimeline(!timeline)} aria-expanded={timeline}>Entries &amp; corrections</button>
+        {!teamControls&&<button style={inputStyle} type="button" onClick={()=>{
+          setContext(snapshot.session.tracker_context||context);setShowContext(!showContext);
+        }} aria-expanded={showContext}>Game details</button>}
+        {value.pending.length>0&&<button style={inputStyle} type="button" onClick={downloadPending}>Export pending backup</button>}
+        <button style={inputStyle} type="button" onClick={()=>{
+          if(mediaBusy){setError('Stop and save the game video before leaving the stat tracker.');return;}
+          onClose();
+        }}>Save for later</button>
+      </div>
+      {showContext&&<><GameContextForm value={context} onChange={setContext}/>
+        <button style={inputStyle} disabled={conflict||ending} type="button" onClick={()=>{
+          if(entry({kind:'context',context}))setShowContext(false);
+        }}>Save game details</button></>}
+      {timeline&&<SessionTimeline events={snapshot.events} busy={conflict||ending}
+        reverse={id=>entry({kind:'reverse',target:id})} onCorrect={correctEvent}/>}
+      <small className="tracker-hint">{status}</small>
+    </details>
   </section>;
   return <CourtTrackerView sessionType={snapshot.session.type} shots={shots} selectedZone={selectedZone} selectZone={setSelectedZone}
     gameStats={stats} updateStat={(key, delta) => entry({ kind: 'stat', key, delta })}
