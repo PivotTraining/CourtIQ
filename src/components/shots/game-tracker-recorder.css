@@ -39,3 +39,16 @@
 .game-video-events{display:flex;flex-wrap:wrap;gap:6px;max-height:140px;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:8px 0}
 .game-video-events strong{flex:1 1 100%;font-size:11px;color:#f0f4fa}
 .game-video-events button{min-height:38px;padding:7px 9px;background:#344556;color:white;border:1px solid #64798e;border-radius:8px;font-size:10px}
+
+.game-video-extra,.game-video-info-details{font-size:11px;color:#cdd6e3}
+.game-video-extra summary,.game-video-info-details summary{cursor:pointer;min-height:32px;display:flex;align-items:center;font-weight:750;font-size:11px;color:#d6deea}
+.game-video-extra label{font-size:11px;display:flex;gap:6px;align-items:center}
+.game-video-info-details[open]{padding-top:5px}
+.game-video-actions .game-video-consent{flex-basis:100%}
+.game-video-heading strong{letter-spacing:.6px}
+@media(orientation:landscape) and (max-height:600px){
+ .game-video-dock{gap:4px}
+ .game-video-heading>div span{font-size:9px}
+ .game-video-consent{font-size:10px}
+ .game-video-camera{height:clamp(100px,38dvh,155px)}
+}

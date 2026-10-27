@@ -182,7 +182,7 @@ test('game recording saves separate timestamped clips and preserves previous foo
   f.button('● Record game').props.onClick();f.h.flush();
   f.button('■ Stop & save clip').props.onClick();await f.h.settle();
   assert.equal(f.writes.length,2);
-  const review=findElement(f.h.output,node=>node.type==='summary');
+  const review=findElement(f.h.output,node=>node.type==='summary' && [node.props.children].flat(Infinity).join('').startsWith('Review game footage'));
   assert.ok(review);
   assert.equal([review.props.children].flat(Infinity).join(''),'Review game footage · 2 saved clips');
   assert.ok(f.writes.every(row=>typeof row[3].recordedAt==='string'));

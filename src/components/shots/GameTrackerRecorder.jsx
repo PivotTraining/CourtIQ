@@ -290,22 +290,32 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
 
   return <section className="game-video-dock" aria-label="Live game recording and video preview">
     <div className="game-video-heading">
-      <div><strong>GAME VIDEO</strong><span>See the court while tracking {playerName||'your player'}.</span></div>
+      <div><strong>GAME VIDEO</strong><span>{playerName||'Your player'} · {clips.length} saved {clips.length===1?'clip':'clips'}</span></div>
       <span className={recording?'game-video-live':''} role="status">{recording?'● REC '+elapsed:state==='saving'?'Saving clip…':cameraRef.current?'● CAMERA ON':'Camera off'}</span>
     </div>
     <div className="game-video-actions">
       <label className="game-video-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} disabled={recording||state==='saving'}/> Filming permission confirmed</label>
-      <select aria-label="Choose camera" value={cameraFace} disabled={!!cameraRef.current||recording} onChange={e=>setCameraFace(e.target.value)}>
-        <option value="environment">Rear camera</option><option value="user">Front camera</option>
-      </select>
+
       {!cameraRef.current&&!recording&&<button type="button" className="game-record-primary" disabled={!consent||state==='starting'||state==='saving'}
         onClick={()=>enableCamera(true)}>{state==='starting'?'Opening camera…':'● Record game'}</button>}
       {state==='starting'&&<button type="button" onClick={cancelCameraStartup}>Cancel camera startup</button>}
-      {!cameraRef.current&&!recording&&<button type="button" disabled={!consent||state==='starting'||state==='saving'} onClick={()=>enableCamera(false)}>Preview camera</button>}
+
       {cameraRef.current&&!recording&&<button type="button" className="game-record-primary" disabled={state==='saving'||!consent} onClick={startCapture}>● Record game</button>}
       {recording&&<button type="button" className="game-record-stop" onClick={()=>stopRecording(false)}>■ Stop &amp; save clip</button>}
-      {cameraRef.current&&!recording&&<button type="button" onClick={()=>{stopCamera();setVisible(false);}} disabled={state==='saving'}>Close camera</button>}
     </div>
+    <details className="game-video-extra">
+      <summary>Camera options</summary>
+      <div className="game-video-actions">
+        <label>Lens <select aria-label="Choose camera" value={cameraFace}
+          disabled={!!cameraRef.current||recording} onChange={e=>setCameraFace(e.target.value)}>
+          <option value="environment">Rear camera</option><option value="user">Front camera</option>
+        </select></label>
+        {!cameraRef.current&&!recording&&<button type="button" disabled={!consent||state==='starting'||state==='saving'}
+          onClick={()=>enableCamera(false)}>Preview camera</button>}
+        {cameraRef.current&&!recording&&<button type="button" disabled={state==='saving'}
+          onClick={()=>{stopCamera();setVisible(false);}}>Close camera</button>}
+      </div>
+    </details>
     <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting' && !recording}>
       <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview"
         onClick={()=>{try{videoRef.current?.play()?.catch(()=>setError('Video preview could not play. Try Safari with camera permission enabled.'));}catch{setError('Live preview could not play in this browser.');}}} />
@@ -342,6 +352,9 @@ export default function GameTrackerRecorder({ accountId, sessionId, playerName='
     </div>}
     {error&&<p className="game-video-error" role="alert">{error}</p>}
     {info&&<p className="game-video-info" role="status">{info}</p>}
-    <p className="game-video-note">Live video is visible while shot-chart and box-score buttons remain usable. Recording is silent and device-only (4-minute clips, 100 MB each, 250 MB account total). Four-minute clips auto-continue when the device successfully saves each segment. Recordings stay on this device (100 MB per segment, 250 MB per account). Review timestamped game events beside saved clips. Download footage regularly; device storage may fill and is not cloud backup or automatic stat analysis.</p>
+    <details className="game-video-info-details">
+      <summary>Recording limits &amp; privacy</summary>
+      <p className="game-video-note">Video is silent and stored only on this device. Clips are up to four minutes and 100 MB each, with a 250 MB account limit. The next clip starts after the previous clip saves. Download important game film for backup. Footage is not cloud-synced and never automatically changes statistics.</p>
+    </details>
   </section>;
 }
