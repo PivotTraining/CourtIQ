@@ -25,7 +25,7 @@ const TOUCH_POSITIONS = {
 
 function StatInputs({ stats, updateStat, busy, compact = false }) {
   return <div className={`tracker-stat-grid ${compact ? 'compact' : ''}`}>
-    {STAT_INPUTS.map(stat => <button key={stat.key} className="tracker-stat-input" data-tone={stat.tone}
+    {STAT_INPUTS.filter(stat=>!compact||['ast','reb','stl','to'].includes(stat.key)).map(stat => <button key={stat.key} className="tracker-stat-input" data-tone={stat.tone}
       disabled={busy} aria-label={`Add ${stat.label.toLowerCase()}, current count ${stats[stat.key]}`}
       onClick={() => updateStat(stat.key, 1)}>
       <Icon name={stat.icon} size={compact ? 18 : 24} />
@@ -86,7 +86,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         <label className="tracker-live-clock">Game clock
           <input aria-label="Manual game clock" inputMode="numeric" value={clock}
             disabled={busy} onChange={event=>{
-              if(/^\\d{0,2}:?\\d{0,2}$/.test(event.target.value))setClock(event.target.value);
+              if(/^\d{0,2}:?\d{0,2}$/.test(event.target.value))setClock(event.target.value);
             }}/>
         </label>
         <button type="button" className="tracker-score-control" onClick={onEditGame}>
@@ -129,17 +129,19 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
                   {COURT_ZONES.filter(zone => zone.pts !== 1).map(zone => <option key={zone.id} value={zone.id}>{zone.label} · {zone.pts}PT</option>)}
                 </select>
               </label>
-              <button aria-label="Change court surface" title="Change court surface" onClick={() => setCourtTheme(courtTheme === 'tan' ? 'gray' : 'tan')}><Icon name="paint" size={18} /></button>
+              <button aria-label="Change court surface" title="Change court surface" onClick={() => setCourtTheme(courtTheme === 'tan' ? 'gray' : 'tan')} className="tracker-surface-button"><Icon name="paint" size={18} /></button>
             </div>
           </section>
           <section className="tracker-controls" aria-label="Stat inputs">
             <div className="tracker-shot-actions">
               <div className="tracker-quick-zone-controls">
-                <label><input type="checkbox" checked={keepZone} onChange={event=>setKeepZone(event.target.checked)}/>
-                  Keep location</label>
-                <button type="button" disabled={busy} onClick={()=>selectZone(null)}>Free throws</button>
-                {shots.some(shot=>shot.zone_id!=='free-throw')&&<button type="button" disabled={busy}
-                  onClick={()=>selectZone([...shots].reverse().find(shot=>shot.zone_id!=='free-throw')?.zone_id||null)}>Last shot zone</button>}
+                <button className={selectedZone===null?'tracker-free-throw-active':''} type="button" disabled={busy} onClick={()=>selectZone(null)}>Free throws</button>
+                <details className="tracker-shot-options">
+                  <summary>Shot options</summary>
+                  <label><input type="checkbox" checked={keepZone} onChange={event=>setKeepZone(event.target.checked)}/> Keep location</label>
+                  {shots.some(shot=>shot.zone_id!=='free-throw')&&<button type="button" disabled={busy}
+                    onClick={()=>selectZone([...shots].reverse().find(shot=>shot.zone_id!=='free-throw')?.zone_id||null)}>Last shot zone</button>}
+                </details>
               </div>
               <p>{selected ? `${selected.label} · ${selected.pts}PT` : 'Free throws'}<span>{saving ? 'Saving…' : 'Tap a zone, then record the result'}</span></p>
               <div>
@@ -148,22 +150,22 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
               </div>
             </div>
             <StatInputs stats={gameStats} updateStat={updateStat} busy={busy} compact />
-            <p className="tracker-hint">Undo corrects the last entry. Minutes are in Box score.</p>
+            <p className="tracker-hint tracker-tracking-tip">Tap a court location, then Made or Missed. Undo fixes your last entry.</p>
           </section>
         </div> : <section className="tracker-boxscore" aria-label="Player box score inputs">
-          <h2>Player box score</h2><p className="tracker-hint">Track a player yourself or keep their stats as a coach. Shooting totals come from the shot chart.</p>
+          <h2>Player box score</h2>
           <StatInputs stats={gameStats} updateStat={updateStat} busy={busy} />
           {gameStats.oreb !== undefined && <div className="tracker-tool-row" aria-label="Rebound split">
             <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => updateStat('oreb', 1)}>Offensive rebound · {gameStats.oreb}</button>
             <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => updateStat('dreb', 1)}>Defensive rebound · {gameStats.dreb}</button>
-            <p className="tracker-hint">Split entries also increase total rebounds. Use the entry timeline to correct mistakes.</p>
+             
           </div>}
           <div className="tracker-minutes">
             <h3>Minutes played</h3>
             <div><button aria-label="Subtract one minute" disabled={busy || gameStats.min <= 0} onClick={() => updateStat('min', -1)}>−</button><output aria-label="Minutes played">{gameStats.min}</output><button aria-label="Add one minute" disabled={busy} onClick={() => updateStat('min', 1)}>+</button></div>
-            <p className="tracker-hint">Enter actual playing time, not session length. This enables per-36 scoring in the game report.</p>
+             
           </div>
-          <div className="tracker-report-preview"><h3>Included in your final report</h3><p>Full box score, 2PT / 3PT / FT splits, eFG%, estimated TS%, assist-to-turnover ratio, shot-zone distribution and a downloadable CSV for coach review.</p></div>
+           
         </section>}
       </div>
         </div>
