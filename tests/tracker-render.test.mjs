@@ -107,3 +107,25 @@ test('season and monthly per-game averages exclude practice and do not double-co
   assert.equal(month.totalPts, 3);
   assert.equal(intelligence.computeCoachReport(sessions, {}).length, 0);
 });
+
+
+test('filming and stat court share workspace without blocking shot selection in portrait or landscape', async () => {
+  const dock = React.createElement('section', { className: 'game-video-dock', 'aria-label': 'Live game recording' },
+    React.createElement('button', { type: 'button' }, 'Record game'));
+  const html = render(Tracker, { ...props, videoDock: dock });
+  assert.match(html, /tracker-workspace tracker-workspace-video/);
+  assert.match(html, /class="tracker-tracking-column"/);
+  assert.ok(html.indexOf('Live game recording') < html.indexOf('aria-label="Shot location"'),
+    'video renders as its own sibling, never overlaid on the court');
+  assert.match(html, /aria-label="Shot location"/);
+  assert.match(html, /aria-label="Stat inputs"/);
+  assert.match(html, /aria-label="Tracking view"/);
+  assert.match(html, /data-tone="green"/);
+  const css=await readFile(new URL('../src/components/shots/tracker.css',import.meta.url),'utf8');
+  const recordingCss=await readFile(new URL('../src/components/shots/game-tracker-recorder.css',import.meta.url),'utf8');
+  assert.match(css,/\.tracker-workspace-video \.tracker-content\s*\{[^}]*overflow-y: auto;/);
+  assert.match(css,/\.tracker-workspace\.tracker-workspace-video\s*\{[^}]*grid-template-columns: minmax\(0, 38%\) minmax\(0, 62%\)/);
+  assert.match(recordingCss,/\.tracker-workspace-video > \.game-video-dock\s*\{[^}]*max-height: clamp\(118px, 23dvh, 178px\)/);
+  assert.match(recordingCss,/\.game-video-live-controls \.game-video-camera\s*\{[^}]*height: clamp\(76px, 12dvh, 104px\)/);
+  assert.match(recordingCss,/\.game-video-camera\[hidden\]\{display:none!important\}/);
+});

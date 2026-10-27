@@ -199,3 +199,25 @@ test('clip timeline is available on game-recording preview and saved session',as
   assert.match(report,/store\.listSegments\?\.\(accountId,sessionId\)/);
   assert.match(report,/removeSegment\(accountId,sessionId,id\)/);
 });
+
+
+test('live game recording continues with video preview hidden so the court can fill the screen',async()=>{
+  const f=await fixture();
+  await f.button('● Record game').props.onClick();
+  await f.h.settle();
+  assert.ok(f.button('Hide preview'));
+  f.button('Hide preview').props.onClick();
+  f.h.flush();
+  let view=findElement(f.h.output,node=>node.props?.['aria-label']==='What the camera is recording');
+  assert.equal(view.props.hidden,true,'camera preview can collapse without stopping the stream');
+  assert.ok(f.button('■ Stop & save clip'),'stop recording remains available');
+  assert.equal(f.video.srcObject,f.stream,'camera stream stays attached for MediaRecorder');
+  f.button('Show preview').props.onClick();
+  f.h.flush();
+  view=findElement(f.h.output,node=>node.props?.['aria-label']==='What the camera is recording');
+  assert.equal(view.props.hidden,false);
+  f.button('■ Stop & save clip').props.onClick();
+  await f.h.settle();
+  assert.equal(f.writes.length,1,'video still saves after preview was temporarily hidden');
+  f.h.unmount();
+});

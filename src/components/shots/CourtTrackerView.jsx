@@ -99,7 +99,6 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
         </button>)}
       </div>
       <div className="tracker-content">
-        {ticker}
         {tab === 'court' ? <div className="tracker-court-layout">
           <section className="tracker-court-panel" aria-label="Shot location">
             <div className={`tracker-court ${courtTheme === 'gray' ? 'gray' : ''}`}>
@@ -167,6 +166,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
           </div>
            
         </section>}
+        {ticker}
       </div>
         </div>
       </div>
