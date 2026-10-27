@@ -52,3 +52,71 @@
  .game-video-consent{font-size:10px}
  .game-video-camera{height:clamp(100px,38dvh,155px)}
 }
+
+/* In Gametime the camera is an inline monitoring strip, never a layer over the
+   shot court. It has its own bounded overflow so reviewing old film cannot
+   steal vertical space from the separate, scrollable stat pane. */
+.tracker-workspace-video > .game-video-dock {
+  box-sizing: border-box;
+  width: auto;
+  max-width: none;
+  max-height: clamp(118px, 23dvh, 178px);
+  margin: 2px 8px 4px;
+  padding: 6px 9px;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.game-video-live-controls {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 1px 0 4px;
+  background: #1b1c23;
+}
+.game-video-live-controls.is-active {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 33%);
+  grid-template-areas: "heading heading" "actions preview";
+  align-items: start;
+  gap: 5px 7px;
+}
+.game-video-live-controls .game-video-heading { grid-area: heading; gap: 4px; }
+.game-video-live-controls .game-video-actions { grid-area: actions; gap: 4px; align-content: start; }
+.game-video-live-controls .game-video-camera {
+  grid-area: preview;
+  min-height: 76px;
+  height: clamp(76px, 12dvh, 104px);
+  max-height: 104px;
+  width: 100%;
+  align-self: start;
+}
+.game-video-live-controls .game-video-consent { font-size: 10px; line-height: 1.2; }
+.game-video-live-controls .game-video-consent input { width: 16px; height: 16px; min-width: 16px; }
+.game-video-live-controls .game-record-primary,
+.game-video-live-controls .game-record-stop { min-height: 42px; padding: 6px 9px; font-size: 11px; }
+.game-video-live-controls .game-video-counter { top: 4px; left: 4px; padding: 2px 4px; font-size: 9px; }
+.game-video-live-controls .game-video-camera p { font-size: 10px; padding: 5px; text-align: center; }
+@media (orientation: landscape) and (max-height: 600px) {
+  .tracker-workspace-video > .game-video-dock {
+    height: 100%;
+    max-height: 100%;
+    margin: 0 4px 4px 6px;
+    padding: 6px;
+    align-content: start;
+  }
+  .game-video-live-controls.is-active {
+    display: flex;
+    flex-direction: column;
+  }
+  .game-video-live-controls .game-video-camera {
+    height: clamp(74px, 26dvh, 128px);
+    max-height: 128px;
+    min-height: 74px;
+  }
+}
