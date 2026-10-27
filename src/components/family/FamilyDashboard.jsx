@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
-import { fetchManagedPlayers, fetchSessionHistory } from "@/lib/queries";
+import { fetchManagedPlayers, fetchSessionHistory, issuePlayerInvite,
+  acceptPlayerInvite, fetchPlayerShares, revokePlayerShare } from "@/lib/queries";
 import { computeSkillRatings, computeSeasonStats } from "@/lib/intelligence";
 import { computeNextMove } from "@/lib/nextMove.mjs";
 import Icon from "@/components/ui/Icons";
@@ -17,6 +18,14 @@ export default function FamilyDashboard({ onManagePlayers }) {
   const [error, setError] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const [switchingId, setSwitchingId] = useState(null);
+  const [reload,setReload]=useState(0);
+  const [joinCode,setJoinCode]=useState('');
+  const [shareBusy,setShareBusy]=useState(false);
+  const [shareError,setShareError]=useState('');
+  const [shareMessage,setShareMessage]=useState('');
+  const [inviteCode,setInviteCode]=useState('');
+  const [sharePlayer,setSharePlayer]=useState(null);
+  const [sharedMembers,setSharedMembers]=useState([]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -39,7 +48,7 @@ export default function FamilyDashboard({ onManagePlayers }) {
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
-  }, [user?.id]);
+  }, [user?.id,reload]);
 
   const openPlayer = async player => {
     if (switchingId) return;
@@ -53,6 +62,40 @@ export default function FamilyDashboard({ onManagePlayers }) {
     } finally {
       setSwitchingId(null);
     }
+  };
+
+  const joinFamilyPlayer=async event=>{
+    event.preventDefault();
+    if(shareBusy)return;
+    setShareBusy(true);setShareError('');setShareMessage('');
+    try{
+      const playerId=await acceptPlayerInvite(joinCode);
+      setJoinCode('');setReload(value=>value+1);
+      await switchToManagedPlayer(playerId);
+      setShareMessage('Player successfully shared. You can now track the same game using your own sign-in.');
+    }catch(err){setShareError(err?.message||'Unable to accept invitation. Ask the owner for a new code.');}
+    finally{setShareBusy(false);}
+  };
+  const createInvite=async player=>{
+    if(shareBusy)return;
+    setShareBusy(true);setShareError('');setShareMessage('');setInviteCode('');
+    try{
+      const [code,members]=await Promise.all([issuePlayerInvite(player.id),fetchPlayerShares(player.id)]);
+      setSharePlayer(player);setSharedMembers(members);setInviteCode(code);
+      setShareMessage('Share the one-time code privately. It expires in 48 hours. Only the player manager can revoke access.');
+    }catch(err){setShareError(err?.message||'Could not issue invitation.');}
+    finally{setShareBusy(false);}
+  };
+  const removeShare=async uid=>{
+    if(!sharePlayer||shareBusy)return;
+    if(!window.confirm('Revoke this parent\'s access to the selected player and their game statistics?'))return;
+    setShareBusy(true);setShareError('');
+    try{
+      await revokePlayerShare(sharePlayer.id,uid);
+      setSharedMembers(current=>current.filter(row=>row.member_uid!==uid));
+      setShareMessage('Access revoked on the server. Locally downloaded copies cannot be recalled.');
+    }catch(err){setShareError(err?.message||'Could not revoke access.');}
+    finally{setShareBusy(false);}
   };
 
   if (error) return <RecordsUnavailable />;
@@ -78,6 +121,40 @@ export default function FamilyDashboard({ onManagePlayers }) {
       </section>
 
       {switchError && <p role="alert" style={{ color: "var(--color-danger)", fontSize: 13 }}>{switchError}</p>}
+      <details className="family-share-panel">
+        <summary>Share a player across parent accounts</summary>
+        <p>Each parent signs in separately. The player manager provides a one-time private code. Both accounts then use the same player profile and game history.</p>
+        <form onSubmit={joinFamilyPlayer} className="family-share-join">
+          <label>Join a shared player
+            <input autoComplete="off" spellCheck="false" value={joinCode}
+              onChange={event=>setJoinCode(event.target.value.trim())}
+              placeholder="CI-… (code from the other parent)"
+              maxLength={51} required />
+          </label>
+          <button type="submit" disabled={shareBusy||!joinCode}>Join player</button>
+        </form>
+        {sharePlayer&&<div className="family-share-access">
+          <strong>Sharing {sharePlayer.name}</strong>
+          {inviteCode&&<div className="family-invite-code">
+            <label>Private invitation code <input readOnly value={inviteCode} onFocus={event=>event.target.select()}/></label>
+            <button type="button" onClick={async()=>{
+              try{await navigator.clipboard.writeText(inviteCode);setShareMessage('Invitation code copied. Send it privately to the other parent.');}
+              catch{setShareMessage('Select and copy the code above.');}
+            }}>Copy code</button>
+          </div>}
+          <p>Accepted parent accounts: {sharedMembers.length}</p>
+          {sharedMembers.map(member=><div key={member.member_uid} className="family-share-member">
+            <span>Parent account …{member.member_uid.slice(-6)}</span>
+            <button type="button" disabled={shareBusy} onClick={()=>removeShare(member.member_uid)}>Revoke access</button>
+          </div>)}
+          <button type="button" disabled={shareBusy} onClick={async()=>{
+            try{const people=await fetchPlayerShares(sharePlayer.id);setSharedMembers(people);}
+            catch{setShareError('Unable to refresh parent access.');}
+          }}>Refresh access list</button>
+        </div>}
+        {shareError&&<p role="alert">{shareError}</p>}
+        {shareMessage&&<p role="status">{shareMessage}</p>}
+      </details>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
         {players.map((player) => {
           const active = playerProfile?.id === player.id;
@@ -116,6 +193,13 @@ export default function FamilyDashboard({ onManagePlayers }) {
                 <div style={{ fontSize: 12, fontWeight: 850, color: "var(--color-text)", marginTop: 4 }}>{player.nextMove.title}</div>
               </div>
 
+              {player.manager_uid===user?.id
+                ? <button type="button" onClick={()=>{
+                    createInvite(player);
+                  }} disabled={shareBusy} className="family-invite-button">
+                    Invite another parent
+                  </button>
+                : <div className="family-shared-label">Shared by another parent · game stats available</div>}
               {!active && (
                 <button type="button" onClick={() => openPlayer(player)} disabled={!!switchingId} style={{ width: "100%", marginTop: 14, minHeight: 44, border: 0, borderRadius: 12, background: "#FF6B35", color: "white", fontWeight: 900, cursor: "pointer" }}>
                   {switchingId === player.id ? "Switching…" : <>Use {player.name.split(" ")[0]}&apos;s profile</>}
