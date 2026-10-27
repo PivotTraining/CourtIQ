@@ -329,7 +329,7 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
       {(recording||cameraRef.current)&&<button type="button" className="game-preview-toggle"
         aria-pressed={visible} onClick={()=>setVisible(previous=>!previous)}>
         {visible?'Hide preview':'Show preview'}
-      </button>
+      </button>}
     </div>
     <div className="game-video-camera" aria-label="What the camera is recording" hidden={!visible && state!=='starting'}>
       <video ref={videoRef} autoPlay muted playsInline aria-label="Live game recording camera preview"
