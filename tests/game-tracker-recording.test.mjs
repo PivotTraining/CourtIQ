@@ -42,6 +42,7 @@ async function fixture({saved=null, fail=false, recorderSupported=true, neverPla
       },
       '@/lib/formIqRecording.mjs':recording,
       '@/lib/browserDownload.mjs':{downloadBlob:(...args)=>downloads.push(args)},
+      './FamilyCloudVideo':()=>null,
     },
     {
       navigator:{mediaDevices:{getUserMedia:async constraints=>{
