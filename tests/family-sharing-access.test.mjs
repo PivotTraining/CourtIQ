@@ -40,3 +40,19 @@ test('server game RPC retains authoritative version/ownership checks and accepts
  const chooser=await readFile(new URL('../src/components/PlayerSwitcher.jsx',import.meta.url),'utf8');
  assert.match(chooser,/p\.manager_uid === user\?\.id/);
 });
+
+test('invitation is actually revealed after owner generates it and other parent can join',async()=>{
+ const ui=await readFile(new URL('../src/components/family/FamilyDashboard.jsx',import.meta.url),'utf8');
+ assert.match(ui,/setInviteCode\(code\);setSharePanelOpen\(true\)/);
+ assert.match(ui,/sharePanelOpen\}/);
+ assert.match(ui,/Join a shared player/);
+ assert.match(ui,/Invite another parent/);
+ assert.match(ui,/Revoke access/);
+});
+test('parent can deliberately send recorded game footage using native phone sharing',async()=>{
+ const ui=await readFile(new URL('../src/components/shots/GameTrackerRecorder.jsx',import.meta.url),'utf8');
+ assert.match(ui,/navigator\.canShare/);
+ assert.match(ui,/await navigator\.share\(\{files:\[movie\]/);
+ assert.match(ui,/Send clip to another parent/);
+ assert.match(ui,/This is not automatic cloud synchronization/);
+});
