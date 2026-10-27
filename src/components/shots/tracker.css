@@ -210,3 +210,42 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
  .tracker-score-summary strong{font-size:17px}
  .tracker-more-tools summary{min-height:31px}
 }
+
+/* The shot court stays the primary tracking surface. The video recording dock
+   consumes only its bounded strip and cannot overlay the player controls. */
+.tracker-workspace-video > .tracker-tracking-column {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.tracker-workspace-video .tracker-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+.tracker-workspace-video .tracker-court {
+  width: min(100%, 300px, max(220px, calc((100dvh - 470px) * 1.2)));
+}
+.tracker-workspace-video .tracker-court-layout { margin: 0 auto; }
+.tracker-workspace-video .tracker-recovery-tools { margin-top: 14px; }
+@media (orientation: landscape) and (max-height: 600px) {
+  /* Camera left, scrolling court and Made/Missed right: no overlays. */
+  .tracker-workspace.tracker-workspace-video {
+    grid-template-columns: minmax(0, 38%) minmax(0, 62%);
+  }
+  .tracker-workspace-video > .tracker-tracking-column { height: 100%; }
+  .tracker-workspace-video .tracker-content {
+    height: auto;
+    min-height: 0;
+    padding: 0 7px 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  .tracker-workspace-video .tracker-court { width: min(100%, 300px); }
+}
