@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createDeviceVideoStore, validateClip, clipKey } from '@/lib/deviceVideo.mjs';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
+import FamilyCloudVideo from './FamilyCloudVideo';
 import './report-media.css';
 
 function GameFilmSegment({clip,index,onDelete,busy}){
@@ -94,6 +95,7 @@ export function DeviceSessionVideo({accountId,sessionId}) {
       {segments.map((clip,index)=><GameFilmSegment key={clip.id} clip={clip} index={index}
         onDelete={deleteSegment} busy={busy}/>)}
     </div>}
+    <FamilyCloudVideo sessionId={sessionId} localClip={record}/>
     {busy&&<p role="status">Checking device video storage…</p>}{message&&<p role="status">{message}</p>}{error&&<p role="alert">{error}</p>}
   </section>;
 }
