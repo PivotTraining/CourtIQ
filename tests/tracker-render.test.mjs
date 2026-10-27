@@ -64,7 +64,7 @@ test('saving locks stat and shooting controls and box score exposes actual minut
   const box = render(Tracker, { ...props, tab: 'stats' });
   assert.match(box, /Add one minute/);
   assert.match(box, /Subtract one minute/);
-  assert.match(box, /downloadable CSV/);
+  assert.match(box, /Minutes played/);
 });
 
 test('actual report render exposes splits and honest undefined values', () => {
