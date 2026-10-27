@@ -28,7 +28,7 @@ export default function SessionVideo({accountId,sessionId,sessionType='game'}) {
   return <DeviceSessionVideo key={clipKey(accountId,sessionId)} accountId={accountId} sessionId={sessionId} sessionType={sessionType} />;
 }
 
-export function DeviceSessionVideo({accountId,sessionId}) {
+export function DeviceSessionVideo({accountId,sessionId,sessionType='game'}) {
   const store=useMemo(()=>createDeviceVideoStore(),[]);
   const [record,setRecord]=useState(null),[segments,setSegments]=useState([]),[url,setUrl]=useState(''),[consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(true),[error,setError]=useState(''),[message,setMessage]=useState('');
