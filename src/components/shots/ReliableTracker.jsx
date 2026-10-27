@@ -45,6 +45,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   const [courtTheme, setCourtTheme] = useState('tan');
   const [timeline, setTimeline] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [toolOpen,setToolOpen]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [ending,setEnding]=useState(false);
   const [keepZone,setKeepZone]=useState(false);
@@ -347,7 +348,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       <button style={inputStyle} onClick={downloadPending}>Download unsynced entries</button>
       <button style={inputStyle} disabled={busyRef.current} onClick={resolveConflict}>Discard pending copy after review</button>
     </div>}
-    <details className="tracker-more-tools">
+    <details className="tracker-more-tools" open={toolOpen} onToggle={event=>setToolOpen(event.currentTarget.open)}>
       <summary>More game tools <span>Corrections · Game details · Backup</span></summary>
       {teamControls&&<label>Recording player <select style={{...inputStyle,maxWidth:'100%'}}
         value={playerId} disabled={busy} onChange={event=>teamControls.onPlayerChange(event.target.value)}>
@@ -388,7 +389,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     clock={teamControls?.clock??clock}
     setClock={teamControls?()=>{}:setClock}
     gameContext={snapshot.session.tracker_context}
-    onEditGame={()=>{setContext(snapshot.session.tracker_context||context);setShowContext(true);}}
+    onEditGame={()=>{setContext(snapshot.session.tracker_context||context);setShowContext(true);setToolOpen(true);}}
     logShot={made => { if(entry({ kind: 'shot', zone_id: selectedZone, made }) && !keepZone) setSelectedZone(null); }}
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools}
      videoDock={snapshot.session.type==='game'?
