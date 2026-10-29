@@ -255,7 +255,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                     Parent-managed player
                   </div>
                   <p style={{ fontSize: 12, lineHeight: 1.55, color: "var(--color-text-sec)", margin: "0 0 10px" }}>
-                    This profile belongs to your adult CourtIQ account. Your child won't have a login.
+                    This profile belongs to your adult CourtIQ account. Your child won&apos;t have a login.
                     You will enter and manage their basketball stats. Review our{" "}
                     <a href="/privacy" target="_blank" rel="noopener noreferrer"
                        style={{ textDecoration: "underline", color: "var(--color-accent)" }}>
@@ -268,8 +268,8 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                       onChange={e => { setGuardianStatement(e.target.checked); setError(""); }}
                       style={{ marginTop: 4, flexShrink: 0, width: 19, height: 19 }}
                     />
-                    <span>I am at least 18 and this player's parent or legal guardian.
-                      I will manage the profile, enter the stats, and won't give the child my login.</span>
+                    <span>I am at least 18 and this player&apos;s parent or legal guardian.
+                      I will manage the profile, enter the stats, and won&apos;t give the child my login.</span>
                   </label>
                 </div>
               )}
