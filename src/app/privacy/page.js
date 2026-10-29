@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <div className="max-w-[680px] mx-auto px-6 py-10 min-h-screen bg-bg">
       <Link href="/" className="text-accent text-sm font-bold mb-4 inline-block">&larr; Back</Link>
       <h1 className="text-2xl font-black text-text mb-4">Privacy Policy</h1>
-      <p className="text-xs text-text-sec mb-2">Last updated: October 19, 2026</p>
+      <p className="text-xs text-text-sec mb-2">Last updated: October 29, 2026</p>
       <div className="text-sm text-text-sec leading-relaxed flex flex-col gap-4">
         <p>CourtIQ (&quot;we&quot;, &quot;us&quot;) operates the CourtIQ basketball development service. This policy explains how information is collected, used, and protected.</p>
         <h2 className="text-base font-bold text-text">1. Information We Collect</h2>
@@ -32,7 +32,8 @@ export default function PrivacyPage() {
         <h2 className="text-base font-bold text-text">4. Data Retention and Deletion</h2>
         <p>Data is retained while an account remains active or as otherwise required for legitimate service, security, or legal purposes. During the public beta, account-deletion requests are submitted from Settings and queued for manual processing. Submitting a request does not delete the account immediately.</p>
         <h2 className="text-base font-bold text-text">5. Children&apos;s Privacy</h2>
-        <p>CourtIQ is intended for users age 13 and older. We do not knowingly permit children under 13 to create or operate their own CourtIQ accounts. A verified guardian-consent workflow for younger users is not currently offered.</p>
+        <p>CourtIQ accounts may only be operated by eligible users age 13 and older. Children under 13 may not create, operate, or sign into their own CourtIQ accounts. A signed-in adult parent or legal guardian may create a limited, parent-managed player record for a younger athlete and manually enter game and training statistics. This creates no account or credentials for the child. The parent must acknowledge responsibility for managing the profile; this acknowledgement is recorded and is not independent verification of parental identity.</p>
+        <p>Parents decide which player details to provide, may review and delete the managed profile and its records, and should not give a child their account credentials. Under-13 player data should not be entered into optional AI Coach prompts or publicly shared from the service. CourtIQ does not offer an independently verified parental-consent process for under-13 child-operated features. The limited parent-managed profile feature does not authorize children to use those features.</p>
         <h2 className="text-base font-bold text-text">6. Your Choices and Rights</h2>
         <p>You can update profile information in the service and may request access, correction, export, or deletion where applicable. <Link href="/support" className="text-accent font-bold">Visit CourtIQ Support</Link> for account and privacy assistance.</p>
         <h2 className="text-base font-bold text-text">7. Changes</h2>
