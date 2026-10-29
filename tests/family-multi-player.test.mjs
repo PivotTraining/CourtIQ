@@ -105,7 +105,7 @@ test('under-13 player creation requires explicit adult acknowledgement and uses 
     '@/components/ui/Icons':Empty
   });
   h.render(Picker,{onClose() {}});await h.settle();
-  assert.ok(hasText(h.output,'Parents control switching'));
+  assert.ok(hasText(h.output,'Owned and explicitly shared players'));
   findElement(h.output,node=>node.type==='button'&&hasText(node,'Add another player')).props.onClick();
   h.flush();
   const inputs=[];
