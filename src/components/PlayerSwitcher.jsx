@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { fetchManagedPlayers, addManagedPlayer, deleteManagedPlayer } from "@/lib/queries";
+import { fetchManagedPlayers, addManagedPlayer, addParentManagedYoungerPlayer, deleteManagedPlayer } from "@/lib/queries";
 import Icon from "@/components/ui/Icons";
 
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
@@ -24,6 +24,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [guardianStatement, setGuardianStatement] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: "", position: "PG", jersey_number: "", age: "", team_name: "" });
   const [saving, setSaving] = useState(false);
   const [switchingId, setSwitchingId] = useState(null);
@@ -40,24 +41,34 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
     return () => { active = false; };
   }, [user]);
 
+  const playerAge = newPlayer.age === "" ? null : Number(newPlayer.age);
+  const youngerPlayer = Number.isInteger(playerAge) && playerAge >= 0 && playerAge < 13;
+  const ageInvalid = playerAge !== null && (!Number.isInteger(playerAge) || playerAge < 0 || playerAge > 120);
+  const canAddPlayer = !!newPlayer.name.trim() && !ageInvalid && !saving
+    && (!youngerPlayer || guardianStatement);
+
   const handleAdd = async () => {
-    if (saving || !newPlayer.name.trim()) return;
-    const age = newPlayer.age ? parseInt(newPlayer.age) : null;
-    if (age !== null && age < 13) { setError("Under-13 managed profiles are paused until CourtIQ has a verified guardian-consent workflow."); return; }
+    if (!user?.id || !canAddPlayer) return;
     setSaving(true);
     setError("");
     try {
-      const p = await addManagedPlayer(user.id, {
+      const payload = {
         ...newPlayer,
-        jersey_number: newPlayer.jersey_number ? parseInt(newPlayer.jersey_number) : null,
-        age,
-      });
+        jersey_number: newPlayer.jersey_number !== "" ? Number(newPlayer.jersey_number) : null,
+        age: playerAge,
+      };
+      const p = youngerPlayer
+        ? await addParentManagedYoungerPlayer({ ...payload, guardianStatement })
+        : await addManagedPlayer(user.id, payload);
       setPlayers((prev) => [...prev, p]);
       setNewPlayer({ name: "", position: "PG", jersey_number: "", age: "", team_name: "" });
+      setGuardianStatement(false);
       setShowAdd(false);
     } catch (err) {
       console.error("Failed to add player:", err);
-      setError("Player wasn't added. Check your connection and permissions, then try again.");
+      setError(youngerPlayer
+        ? "Parent-managed player couldn't be added. Your existing player records are unchanged. Check your signed-in account and try again."
+        : "Player wasn't added. Check your connection and permissions, then try again.");
     } finally {
       setSaving(false);
     }
@@ -231,14 +242,39 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                     placeholder="#" style={inputStyle} />
                 </div>
                 <div style={{ width: 64 }}>
-                  <input type="number" value={newPlayer.age} onChange={(e) => setNewPlayer({ ...newPlayer, age: e.target.value })}
-                    placeholder="Age" min="13" max="30" style={inputStyle} />
+                  <input type="number" value={newPlayer.age} onChange={(e) => { setNewPlayer({ ...newPlayer, age: e.target.value }); setError(""); }}
+                    aria-label="Player age" placeholder="Age" min="0" max="120" style={inputStyle} />
                 </div>
               </div>
               <input value={newPlayer.team_name} onChange={(e) => setNewPlayer({ ...newPlayer, team_name: e.target.value })}
                 placeholder="Team name (optional)" style={inputStyle} />
+              {youngerPlayer && (
+                <div style={{ padding: 13, borderRadius: 12,
+                  background: "var(--color-accent-light)", border: "1px solid var(--color-border)" }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "var(--color-text)", marginBottom: 6 }}>
+                    Parent-managed player
+                  </div>
+                  <p style={{ fontSize: 12, lineHeight: 1.55, color: "var(--color-text-sec)", margin: "0 0 10px" }}>
+                    This profile belongs to your adult CourtIQ account. Your child won't have a login.
+                    You will enter and manage their basketball stats. Review our{" "}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer"
+                       style={{ textDecoration: "underline", color: "var(--color-accent)" }}>
+                      Privacy Policy
+                    </a>.
+                  </p>
+                  <label style={{ display: "flex", gap: 10, alignItems: "flex-start",
+                    color: "var(--color-text)", fontSize: 13, lineHeight: 1.5, cursor: "pointer" }}>
+                    <input type="checkbox" checked={guardianStatement}
+                      onChange={e => { setGuardianStatement(e.target.checked); setError(""); }}
+                      style={{ marginTop: 4, flexShrink: 0, width: 19, height: 19 }}
+                    />
+                    <span>I am at least 18 and this player's parent or legal guardian.
+                      I will manage the profile, enter the stats, and won't give the child my login.</span>
+                  </label>
+                </div>
+              )}
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setShowAdd(false)} style={{
+                <button onClick={() => { setShowAdd(false); setGuardianStatement(false); setError(""); }} style={{
                   flex: 1,
                   padding: "12px 0",
                   borderRadius: 12,
@@ -250,7 +286,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                   cursor: "pointer",
                   minHeight: 44,
                 }}>Cancel</button>
-                <button onClick={handleAdd} disabled={saving || !newPlayer.name.trim()} style={{
+                <button onClick={handleAdd} disabled={!canAddPlayer} style={{
                   flex: 1,
                   padding: "12px 0",
                   borderRadius: 12,
@@ -261,7 +297,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
                   border: "none",
                   cursor: "pointer",
                   minHeight: 44,
-                  opacity: saving || !newPlayer.name.trim() ? 0.5 : 1,
+                  opacity: canAddPlayer ? 1 : 0.5,
                 }}>{saving ? "Adding..." : "Add Player"}</button>
               </div>
             </div>
@@ -287,7 +323,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
             <Icon name="plus" size={16} /> Add another player
           </button>
         )}
-        <p style={{ fontSize: 11, lineHeight: 1.6, color: "var(--color-text-sec)", marginTop: 14 }}>Parents control switching. New under-13 profiles require a verified guardian-consent workflow and cannot be created yet. Do not use an incorrect age to bypass that restriction.</p>
+        <p style={{ fontSize: 11, lineHeight: 1.6, color: "var(--color-text-sec)", marginTop: 14 }}>Profiles for younger athletes must be created and managed by an adult parent or guardian. Children under 13 do not get their own sign-in. Parent verification is not provided by this acknowledgement alone.</p>
       </div>
     </div>
   );
