@@ -13,11 +13,13 @@ const inputStyle = {
   borderRadius: 12,
   border: "1px solid var(--color-border)",
   background: "var(--color-input-bg)",
-  fontSize: 15,
+  fontSize: 16,
   color: "var(--color-text)",
   outline: "none",
   boxSizing: "border-box",
 };
+
+const fieldLabelStyle = { display: "block", marginBottom: 6, fontSize: 12, fontWeight: 700, color: "var(--color-text-sec)" };
 
 export default function PlayerSwitcher({ onClose, onSwitch }) {
   const { user, playerProfile, switchToManagedPlayer } = useAuth();
@@ -44,7 +46,7 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
   const playerAge = newPlayer.age === "" ? null : Number(newPlayer.age);
   const youngerPlayer = Number.isInteger(playerAge) && playerAge >= 0 && playerAge < 13;
   const ageInvalid = playerAge !== null && (!Number.isInteger(playerAge) || playerAge < 0 || playerAge > 120);
-  const canAddPlayer = !!newPlayer.name.trim() && !ageInvalid && !saving
+  const canAddPlayer = !!newPlayer.name.trim() && playerAge !== null && !ageInvalid && !saving
     && (!youngerPlayer || guardianStatement);
 
   const handleAdd = async () => {
@@ -228,26 +230,43 @@ export default function PlayerSwitcher({ onClose, onSwitch }) {
           }}>
             <h3 style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text)", margin: "0 0 12px" }}>Add a player profile</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <input value={newPlayer.name} onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                placeholder="Child or player name" required style={inputStyle} />
-              <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <select value={newPlayer.position} onChange={(e) => setNewPlayer({ ...newPlayer, position: e.target.value })}
+              <div>
+                <label htmlFor="family-player-name" style={fieldLabelStyle}>Player name</label>
+                <input id="family-player-name" value={newPlayer.name}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                  placeholder="Child or player name" required maxLength={80} style={inputStyle} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="family-player-position" style={fieldLabelStyle}>Position</label>
+                  <select id="family-player-position" value={newPlayer.position}
+                    onChange={(e) => setNewPlayer({ ...newPlayer, position: e.target.value })}
                     style={inputStyle}>
                     {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
-                <div style={{ width: 72 }}>
-                  <input type="number" value={newPlayer.jersey_number} onChange={(e) => setNewPlayer({ ...newPlayer, jersey_number: e.target.value })}
-                    placeholder="#" style={inputStyle} />
-                </div>
-                <div style={{ width: 64 }}>
-                  <input type="number" value={newPlayer.age} onChange={(e) => { setNewPlayer({ ...newPlayer, age: e.target.value }); setError(""); }}
-                    aria-label="Player age" placeholder="Age" min="0" max="120" style={inputStyle} />
+                <div style={{ minWidth: 0 }}>
+                  <label htmlFor="family-player-jersey" style={fieldLabelStyle}>Jersey number</label>
+                  <input id="family-player-jersey" type="number" inputMode="numeric" min="0" max="99"
+                    value={newPlayer.jersey_number}
+                    onChange={(e) => setNewPlayer({ ...newPlayer, jersey_number: e.target.value })}
+                    placeholder="Optional" style={inputStyle} />
                 </div>
               </div>
-              <input value={newPlayer.team_name} onChange={(e) => setNewPlayer({ ...newPlayer, team_name: e.target.value })}
-                placeholder="Team name (optional)" style={inputStyle} />
+              <div>
+                <label htmlFor="family-player-age" style={fieldLabelStyle}>Player age (required)</label>
+                <input id="family-player-age" type="number" inputMode="numeric"
+                  value={newPlayer.age}
+                  onChange={(e) => { setNewPlayer({ ...newPlayer, age: e.target.value }); setError(""); }}
+                  aria-label="Player age" placeholder="Age" min="0" max="120"
+                  required style={inputStyle} />
+              </div>
+              <div>
+                <label htmlFor="family-player-team" style={fieldLabelStyle}>Team (optional)</label>
+                <input id="family-player-team" value={newPlayer.team_name}
+                  onChange={(e) => setNewPlayer({ ...newPlayer, team_name: e.target.value })}
+                  placeholder="Team name (optional)" style={inputStyle} />
+              </div>
               {youngerPlayer && (
                 <div style={{ padding: 13, borderRadius: 12,
                   background: "var(--color-accent-light)", border: "1px solid var(--color-border)" }}>
