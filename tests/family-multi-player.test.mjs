@@ -117,6 +117,10 @@ test('under-13 player creation requires explicit adult acknowledgement and uses 
   const name=inputs.find(input=>input.props?.placeholder==='Child or player name');
   name.props.onChange({target:{value:'Young child'}});
   h.flush();
+  assert.ok(hasText(h.output,'Player age (required)'));
+  assert.ok(hasText(h.output,'Jersey number'));
+  assert.equal(findElement(h.output,node=>node.type==='button'&&hasText(node,'Add Player')).props.disabled,true,
+    'Cannot add a managed player without knowing their age');
   const refreshedInputs=[];
   const collectAgain=node=>{if(!node || typeof node!=='object')return;
     if(node.type==='input')refreshedInputs.push(node);
