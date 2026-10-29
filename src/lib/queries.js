@@ -73,6 +73,20 @@ export async function addManagedPlayer(firebaseUid, player) {
     .single(), "Player creation");
 }
 
+// A younger athlete is always a player under the signed-in adult's account,
+// never a new Auth user. The server verifies the current user, age and
+// parent acknowledgement before creating the record and audit entry.
+export async function addParentManagedYoungerPlayer(player) {
+  return checked(await getSupabase().rpc("courtiq_create_parent_managed_player", {
+    p_name: player.name.trim(),
+    p_age: player.age,
+    p_position: player.position || "PG",
+    p_jersey_number: player.jersey_number ?? null,
+    p_team_name: player.team_name || null,
+    p_guardian_statement: player.guardianStatement === true,
+  }));
+}
+
 export async function deleteManagedPlayer(playerId) {
   // Foreign-key cascades make cleanup atomic. RLS protects the primary profile.
   requireSavedRow(await getSupabase().from("players").delete().eq("id", playerId)

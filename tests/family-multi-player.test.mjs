@@ -93,17 +93,19 @@ test('parent-scoped app state never shows an older child\'s stats while switchin
   h.unmount();
 });
 
-test('parent picker visibly keeps new under-13 profile creation blocked pending consent workflow', async () => {
+test('under-13 player creation requires explicit adult acknowledgement and uses the parent-managed backend pathway', async () => {
   const h=reactHarness(),children=[alice];
-  let inserts=0;
+  let inserts=0,managedInserts=0;
   const auth={user:{id:'parent'},playerProfile:alice,switchToManagedPlayer:async()=>alice};
   const {default: Picker}=await loadComponent(new URL('components/PlayerSwitcher.jsx',root),{
     react:h.react,'@/context/AuthContext':{useAuth:()=>auth},
-    '@/lib/queries':{fetchManagedPlayers:async()=>children,addManagedPlayer:async()=>{inserts++;},deleteManagedPlayer:async()=>{}},
+    '@/lib/queries':{fetchManagedPlayers:async()=>children,addManagedPlayer:async()=>{inserts++;},
+      addParentManagedYoungerPlayer:async()=>{managedInserts++;return {id:'child10',name:'Young child',age:10};},
+      deleteManagedPlayer:async()=>{}},
     '@/components/ui/Icons':Empty
   });
   h.render(Picker,{onClose() {}});await h.settle();
-  assert.ok(hasText(h.output,'verified guardian-consent'));
+  assert.ok(hasText(h.output,'Owned and explicitly shared players'));
   findElement(h.output,node=>node.type==='button'&&hasText(node,'Add another player')).props.onClick();
   h.flush();
   const inputs=[];
@@ -123,8 +125,17 @@ test('parent picker visibly keeps new under-13 profile creation blocked pending 
   collectAgain(h.output);
   refreshedInputs.find(input=>input.props?.placeholder==='Age').props.onChange({target:{value:'10'}});
   h.flush();
-  findElement(h.output,node=>node.type==='button'&&hasText(node,'Add Player')).props.onClick();
-  h.flush();
+  assert.ok(hasText(h.output,'Parent-managed player'));
+  const blocked = findElement(h.output,node=>node.type==='button'&&hasText(node,'Add Player'));
+  assert.equal(blocked.props.disabled,true);
   assert.equal(inserts,0);
-  assert.ok(findElement(h.output,node=>node.props?.role==='alert'));
+  const checkbox=findElement(h.output,node=>node.type==='input'&&node.props?.type==='checkbox');
+  checkbox.props.onChange({target:{checked:true}});
+  h.flush();
+  const allowed=findElement(h.output,node=>node.type==='button'&&hasText(node,'Add Player'));
+  assert.equal(allowed.props.disabled,false);
+  await allowed.props.onClick();
+  await h.settle();
+  assert.equal(managedInserts,1);
+  assert.equal(inserts,0);
 });
