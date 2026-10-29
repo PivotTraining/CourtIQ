@@ -39,11 +39,12 @@ test("Under-13 records require signed-in parent acknowledgement and no child Aut
   assert.equal(attest.parent_uid,alice);assert.equal(attest.notice_version,"parent-managed-v1-2026-10");
   assert.equal((await as(db,bob,`select count(*)::int n from players where id='${id}'`)).rows[0].n,0);
   assert.equal((await as(db,bob,`select count(*)::int n from parent_managed_player_attestations where player_id='${id}'`)).rows[0].n,0);
+  await db.exec("reset role");
   assert.equal((await db.query("select count(*)::int n from auth.users")).rows[0].n,2);
   await assert.rejects(as(db,alice,`insert into parent_managed_player_attestations(player_id,parent_uid,notice_version)
    values('${id}','${alice}','parent-managed-v1-2026-10')`));
   await as(db,alice,`delete from players where id='${id}'`);
-  assert.equal((await db.query(`select count(*)::int n from parent_managed_player_attestations where player_id='${id}'`)).rows[0].n,0);
+  assert.equal((await as(db,alice,`select count(*)::int n from parent_managed_player_attestations where player_id='${id}'`)).rows[0].n,0);
  }finally{await db.close();}
 });
 test("Parent accounts are isolated and minor creation validates inputs",async()=>{
