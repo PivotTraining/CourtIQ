@@ -5,12 +5,17 @@ import vm from 'node:vm';
 import { requireSavedRow } from '../src/lib/dataSafety.mjs';
 import { deferred, findElement, loadComponent, reactHarness } from './helpers/reactHarness.mjs';
 
-async function setup(save = async profile => ({ id: 'saved', ...profile })) {
-  const harness = reactHarness(), saved = [], transitions = [];
+async function setup(save = async profile => ({ id: 'saved', ...profile }),
+  { acceptInvite = async () => 'existing-player', fetch = async () => [{ id: 'existing-player', name: 'Caleb D.' }] } = {}) {
+  const harness = reactHarness(), saved = [], transitions = [], joined = [];
   const { default: ProfileSetup } = await loadComponent(new URL('../src/components/auth/ProfileSetup.jsx', import.meta.url), {
     react: harness.react,
     '@/context/AuthContext': { useAuth: () => ({ user: { id: 'owner' }, setPlayerProfile: profile => transitions.push(profile), setNeedsProfile: value => transitions.push(value) }) },
-    '@/lib/queries': { createPlayerProfile: profile => { saved.push(profile); return save(profile); } },
+    '@/lib/queries': {
+      createPlayerProfile: profile => { saved.push(profile); return save(profile); },
+      acceptPlayerInvite: code => { joined.push(code); return acceptInvite(code); },
+      fetchManagedPlayers: fetch,
+    },
     '@/components/ui/Icons': { default: () => null },
     './SignOutButton': { default: function SignOutFixture() {} },
   });
@@ -18,7 +23,7 @@ async function setup(save = async profile => ({ id: 'saved', ...profile })) {
   harness.flush();
   const input = (id, value) => { findElement(harness.output, node => node.props?.id === id).props.onChange({ target: { value } }); harness.flush(); };
   const submit = () => findElement(harness.output, node => node.type === 'form').props.onSubmit({ preventDefault() {} });
-  return { harness, saved, transitions, input, submit };
+  return { harness, saved, transitions, joined, input, submit };
 }
 
 test('profile creation uses native form submission and linked labels', async () => {
@@ -83,4 +88,54 @@ test('primary and managed profile creation require returned records and preserve
     result = { data: { id: 'saved' }, error: null }; await fn(...args);
     assert.equal(inserted.manager_uid, 'owner'); assert.equal(inserted.jersey_number, 0);
   }
+});
+
+
+test('first-time Google login can join an existing player without creating a duplicate', async () => {
+  const { harness, saved, transitions, joined, input } = await setup();
+  const joinToggle = findElement(harness.output, node => node.type === 'button' &&
+    JSON.stringify(node.props?.children || '').includes('Already have a player with saved games?'));
+  assert.ok(joinToggle);
+  joinToggle.props.onClick(); harness.flush();
+  const code = 'CI-' + 'a'.repeat(48);
+  input('existing-player-code', code);
+  const joinForm = findElement(harness.output, node => node.type === 'form' && node.props?.id === 'join-existing-player-form');
+  await joinForm.props.onSubmit({ preventDefault() {} }); await harness.settle();
+  assert.deepEqual(joined, [code]);
+  assert.deepEqual(transitions, [{ id: 'existing-player', name: 'Caleb D.' }, false]);
+  assert.equal(saved.length, 0);
+  harness.unmount();
+});
+
+test('invalid invitation never reaches the server or creates an account', async () => {
+  const { harness, joined, saved, transitions, input } = await setup();
+  findElement(harness.output, node => node.type === 'button' &&
+    JSON.stringify(node.props?.children || '').includes('Already have a player with saved games?')).props.onClick();
+  harness.flush();
+  input('existing-player-code', 'bad');
+  await findElement(harness.output, node => node.type === 'form' &&
+    node.props?.id === 'join-existing-player-form').props.onSubmit({ preventDefault() {} });
+  await harness.settle();
+  assert.deepEqual(joined, []);
+  assert.deepEqual(saved, []);
+  assert.deepEqual(transitions, []);
+  assert.match(JSON.stringify(harness.output), /complete private invitation/);
+  harness.unmount();
+});
+
+test('accepted invite with an unavailable player stays safe and says to reload, not recreate', async () => {
+  const { harness, joined, saved, transitions, input } = await setup(
+    undefined, { fetch: async () => [] });
+  findElement(harness.output, node => node.type === 'button' &&
+    JSON.stringify(node.props?.children || '').includes('Already have a player with saved games?')).props.onClick();
+  harness.flush();
+  input('existing-player-code', 'CI-' + 'b'.repeat(48));
+  await findElement(harness.output, node => node.type === 'form' &&
+    node.props?.id === 'join-existing-player-form').props.onSubmit({ preventDefault() {} });
+  await harness.settle();
+  assert.equal(joined.length, 1);
+  assert.equal(saved.length, 0);
+  assert.equal(transitions.length, 0);
+  assert.match(JSON.stringify(harness.output), /Reload CourtIQ/);
+  harness.unmount();
 });
