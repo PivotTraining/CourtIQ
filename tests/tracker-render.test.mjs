@@ -50,10 +50,15 @@ test('mounted court includes every keyboard-accessible zone and shared theme con
   assert.match(html, /Switch to light mode/);
   for (const zone of constants.COURT_ZONES.filter(zone => zone.pts !== 1)) assert.ok(html.includes(`aria-label="${zone.label},`), zone.id);
   assert.match(html, /Made FT/);
+  assert.doesNotMatch(html, /<select\b/, 'shot entry should not present a redundant location dropdown');
+  assert.match(html, /Tap a court spot to select the shot location/);
   assert.match(html, /Add assist, current count 0/);
   const selected = render(Tracker, { ...props, darkMode: false, selectedZone: 'top-key-3' });
   assert.match(selected, /Switch to dark mode/);
   assert.match(selected, /Top Key 3 · 3PT/);
+  assert.match(selected, /Selected: Top Key 3 · 3PT/);
+  assert.doesNotMatch(selected, /<select\b/);
+  assert.doesNotMatch(selected, /Keep location/);
   assert.doesNotMatch(selected, />Made FT</);
 });
 
