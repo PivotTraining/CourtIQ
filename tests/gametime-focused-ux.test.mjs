@@ -9,10 +9,13 @@ test('live Gametime defaults to compact visible totals and an expandable tools p
  assert.match(tracker,/More game tools/);
  assert.match(tracker,/\{conflict&&<div className="tracker-merge-controls"/);
  assert.match(tracker,/setToolOpen\(true\)/);
- assert.match(view,/tracker-shot-options/);
+ assert.doesNotMatch(view,/<select/,'Selecting a court zone must not open or require a separate location dropdown');
+ assert.match(view,/tracker-location-feedback/);
+ assert.match(view,/onClick=\{\(\) => selectZone\(zone.id\)\}/);
  assert.match(view,/\['ast','reb','stl','to'\]/);
  assert.match(view,/Free throws/);
- assert.match(view,/Keep location/);
+ assert.doesNotMatch(view,/Keep location/,'The court selection should persist without a settings toggle');
+ assert.match(tracker,/if\(selectedZone\) entry\(\{ kind: 'shot', zone_id: selectedZone, made \}\)/);
  assert.match(view,/Shot chart/);
  assert.match(view,/Box score/);
  assert.doesNotMatch(view,/Full box score, 2PT/);
