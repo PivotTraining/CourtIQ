@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/Icons';
 import { COURT_ZONES } from '@/lib/constants';
 import { getHeatColor } from '@/lib/utils';
@@ -9,10 +9,10 @@ import './tracker.css';
 const STAT_INPUTS = [
   { key: 'ast', label: 'Assist', short: 'AST', icon: 'eye', tone: 'green' },
   { key: 'reb', label: 'Rebound', short: 'REB', icon: 'refresh', tone: 'amber' },
-  { key: 'stl', label: 'Steal', short: 'STL', icon: 'lock', tone: 'teal' },
+  { key: 'stl', label: 'Steal', short: 'STL', icon: 'hand', tone: 'teal' },
   { key: 'blk', label: 'Block', short: 'BLK', icon: 'shield', tone: 'violet' },
   { key: 'to', label: 'Turnover', short: 'TO', icon: 'zap', tone: 'red' },
-  { key: 'pf', label: 'Foul', short: 'PF', icon: 'hand', tone: 'amber' },
+  { key: 'pf', label: 'Foul', short: 'PF', icon: 'alert', tone: 'amber' },
 ];
 // Spread touch targets apart on small courts; all zones remain named and selectable.
 const TOUCH_POSITIONS = {
@@ -23,13 +23,14 @@ const TOUCH_POSITIONS = {
   'paint': [50, 56], 'left-block': [33, 79], 'right-block': [67, 79],
 };
 
-function StatInputs({ stats, updateStat, busy, compact = false }) {
-  return <div className={`tracker-stat-grid ${compact ? 'compact' : ''}`}>
-    {STAT_INPUTS.filter(stat=>!compact||['ast','reb','stl','to'].includes(stat.key)).map(stat => <button key={stat.key} className="tracker-stat-input" data-tone={stat.tone}
-      disabled={busy} aria-label={`Add ${stat.label.toLowerCase()}, current count ${stats[stat.key]}`}
-      onClick={() => updateStat(stat.key, 1)}>
-      <Icon name={stat.icon} size={compact ? 18 : 24} />
-      <span>{compact ? stat.short : stat.label}</span><strong>{stats[stat.key]}</strong>
+export function StatInputs({ stats, updateStat, busy, compact = false }) {
+  return <div className={`tracker-stat-grid ${compact ? 'compact' : ''}`} role="group" aria-label="Record a player statistic">
+    {STAT_INPUTS.filter(stat=>!compact||['ast','reb','stl','to'].includes(stat.key)).map(stat => <button
+      key={stat.key} type="button" className="tracker-stat-input" data-tone={stat.tone} data-stat-key={stat.key}
+      disabled={busy} aria-label={`Add ${stat.label.toLowerCase()}, current count ${stats[stat.key] ?? 0}`}
+      onClick={() => updateStat(stat.key, 1, stat.label)}>
+      <Icon name={stat.icon} size={compact ? 20 : 24} />
+      <span>{stat.label}</span><strong>{stats[stat.key] ?? 0}</strong>
     </button>)}
   </div>;
 }
@@ -37,10 +38,19 @@ function StatInputs({ stats, updateStat, busy, compact = false }) {
 export default function CourtTrackerView({ sessionType, shots, selectedZone, selectZone, gameStats, updateStat,
   saving, ending, saveError, tab, setTab, darkMode, onToggleTheme, courtTheme, setCourtTheme,
   undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, videoDock,
-  keepZone=false, setKeepZone=()=>{},period=1,setPeriod=()=>{},clock='00:00',setClock=()=>{},
+  period=1,setPeriod=()=>{},clock='00:00',setClock=()=>{},
   gameContext={},onEditGame=()=>{},endLabel = 'End session', headerTitle }) {
   const busy = saving || ending;
   const selected = COURT_ZONES.find(zone => zone.id === selectedZone);
+  const [lastStat, setLastStat] = useState('');
+  // Confirm the precise stat the app accepted locally; never claim cloud sync
+  // while a game command may still be pending.
+  const recordStat = (key, delta, label) => {
+    if (busy) return false;
+    const accepted = updateStat(key, delta);
+    if (accepted === true) setLastStat(`${label} ${delta > 0 ? '+1' : '−1'} added to this game`);
+    return accepted;
+  };
   const dialogRef = useRef(null);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -115,53 +125,47 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
                 const made = attempts.filter(shot => shot.made).length;
                 const [x, y] = TOUCH_POSITIONS[zone.id] || [zone.x, zone.y];
                 return <button key={zone.id} className="tracker-zone" aria-label={`${zone.label}, ${zone.pts} points, ${made} made of ${attempts.length}`} aria-pressed={selectedZone === zone.id}
-                  onClick={() => selectZone(selectedZone === zone.id ? null : zone.id)}
+                  disabled={busy} onClick={() => selectZone(zone.id)}
                   style={{ left: `${x}%`, top: `${y}%`, ...(attempts.length ? { background: getHeatColor(made / attempts.length * 100) } : {}) }}>
                   {attempts.length ? `${made}/${attempts.length}` : zone.pts === 3 ? '3' : '2'}
                 </button>;
               })}
             </div>
             <div className="tracker-location-row">
-              <label className="tracker-location"><span className="sr-only">Shot location</span>
-                <select value={selectedZone || ''} onChange={event => selectZone(event.target.value || null)}>
-                  <option value="">Free throws / choose a zone</option>
-                  {COURT_ZONES.filter(zone => zone.pts !== 1).map(zone => <option key={zone.id} value={zone.id}>{zone.label} · {zone.pts}PT</option>)}
-                </select>
-              </label>
-              <button aria-label="Change court surface" title="Change court surface" onClick={() => setCourtTheme(courtTheme === 'tan' ? 'gray' : 'tan')} className="tracker-surface-button"><Icon name="paint" size={18} /></button>
+              <p className="tracker-location-feedback" role="status" aria-live="polite">
+                {selected ? `Selected: ${selected.label} · ${selected.pts}PT` : 'Tap a court spot to select the shot location'}
+              </p>
+              <button type="button" aria-label="Change court surface" title="Change court surface" onClick={() => setCourtTheme(courtTheme === 'tan' ? 'gray' : 'tan')} className="tracker-surface-button"><Icon name="paint" size={18} /></button>
             </div>
           </section>
           <section className="tracker-controls" aria-label="Stat inputs">
             <div className="tracker-shot-actions">
               <div className="tracker-quick-zone-controls">
                 <button className={selectedZone===null?'tracker-free-throw-active':''} type="button" disabled={busy} onClick={()=>selectZone(null)}>Free throws</button>
-                <details className="tracker-shot-options">
-                  <summary>Shot options</summary>
-                  <label><input type="checkbox" checked={keepZone} onChange={event=>setKeepZone(event.target.checked)}/> Keep location</label>
-                  {shots.some(shot=>shot.zone_id!=='free-throw')&&<button type="button" disabled={busy}
-                    onClick={()=>selectZone([...shots].reverse().find(shot=>shot.zone_id!=='free-throw')?.zone_id||null)}>Last shot zone</button>}
-                </details>
+ 
               </div>
-              <p>{selected ? `${selected.label} · ${selected.pts}PT` : 'Free throws'}<span>{saving ? 'Saving…' : 'Tap a zone, then record the result'}</span></p>
+              <p>{selected ? `${selected.label} · ${selected.pts}PT` : 'Free throws'}<span>{saving ? 'Saving…' : 'Tap a court spot, then Made or Missed'}</span></p>
               <div>
                 <button className="tracker-result" data-tone="green" disabled={busy} onClick={() => selected ? logShot(true) : logFreeThrow(true)}><Icon name="check" size={18} />{selected ? 'Made' : 'Made FT'}</button>
                 <button className="tracker-result" data-tone="red" disabled={busy} onClick={() => selected ? logShot(false) : logFreeThrow(false)}><Icon name="x" size={18} />{selected ? 'Missed' : 'Missed FT'}</button>
               </div>
             </div>
-            <StatInputs stats={gameStats} updateStat={updateStat} busy={busy} compact />
-            <p className="tracker-hint tracker-tracking-tip">Tap a court location, then Made or Missed. Undo fixes your last entry.</p>
+            <StatInputs stats={gameStats} updateStat={recordStat} busy={busy} compact />
+            {lastStat && <p className="tracker-stat-ack" role="status" aria-live="polite">{lastStat}</p>}
+            <p className="tracker-hint tracker-tracking-tip">Tap a spot on the court, then Made or Missed. The location stays selected for the next shot until you tap another spot or Free throws. Undo fixes your last entry.</p>
           </section>
         </div> : <section className="tracker-boxscore" aria-label="Player box score inputs">
           <h2>Player box score</h2>
-          <StatInputs stats={gameStats} updateStat={updateStat} busy={busy} />
+          <StatInputs stats={gameStats} updateStat={recordStat} busy={busy} />
+          {lastStat && <p className="tracker-stat-ack" role="status" aria-live="polite">{lastStat}</p>}
           {gameStats.oreb !== undefined && <div className="tracker-tool-row" aria-label="Rebound split">
-            <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => updateStat('oreb', 1)}>Offensive rebound · {gameStats.oreb}</button>
-            <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => updateStat('dreb', 1)}>Defensive rebound · {gameStats.dreb}</button>
+            <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => recordStat('oreb', 1, 'Offensive rebound')}>Offensive rebound · {gameStats.oreb}</button>
+            <button className="tracker-result" data-tone="amber" disabled={busy} onClick={() => recordStat('dreb', 1, 'Defensive rebound')}>Defensive rebound · {gameStats.dreb}</button>
              
           </div>}
           <div className="tracker-minutes">
             <h3>Minutes played</h3>
-            <div><button aria-label="Subtract one minute" disabled={busy || gameStats.min <= 0} onClick={() => updateStat('min', -1)}>−</button><output aria-label="Minutes played">{gameStats.min}</output><button aria-label="Add one minute" disabled={busy} onClick={() => updateStat('min', 1)}>+</button></div>
+            <div><button aria-label="Subtract one minute" disabled={busy || gameStats.min <= 0} onClick={() => recordStat('min', -1, 'Minutes played')}>−</button><output aria-label="Minutes played">{gameStats.min}</output><button aria-label="Add one minute" disabled={busy} onClick={() => recordStat('min', 1, 'Minutes played')}>+</button></div>
              
           </div>
            

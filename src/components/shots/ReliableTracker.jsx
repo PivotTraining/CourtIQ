@@ -48,7 +48,6 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   const [toolOpen,setToolOpen]=useState(false);
   const [mediaBusy,setMediaBusy]=useState(false);
   const [ending,setEnding]=useState(false);
-  const [keepZone,setKeepZone]=useState(false);
 
   const persist = next => {
     if (identity.current !== `${accountId}:${playerId}`) throw new Error('Account changed.');
@@ -383,14 +382,13 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
        onClose();
      } : finish}
     endLabel={teamControls ? 'Back to team' : 'End session'} headerTitle={teamControls?.roster.find(player => player.id === playerId)?.name}
-    keepZone={keepZone} setKeepZone={setKeepZone}
     period={teamControls?.period??period}
     setPeriod={teamControls?()=>{}:setPeriod}
     clock={teamControls?.clock??clock}
     setClock={teamControls?()=>{}:setClock}
     gameContext={snapshot.session.tracker_context}
     onEditGame={()=>{setContext(snapshot.session.tracker_context||context);setShowContext(true);setToolOpen(true);}}
-    logShot={made => { if(entry({ kind: 'shot', zone_id: selectedZone, made }) && !keepZone) setSelectedZone(null); }}
+    logShot={made => { if(selectedZone) entry({ kind: 'shot', zone_id: selectedZone, made }); } }
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools}
      videoDock={snapshot.session.type==='game'?
        <GameTrackerRecorder accountId={accountId} playerId={playerId} sessionId={snapshot.session.id} events={snapshot.events}
