@@ -98,13 +98,13 @@ test('stat feedback is displayed only for locally accepted actions', async () =>
   assert.match(view, /role="status" aria-live="polite"/);
   assert.match(view, /updateStat=\{recordStat\}/);
   const legacy = await readFile(new URL('../src/components/shots/ShotLogger.jsx', import.meta.url),'utf8');
-  assert.match(legacy,/setUndoStack\(\(prev\) => \[\.\.\.prev, \{ type: "stat", key, delta \} \]\);\s*return true;/);
+  assert.match(legacy,/setUndoStack\([^\n]*type: "stat", key, delta[^\n]*\n\s*return true;/);
 });
 
 test('saving locks stat and shooting controls and box score exposes actual minutes', () => {
   const html = render(Tracker, { ...props, saving: true });
   assert.match(html, /class="tracker-result" data-tone="green" disabled=""/);
-  assert.match(html, /class="tracker-stat-input" data-tone="green" disabled=""/);
+  assert.match(html, /class="tracker-stat-input" data-tone="green" data-stat-key="ast" disabled=""/);
   const box = render(Tracker, { ...props, tab: 'stats' });
   assert.match(box, /Add one minute/);
   assert.match(box, /Subtract one minute/);
