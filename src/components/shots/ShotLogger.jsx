@@ -653,7 +653,6 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false
     setSaving(true);
     setSaveError(null);
     const zoneToLog = selectedZone;
-    setSelectedZone(null); // clear selection optimistically
     try {
       const shot = await insertShot(session.id, playerId, zoneToLog, made);
       setShots((prev) => [...prev, { id: shot.id, zone_id: zoneToLog, made }]);
