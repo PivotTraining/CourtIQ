@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as reports from '../src/lib/sessionReport.mjs';
+import { findElement } from './helpers/reactHarness.mjs';
 
 const require = createRequire(import.meta.url);
 const { transform } = require('next/dist/build/swc');
@@ -24,10 +25,12 @@ const constants = await loadComponent('../src/lib/constants.js');
 const utils = await loadComponent('../src/lib/utils.js');
 const intelligence = await loadComponent('../src/lib/intelligence.js', { './constants': constants, './utils': utils, './sessionReport.mjs': reports });
 const Icon = ({ name }) => React.createElement('span', { 'aria-hidden': true }, name);
-const Tracker = (await loadComponent('../src/components/shots/CourtTrackerView.jsx', {
+const trackerModules = await loadComponent('../src/components/shots/CourtTrackerView.jsx', {
   '@/components/ui/Icons': { __esModule: true, default: Icon }, '@/lib/constants': constants,
   '@/lib/utils': { getHeatColor: () => '#22c55e' },
-})).default;
+});
+const Tracker = trackerModules.default;
+const StatInputs = trackerModules.StatInputs;
 const Report = (await loadComponent('../src/components/shots/AdvancedSessionReport.jsx', {
   '@/lib/constants': constants, '@/lib/sessionReport.mjs': reports,
   './SocialReportCard': { __esModule: true, default: () => null },
@@ -60,6 +63,42 @@ test('mounted court includes every keyboard-accessible zone and shared theme con
   assert.doesNotMatch(selected, /<select\b/);
   assert.doesNotMatch(selected, /Keep location/);
   assert.doesNotMatch(selected, />Made FT</);
+});
+
+test('every stat button sends its own exact stat key, never a neighboring one', () => {
+  const stats = { ast: 2, reb: 3, stl: 4, blk: 5, to: 6, pf: 7 };
+  const expected = [['ast','Assist'],['reb','Rebound'],['stl','Steal'],['blk','Block'],['to','Turnover'],['pf','Foul']];
+  const received = [];
+  const tree = StatInputs({stats, busy:false, compact:false,
+    updateStat:(key,delta,label)=>{received.push([key,delta,label]);return true;}});
+  for(const [key,label] of expected){
+    const btn = findElement(tree,node=>node.type==='button'&&node.props?.['data-stat-key']===key);
+    assert.ok(btn, `Missing stat button ${label}`);
+    assert.equal(btn.props.type, 'button');
+    assert.equal(btn.props.disabled, false);
+    assert.match(btn.props['aria-label'],new RegExp(`Add ${label.toLowerCase()}`));
+    assert.equal(btn.props.children[1].props.children,label);
+    btn.props.onClick();
+  }
+  assert.deepEqual(received, expected.map(([key,label])=>[key,1,label]));
+  const compact = StatInputs({stats, busy:false, compact:true, updateStat:()=>true});
+  for(const key of ['ast','reb','stl','to'])
+    assert.ok(findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']===key));
+  assert.equal(findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']==='blk'),null);
+  const steal=findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']==='stl');
+  assert.equal(steal.props.children[0].props.name,'hand','Steal must never appear locked');
+  assert.equal(steal.props.children[1].props.children,'Steal');
+  const locked = StatInputs({stats, busy:true, compact:true, updateStat:()=>true});
+  assert.equal(findElement(locked,node=>node.props?.['data-stat-key']==='stl').props.disabled,true);
+});
+
+test('stat feedback is displayed only for locally accepted actions', async () => {
+  const view = await readFile(new URL('../src/components/shots/CourtTrackerView.jsx', import.meta.url),'utf8');
+  assert.match(view, /if \(accepted === true\) setLastStat/);
+  assert.match(view, /role="status" aria-live="polite"/);
+  assert.match(view, /updateStat=\{recordStat\}/);
+  const legacy = await readFile(new URL('../src/components/shots/ShotLogger.jsx', import.meta.url),'utf8');
+  assert.match(legacy,/setUndoStack\(\(prev\) => \[\.\.\.prev, \{ type: "stat", key, delta \} \]\);\s*return true;/);
 });
 
 test('saving locks stat and shooting controls and box score exposes actual minutes', () => {
