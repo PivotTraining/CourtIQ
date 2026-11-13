@@ -10,6 +10,7 @@ import { COURT_ZONES } from "@/lib/constants";
 import Icon from "@/components/ui/Icons";
 import DeleteGameButton from "./DeleteGameButton";
 import AdvancedSessionReport from './AdvancedSessionReport';
+import GameShotChart from './GameShotChart';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 import { filterSessionRecords, recordedGameResult } from '@/lib/sessionRecovery.mjs';
 import HistoryFilters from './HistoryFilters';
@@ -195,6 +196,7 @@ function SessionCard({ session, playerName, accountId, playerId, onDeleted }) {
         {showReport ? 'Hide performance report' : 'View performance report'}
       </button>
       {showReport && <AdvancedSessionReport shots={session.shot_logs || []} gameStats={stats} sessionType={session.type} date={session.date || session.tracker_context?.date || session.created_at?.slice(0,10)} playerName={playerName} accountId={accountId} sessionId={session.id} opponent={session.tracker_context?.opponent || ""} />}
+      {showReport && session.type === "game" && <GameShotChart shots={session.shot_logs || []} />}
       {showReport && session.type === "game" && <DeleteGameButton session={session} playerId={playerId} accountId={accountId} onDeleted={onDeleted} />}
     </div>
   );
