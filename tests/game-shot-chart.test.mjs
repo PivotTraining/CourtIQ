@@ -84,7 +84,8 @@ test('game details place the shot court below numbers and do not collapse on fil
   const sessionHistory=await readFile(new URL('../src/components/shots/SessionHistory.jsx',import.meta.url),'utf8');
   assert.ok(gameLog.indexOf('<GameShotChart shots={session.shot_logs || []}')>gameLog.indexOf('{/* Full Stat Grid */}'));
   assert.ok(gameLog.indexOf('<GameShotChart shots={session.shot_logs || []}')<gameLog.indexOf('{/* Shot Zone Breakdown */}'));
-  assert.match(gameLog,/type="button" aria-expanded=\{expanded\}/);
+  assert.match(gameLog,/role="button" tabIndex=\{0\} aria-expanded=\{expanded\}/);
+  assert.match(gameLog,/event.key === 'Enter' \|\| event.key === ' '/);
   assert.doesNotMatch(gameLog,/onClick=\{\(\) => setExpanded\(!expanded\)\}/);
   assert.match(sessionHistory,/showReport && session.type === "game" && <GameShotChart/);
 });
