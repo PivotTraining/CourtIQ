@@ -11,6 +11,7 @@ import { calcPct } from "@/lib/utils";
 import Icon from "@/components/ui/Icons";
 import DeleteGameButton from "@/components/shots/DeleteGameButton";
 import AdvancedSessionReport from '@/components/shots/AdvancedSessionReport';
+import GameShotChart from '@/components/shots/GameShotChart';
 import { buildSessionReport } from '@/lib/sessionReport.mjs';
 
 function formatDate(dateStr) {
@@ -51,17 +52,19 @@ function GameCard({ session, playerName, accountId, playerId, onDeleted }) {
 
   return (
     <div
-      onClick={() => setExpanded(!expanded)}
       style={{
         background: "var(--color-card)",
         borderRadius: 18,
         border: "1px solid var(--color-border)",
         overflow: "hidden",
-        cursor: "pointer",
+        cursor: "default",
         boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
         transition: "box-shadow 0.2s ease",
       }}
     >
+      <button type="button" aria-expanded={expanded} aria-label={expanded ? 'Hide game details' : 'View game details'}
+        onClick={() => setExpanded(value => !value)}
+        style={{ display: 'block', width: '100%', padding: 0, border: 0, textAlign: 'left', background: 'transparent', color: 'inherit', cursor: 'pointer' }}>
       {/* Card Header */}
       <div style={{ padding: "16px 16px 12px", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{
@@ -124,6 +127,8 @@ function GameCard({ session, playerName, accountId, playerId, onDeleted }) {
         )}
       </div>
 
+      </button>
+
       {/* Expanded Details */}
       {expanded && (
         <div style={{ borderTop: "1px solid var(--color-border)", padding: 16 }}>
@@ -156,6 +161,9 @@ function GameCard({ session, playerName, accountId, playerId, onDeleted }) {
               </div>
             </div>
           )}
+
+          {/* Court visualization remains visible below the full-game statistics. */}
+          <GameShotChart shots={session.shot_logs || []} />
 
           {/* Shot Zone Breakdown */}
           {zoneBreakdown.length > 0 && (
