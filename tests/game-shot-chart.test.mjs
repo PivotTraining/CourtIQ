@@ -73,8 +73,8 @@ test('finished games with no recorded court shots get a truthful empty state',as
   const h=await chartFixture([{zone_id:'free-throw',made:false}]);
   const text=JSON.stringify(h.output);
   assert.match(text,/No field-goal locations were recorded/);
-  assert.match(text,/Free throws \\(tracked separately\\)/);
-  assert.match(text,/"children":\\[0," made · ",1," missed"\\]/);
+  assert.ok(text.includes('Free throws (tracked separately)'));
+  assert.ok(text.includes('"children":[0," made · ",1," missed"]'));
   assert.equal(findFilter(h.output,'Misses'),null);
   h.unmount();
 });
