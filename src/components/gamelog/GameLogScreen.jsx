@@ -62,9 +62,15 @@ function GameCard({ session, playerName, accountId, playerId, onDeleted }) {
         transition: "box-shadow 0.2s ease",
       }}
     >
-      <button type="button" aria-expanded={expanded} aria-label={expanded ? 'Hide game details' : 'View game details'}
+      <div role="button" tabIndex={0} aria-expanded={expanded} aria-label={expanded ? 'Hide game details' : 'View game details'}
         onClick={() => setExpanded(value => !value)}
-        style={{ display: 'block', width: '100%', padding: 0, border: 0, textAlign: 'left', background: 'transparent', color: 'inherit', cursor: 'pointer' }}>
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setExpanded(value => !value);
+          }
+        }}
+        style={{ display: 'block', width: '100%', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
       {/* Card Header */}
       <div style={{ padding: "16px 16px 12px", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{
@@ -127,7 +133,7 @@ function GameCard({ session, playerName, accountId, playerId, onDeleted }) {
         )}
       </div>
 
-      </button>
+      </div>
 
       {/* Expanded Details */}
       {expanded && (
