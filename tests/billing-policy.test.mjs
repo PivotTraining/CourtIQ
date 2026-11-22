@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Stripe from 'stripe';
-import { billingConfig, checkoutChoice, subscriptionSnapshot, sameOrigin, providerUrl } from '../src/lib/billingPolicy.mjs';
+import { billingConfig, checkoutChoice, subscriptionSnapshot, sameOrigin, providerUrl, CHECKOUT_PROMO_TRIAL_DAYS, isCheckoutPromoEligible } from '../src/lib/billingPolicy.mjs';
 import { createBillingService } from '../src/lib/billingService.mjs';
 
 const env = { COURTIQ_BILLING_ENABLED: 'true', COURTIQ_BILLING_MODE: 'test', STRIPE_SECRET_KEY: 'sk_test_local_fixture_only',
@@ -55,6 +55,32 @@ test('no-card active trial creates no customer, subscription, checkout or extra 
   assert.equal(checkout[2].idempotencyKey, `courtiq:checkout:${owner}:${requestId}`);
   assert.equal(checkout[1].success_url, 'http://localhost:4312/billing?checkout=returned');
   assert.equal(h.calls.at(-1)[0], 'finishCheckout');
+});
+test('eligible first-time accounts can start a seven-day card-on-file Checkout subscription without being charged at checkout', async () => {
+  const h = harness();
+  h.stripe.subscriptions.list = async query => {
+    assert.equal(query.customer, 'cus_fixture');
+    assert.equal(query.status, 'all');
+    assert.equal(query.limit, 1);
+    return { data: [], has_more: false };
+  };
+  assert.equal(CHECKOUT_PROMO_TRIAL_DAYS, 7);
+  assert.equal(isCheckoutPromoEligible({status:'eligible'}), true);
+  assert.equal(isCheckoutPromoEligible({status:'expired'}), false);
+  await h.service.checkout({ id: owner, email: 'fixture@example.test' }, body, { status: 'eligible' });
+  const checkout = h.calls.find(call => call[0] === 'checkout')?.[1];
+  assert.ok(checkout);
+  assert.equal(checkout.payment_method_collection, 'always');
+  assert.equal(checkout.subscription_data.trial_period_days, 7);
+  assert.equal(checkout.subscription_data.trial_settings.end_behavior.missing_payment_method, 'cancel');
+  assert.equal(checkout.line_items[0].price, 'price_pm');
+  assert.equal(h.calls.at(-1)[0], 'finishCheckout');
+});
+test('an eligible account with earlier provider subscriptions cannot silently pay full price instead of the promised free trial', async () => {
+  const h = harness();
+  await assert.rejects(h.service.checkout({ id: owner, email: 'fixture@example.test' }, body, { status: 'eligible' }), /first-time subscribers/);
+  assert.equal(h.calls.some(call => call[0] === 'checkout'), false);
+  assert.equal(h.calls.at(-1)[0], 'releaseCheckout');
 });
 test('existing checkout reuses its provider URL, busy claims never create duplicates and failed creation releases only its lease', async () => {
   const open = harness({ claim: 'open' }); assert.match((await open.service.checkout({ id: owner }, body)).url, /existing$/); assert.deepEqual(open.calls, []);
