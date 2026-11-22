@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { BillingError, assertPrice, checkoutChoice, providerUrl, subscriptionSnapshot } from './billingPolicy.mjs';
+import { BillingError, assertPrice, checkoutChoice, providerUrl, subscriptionSnapshot, CHECKOUT_PROMO_TRIAL_DAYS, isCheckoutPromoEligible } from './billingPolicy.mjs';
 
 const id = value => typeof value === 'string' ? value : value?.id;
 const supportedEvents = new Set(['checkout.session.completed', 'checkout.session.async_payment_succeeded',
@@ -51,8 +51,20 @@ export function createBillingService({ stripe, store, config }) {
       const customer = await stripe.customers.retrieve(account.customer_id);
       if (customer.deleted || customer.livemode !== false || customer.metadata?.app !== 'courtiq')
         throw new BillingError('CourtIQ customer could not be verified.', 503);
-      const subscriptionData = { billing_mode: { type: 'flexible' } };
+      const promoEligible = isCheckoutPromoEligible(trial);
+      // A verified eligible account can use the promotion only if this CourtIQ
+      // Stripe customer has never had a subscription. Fail closed rather than
+      // silently charging at checkout when a promised trial is unavailable.
+      if (promoEligible) {
+        const previous = await stripe.subscriptions.list({ customer: account.customer_id, status: 'all', limit: 1 });
+        if (!Array.isArray(previous.data) || previous.data.length > 0 || previous.has_more)
+          throw new BillingError('The 7-day promotional trial is for first-time subscribers only. No payment was taken. Please contact support for options.', 409);
+      }
+      const subscriptionData = { billing_mode: { type: 'flexible' },
+        ...(promoEligible ? { trial_period_days: CHECKOUT_PROMO_TRIAL_DAYS,
+          trial_settings: { end_behavior: { missing_payment_method: 'cancel' } } } : {}) };
       const session = await stripe.checkout.sessions.create({ mode: 'subscription', customer: account.customer_id,
+        payment_method_collection: 'always',
         line_items: [{ price: choice.price, quantity: 1 }], subscription_data: subscriptionData,
         expires_at: Math.floor(Date.parse(claim.expires_at) / 1000),
         integration_identifier: `courtiq-${claim.request_id.replaceAll('-', '').slice(0, 8).replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`,
