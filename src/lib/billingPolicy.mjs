@@ -1,3 +1,7 @@
+// Seven-day card-on-file Checkout promotion. Separate from the legacy 10-day no-card trial.
+export const CHECKOUT_PROMO_TRIAL_DAYS = 7;
+export const isCheckoutPromoEligible = trial => trial?.status === 'eligible';
+
 export const BILLING_PLANS = Object.freeze({
   player: { name: 'Player', monthly: 900, annual: 7900, description: 'Individual tracking, saved history, advanced reports and social cards.' },
   coach: { name: 'Coach · owner-managed team', monthly: 2900, annual: 24900, description: 'Player features plus owner-managed roster games and combined reports. No shared invitations or cloud video.' },
