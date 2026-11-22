@@ -16,7 +16,13 @@ export default function MembershipOverview() {
         <li>Unsaved live shot counter</li><li>{FREE_STARTER.trainingSessions} introductory training session per account</li>
         <li>{FREE_STARTER.savedGames} saved games · {FREE_STARTER.journalEntries} journal entries</li><li>No advanced analytics</li>
       </ul></article>
-      <article><h3>10-day trial</h3><strong className="membership-overview-price">No card</strong><ul>
+      <article><h3>7-day card trial · planned promotion</h3><strong className="membership-overview-price">First 7 days free</strong><ul>
+        <li>Customer provides a card and approves the recurring price in Stripe Checkout</li>
+        <li>After day 7, automatically renews at the selected monthly or annual price unless canceled first</li>
+        <li>Customer can cancel online before trial ends to avoid the first charge</li>
+        <li>This preview does not begin a trial or authorize a payment</li>
+      </ul></article>
+      <article><h3>Earlier no-card trial</h3><strong className="membership-overview-price">No card</strong><ul>
         <li>Starts only when an eligible, verified user chooses it</li><li>No automatic charge or conversion</li><li>One trial per eligible account</li><li>Saved history stays available after expiry; new writes depend on verified access</li>
       </ul></article>
       {Object.entries(BILLING_PLANS).map(([key, plan]) => <article key={key}><h3>{key === 'player' ? 'Player / premium' : 'Coach / owner-managed team'}</h3>
