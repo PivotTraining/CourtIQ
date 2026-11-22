@@ -63,7 +63,9 @@ export function billingRuntime({ scheduled = false } = {}) {
 }
 export async function billingStatus(client) {
   const state = await readBilling(client);
-  const trialAvailable = process.env.COURTIQ_TRIAL_ENABLED === 'true' && !hasOpenSubscription(state.subscription);
+  // Do not advertise a second, no-card trial alongside the paid 7-day card promotion.
+  const trialAvailable = process.env.COURTIQ_TRIAL_ENABLED === 'true' &&
+    process.env.COURTIQ_BILLING_ENABLED !== 'true' && !hasOpenSubscription(state.subscription);
   const proposed = Object.fromEntries(Object.entries(BILLING_PLANS).map(([key, plan]) => [key, { ...plan, month: plan.monthly, year: plan.annual }]));
   if (process.env.COURTIQ_BILLING_ENABLED !== 'true' || !state.enabled)
     return { ...state, trialAvailable, checkoutAvailable: false, mode: 'inactive', plans: proposed, proposed: true };
