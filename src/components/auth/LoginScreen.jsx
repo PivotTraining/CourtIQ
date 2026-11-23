@@ -1,6 +1,7 @@
 "use client";
 
 import BrandLogo from "@/components/ui/BrandLogo";
+import Link from "next/link";
 import GoogleIdentityButton from "./GoogleIdentityButton";
 import { useEffect, useRef, useState } from "react";
 import { signInWithEmail, signInWithGoogle, resetPassword } from "@/lib/firebase";
@@ -161,9 +162,9 @@ export default function LoginScreen({ actions = liveActions } = {}) {
         New email/password registration is temporarily paused while confirmation delivery is repaired. CourtIQ remains free.
       </p>
       <footer style={{ textAlign: "center", margin: "18px auto 0", fontSize: 11, color: "var(--color-text-sec)" }}>
-        <a href="/terms" style={{ color: "inherit", textDecoration: "underline" }}>Terms</a>
+        <Link href="/terms" style={{ color: "inherit", textDecoration: "underline" }}>Terms</Link>
         {" · "}
-        <a href="/privacy" style={{ color: "inherit", textDecoration: "underline" }}>Privacy</a>
+        <Link href="/privacy" style={{ color: "inherit", textDecoration: "underline" }}>Privacy</Link>
         <p style={{ fontSize: 10, margin: "12px auto", opacity: .8 }}>Made in Atlanta, Georgia</p>
       </footer>
     </main>
