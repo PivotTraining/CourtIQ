@@ -12,7 +12,8 @@ test('live Gametime defaults to compact visible totals and an expandable tools p
  assert.doesNotMatch(view,/<select/,'Selecting a court zone must not open or require a separate location dropdown');
  assert.match(view,/tracker-location-feedback/);
  assert.match(view,/onClick=\{\(\) => selectZone\(zone.id\)\}/);
- assert.match(view,/\['ast','reb','stl','to'\]/);
+ assert.match(view,/STAT_INPUTS\.map\(stat => <button/);
+ assert.match(view,/\{ key: 'blk', label: 'Block'/);
  assert.match(view,/Free throws/);
  assert.doesNotMatch(view,/Keep location/,'The court selection should persist without a settings toggle');
  assert.match(tracker,/if\(selectedZone\) entry\(\{ kind: 'shot', zone_id: selectedZone, made \}\)/);
