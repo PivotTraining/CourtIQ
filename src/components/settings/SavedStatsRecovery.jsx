@@ -68,7 +68,7 @@ export default function SavedStatsRecovery() {
 
   return (
     <section aria-label="Find saved statistics" style={{ padding: "12px 0 17px", borderBottom: "1px solid var(--color-border)" }}>
-      <div style={{ fontSize: 13, fontWeight: 850, color: "var(--color-text)" }}>Can't find your game stats?</div>
+      <div style={{ fontSize: 13, fontWeight: 850, color: "var(--color-text)" }}>Can&apos;t find your game stats?</div>
       <p style={{ fontSize: 12, lineHeight: 1.55, margin: "6px 0 10px", color: "var(--color-text-sec)" }}>
         Your records belong to the account used to save them. Signed in as <strong>{user?.email || "an unverified account"}</strong>.
         Check saved players and open their game histories without changing any data.
@@ -79,7 +79,7 @@ export default function SavedStatsRecovery() {
       {found && <div aria-live="polite" role="status" style={{ marginTop: 12, display: "grid", gap: 10 }}>
         {found.length === 0 ? <p style={{ fontSize: 12, lineHeight: 1.55 }}>
           No players were found under this signed-in account. If you used another email, sign in to that original account.
-          Do not create a new profile to recover an existing player's games.
+          Do not create a new profile to recover an existing player&apos;s games.
         </p> : found.map(profile => (
           <div key={profile.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
             padding: "10px 12px", borderRadius: 12, border: "1px solid var(--color-border)" }}>
@@ -96,7 +96,7 @@ export default function SavedStatsRecovery() {
       </div>}
       <p style={{ fontSize: 10, lineHeight: 1.5, marginTop: 9, color: "var(--color-text-sec)" }}>
         This checks server-saved history only. Local recordings and unsynced game entries may remain on the original device.
-        Don't clear website data or reinstall to troubleshoot.
+        Don&apos;t clear website data or reinstall to troubleshoot.
       </p>
     </section>
   );
