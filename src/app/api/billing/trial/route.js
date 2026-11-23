@@ -3,6 +3,7 @@ import { BillingError, hasOpenSubscription } from '@/lib/billingPolicy.mjs';
 export const runtime = 'nodejs';
 export async function POST(request) {
   try {
+    if (process.env.COURTIQ_BILLING_ENABLED === 'true') throw new BillingError('Use the 7-day card-on-file subscription promotion in Membership. The separate no-card trial is not available during this promotion.', 409);
     if (process.env.COURTIQ_TRIAL_ENABLED !== 'true') throw new BillingError('Trials are not activated yet.', 503);
     trialOrigin(request);
     const { client, user } = await billingIdentity();
