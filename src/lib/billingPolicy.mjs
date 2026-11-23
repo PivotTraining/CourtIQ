@@ -71,7 +71,7 @@ export function subscriptionSnapshot(subscription, config) {
   if (!entry || item.quantity !== 1 || typeof price !== 'object' || price.currency !== 'usd' ||
       !Number.isSafeInteger(price.unit_amount) || price.unit_amount <= 0) throw new BillingError('Not a supported CourtIQ subscription.', 422);
   const [plan, interval] = entry[0].split(':');
-  if (price.recurring?.interval !== interval || price.recurring.interval_count !== 1 || price.livemode !== false)
+  if (price.recurring?.interval !== interval || price.recurring.interval_count !== 1 || price.livemode !== !!config.livemode)
     throw new BillingError('Unsupported recurring price.', 422);
   const end = item.current_period_end ?? subscription.current_period_end;
   if (!Number.isSafeInteger(end) || end <= 0 || !/^sub_/.test(subscription.id) || !/^cus_/.test(objectId(subscription.customer) ?? ''))
