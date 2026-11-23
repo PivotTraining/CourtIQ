@@ -129,3 +129,17 @@ test('filming and stat court share workspace without blocking shot selection in 
   assert.match(recordingCss,/\.game-video-live-controls \.game-video-camera\s*\{[^}]*height: clamp\(76px, 12dvh, 104px\)/);
   assert.match(recordingCss,/\.game-video-camera\[hidden\]\{display:none!important\}/);
 });
+
+
+test('live shot chart includes Block and all six accessible statistic actions without opening Box Score',()=>{
+  const html=render(Tracker,{...props,tab:'court'});
+  for(const [key,label] of [
+    ['ast','assist'],['reb','rebound'],['stl','steal'],['blk','block'],['to','turnover'],['pf','foul'],
+  ]) {
+    assert.match(html,new RegExp('data-stat-key="'+key+'"'));
+    assert.match(html,new RegExp('Add '+label+', current count 0'));
+  }
+  assert.match(html,/Live stats/);
+  assert.match(html,/data-stat-key="blk"[^>]*><span/);
+  assert.doesNotMatch(html,/aria-label="Add block[^"]*"[^>]*disabled/);
+});
