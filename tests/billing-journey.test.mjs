@@ -10,7 +10,7 @@ import { reconcileDueAccount } from '../src/lib/billingReconciliation.mjs';
 
 const alice='00000000-0000-0000-0000-000000000001',bob='00000000-0000-0000-0000-000000000002';
 const player='10000000-0000-0000-0000-000000000001';
-const migrations=['20260930171602_web_player_ownership_safeguards.sql','20260930202201_reliable_sessions_and_development.sql','20261001144325_owned_roster_games.sql','20261001151920_ten_day_new_user_trials.sql','20261001170545_courtiq_subscription_core.sql','20261001175225_premium_player_analytics.sql','20261001184745_trial_checkout_exclusion.sql','20261005140000_billing_reconciliation_queue.sql'];
+const migrations=['20260930171602_web_player_ownership_safeguards.sql','20260930202201_reliable_sessions_and_development.sql','20261001144325_owned_roster_games.sql','20261001151920_ten_day_new_user_trials.sql','20261001170545_courtiq_subscription_core.sql','20261001175225_premium_player_analytics.sql','20261001184745_trial_checkout_exclusion.sql','20261005140000_billing_reconciliation_queue.sql','20261122234500_courtiq_seven_day_trialing_access.sql'];
 async function database(){
   const db=new PGlite();
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;
@@ -111,6 +111,8 @@ test('direct trial RPC and atomic checkout claims reject overlapping paid, pendi
       values('sub_bob','${bob}','cus_bob','player','month','price_pm','usd',900,'active',clock_timestamp()+interval '30 days');`);
     for(const status of ['active','past_due','unpaid','incomplete','paused','trialing']){
       await db.exec('reset role;');await db.query('update courtiq_subscriptions set status=$1',[status]);await user(bob);
+      const verifiedAccess=(await db.query('select get_courtiq_billing() value')).rows[0].value.access;
+      assert.equal(verifiedAccess, ['active','trialing'].includes(status) ? 'player' : 'read_only');
       await assert.rejects(db.query('select start_courtiq_trial()'),/can still bill/);
       assert.equal((await db.query('select count(*)::int n from account_trials')).rows[0].n,0);
     }
