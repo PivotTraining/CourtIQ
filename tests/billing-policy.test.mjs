@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Stripe from 'stripe';
-import { billingConfig, checkoutChoice, subscriptionSnapshot, sameOrigin, providerUrl } from '../src/lib/billingPolicy.mjs';
+import { billingConfig, checkoutChoice, subscriptionSnapshot, sameOrigin, providerUrl, CHECKOUT_PROMO_TRIAL_DAYS, isCheckoutPromoEligible } from '../src/lib/billingPolicy.mjs';
 import { createBillingService } from '../src/lib/billingService.mjs';
 
 const env = { COURTIQ_BILLING_ENABLED: 'true', COURTIQ_BILLING_MODE: 'test', STRIPE_SECRET_KEY: 'sk_test_local_fixture_only',
@@ -39,6 +39,21 @@ test('billing configuration rejects live keys, unsafe returns and duplicated pri
   assert.throws(() => sameOrigin(new Request('http://localhost:4312/api/billing/checkout', { headers: { origin: 'https://foreign.test' } }), config), /CourtIQ/);
   assert.throws(() => providerUrl('https://checkout.stripe.com.evil.test/pay', 'checkout'));
 });
+test('live payments need separate release approval, correct key, signed webhook configuration, and verified HTTPS app host', () => {
+  const candidate={...env,COURTIQ_BILLING_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture_only'};
+  assert.throws(()=>billingConfig(candidate),/approved Stripe credentials/);
+  assert.throws(()=>billingConfig({...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true'}),/approved Stripe credentials/);
+  const approved={...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true',STRIPE_COURTIQ_WEBHOOK_SECRET:'whsec_fixture_only',
+    COURTIQ_APP_URL:'https://app.getcourtiq.com'};
+  const validated=billingConfig(approved);
+  assert.equal(validated.mode,'live');
+  assert.equal(validated.livemode,true);
+  assert.throws(()=>billingConfig({...approved,COURTIQ_APP_URL:'https://example.test'}),/verified CourtIQ application/);
+  assert.throws(()=>billingConfig({...approved,STRIPE_SECRET_KEY:'sk_test_fixture'}),/approved Stripe credentials/);
+  assert.equal(isCheckoutPromoEligible({status:'unavailable'}),true);
+  assert.equal(isCheckoutPromoEligible({status:'active'}),false);
+  assert.equal(isCheckoutPromoEligible({status:'expired'}),false);
+});
 test('checkout requires explicit matching consent, price and a known plan, and refuses client customer/account/access fields', () => {
   assert.equal(checkoutChoice(body, config).price, 'price_pm');
   for (const changes of [{ consent: false }, { termsVersion: 'old' }, { plan: '__proto__' }, { customer: 'cus_other' }, { owner }, { access: 'coach' }, { amount: 0 }, { currency: 'gbp' }])
@@ -55,6 +70,45 @@ test('no-card active trial creates no customer, subscription, checkout or extra 
   assert.equal(checkout[2].idempotencyKey, `courtiq:checkout:${owner}:${requestId}`);
   assert.equal(checkout[1].success_url, 'http://localhost:4312/billing?checkout=returned');
   assert.equal(h.calls.at(-1)[0], 'finishCheckout');
+});
+test('eligible first-time accounts can start a seven-day card-on-file Checkout subscription without being charged at checkout', async () => {
+  const h = harness();
+  h.stripe.subscriptions.list = async query => {
+    assert.equal(query.customer, 'cus_fixture');
+    assert.equal(query.status, 'all');
+    assert.equal(query.limit, 1);
+    return { data: [], has_more: false };
+  };
+  assert.equal(CHECKOUT_PROMO_TRIAL_DAYS, 7);
+  assert.equal(isCheckoutPromoEligible({status:'eligible'}), true);
+  assert.equal(isCheckoutPromoEligible({status:'expired'}), false);
+  await h.service.checkout({ id: owner, email: 'fixture@example.test' }, body, { status: 'eligible' });
+  const checkout = h.calls.find(call => call[0] === 'checkout')?.[1];
+  assert.ok(checkout);
+  assert.equal(checkout.payment_method_collection, 'always');
+  assert.equal(checkout.subscription_data.trial_period_days, 7);
+  assert.equal(checkout.subscription_data.trial_settings.end_behavior.missing_payment_method, 'cancel');
+  assert.equal(checkout.line_items[0].price, 'price_pm');
+  assert.equal(h.calls.at(-1)[0], 'finishCheckout');
+});
+test('prices must match approved CourtIQ rates and optional Stripe Tax is enabled only when configured', async () => {
+  const h = harness();
+  h.prices.price_pm.unit_amount = 499;
+  await assert.rejects(h.service.catalog(),/configured CourtIQ price/);
+  assert.equal(h.calls.some(call => call[0] === 'checkout'), false);
+  const withTax = harness();
+  withTax.stripe.subscriptions.list = async()=>({data:[],has_more:false});
+  const taxedService=createBillingService({config:{...config,automaticTax:true},stripe:withTax.stripe,store:withTax.store});
+  await taxedService.checkout({id:owner,email:'fixture@example.test'},body,{status:'eligible'});
+  assert.deepEqual(withTax.calls.find(call=>call[0]==='checkout')[1].automatic_tax,{enabled:true});
+  assert.equal(billingConfig(env).automaticTax,false);
+  assert.equal(billingConfig({...env,COURTIQ_STRIPE_AUTOMATIC_TAX_ENABLED:'true'}).automaticTax,true);
+});
+test('an eligible account with earlier provider subscriptions cannot silently pay full price instead of the promised free trial', async () => {
+  const h = harness();
+  await assert.rejects(h.service.checkout({ id: owner, email: 'fixture@example.test' }, body, { status: 'eligible' }), /first-time subscribers/);
+  assert.equal(h.calls.some(call => call[0] === 'checkout'), false);
+  assert.equal(h.calls.at(-1)[0], 'releaseCheckout');
 });
 test('existing checkout reuses its provider URL, busy claims never create duplicates and failed creation releases only its lease', async () => {
   const open = harness({ claim: 'open' }); assert.match((await open.service.checkout({ id: owner }, body)).url, /existing$/); assert.deepEqual(open.calls, []);
