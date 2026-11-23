@@ -48,6 +48,10 @@ test('live payments need separate release approval, correct key, signed webhook 
   const validated=billingConfig(approved);
   assert.equal(validated.mode,'live');
   assert.equal(validated.livemode,true);
+  const restricted=billingConfig({...approved,STRIPE_SECRET_KEY:'rk_live_fixture_only'});
+  assert.equal(restricted.livemode,true,'least-privilege restricted Stripe keys work');
+  assert.throws(()=>billingConfig({...approved,STRIPE_SECRET_KEY:'rk_test_fixture'}),/approved Stripe credentials/);
+
   assert.throws(()=>billingConfig({...approved,COURTIQ_APP_URL:'https://example.test'}),/verified CourtIQ application/);
   assert.throws(()=>billingConfig({...approved,STRIPE_SECRET_KEY:'sk_test_fixture'}),/approved Stripe credentials/);
   assert.equal(isCheckoutPromoEligible({status:'unavailable'}),true);
