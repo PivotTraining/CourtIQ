@@ -22,7 +22,8 @@ const cases=[
   {host:'app',path:'/robots.txt',name:'Robots index rules',expected:[200],type:'text/plain'},
   {host:'app',path:'/sitemap.xml',name:'Public sitemap',expected:[200],type:'xml',verify:'sitemap'},
   {host:'app',path:'/opengraph-image',name:'Share image',expected:[200],type:'image/'},
-  {host:'app',path:'/favicon.ico',name:'Site favicon',expected:[200],type:'image/'},
+  {host:'app',path:'/brand/courtiq-v2/icon-48.png',name:'Linked browser favicon',expected:[200],type:'image/'},
+  {host:'app',path:'/brand/courtiq-v2/courtiq-app-icon.svg',name:'Linked vector app icon',expected:[200],type:'image/svg+xml'},
   {host:'app',path:'/product-desktop.jpg',name:'Desktop product image',expected:[200],type:'image/'},
   {host:'app',path:'/product-mobile.jpg',name:'Mobile product image',expected:[200],type:'image/'},
   {host:'app',path:'/dev/tracker',name:'Production dev preview denied',expected:[404]},
@@ -37,7 +38,7 @@ const cases=[
     expected:[405]
   })),
   {host:'marketing',path:'/',name:'Public marketing homepage',expected:[200],type:'text/html',verify:'marketing'},
-  ...['privacy','terms','support'].map(path=>({host:'marketing',path:'/'+path,name:'Marketing legal/support '+path,expected:[200],type:'text/html'})),
+  ...['privacy','terms','support'].map(path=>({host:'marketing',path:'/'+path,name:'Marketing policy/support redirect '+path,expected:[301,302,307,308],verify:'marketing-redirect'})),
 ];
 const sleep=ms=>new Promise(done=>setTimeout(done,ms));
 
@@ -56,6 +57,16 @@ async function check(test){
         throw Error('HTTP '+response.status+' (expected '+test.expected.join('/')+')');
       if(test.location&&!new URL(response.headers.get('location')||'/',url).pathname.startsWith(test.location))
         throw Error('Unexpected app-root redirect');
+      if(test.verify==='marketing-redirect'){
+        const location=response.headers.get('location');
+        if(!location)throw Error('Marketing redirect missing Location');
+        const target=new URL(location,url);
+        if(target.protocol!=='https:'||target.hostname!=='app.getcourtiq.com'||target.pathname!==test.path)
+          throw Error('Marketing redirect did not go to canonical CourtIQ legal/support page');
+        const destination=await fetch(target,{redirect:'manual',signal:AbortSignal.timeout(15000),headers:{'User-Agent':'CourtIQ-Release-Smoke/1.0 (read-only)'}});
+        if(destination.status!==200||!(destination.headers.get('content-type')||'').includes('text/html'))
+          throw Error('Marketing redirect destination is unavailable: HTTP '+destination.status);
+      }
       if(test.type&&!ct.includes(test.type))throw Error('Unexpected content type '+ct);
       // Inspect only public, non-player data to avoid reading or logging private records.
       if(test.verify==='sitemap'){
