@@ -42,7 +42,8 @@ export function billingConfig(env = process.env) {
     throw new BillingError('CourtIQ prices and billing management are not configured.', 503);
   if (!env.COURTIQ_BILLING_TERMS_VERSION) throw new BillingError('Billing terms need review before checkout.', 503);
   return { origin: origin.origin, prices, account: env.STRIPE_EXPECTED_ACCOUNT_ID, termsVersion: env.COURTIQ_BILLING_TERMS_VERSION,
-    portal: env.STRIPE_COURTIQ_PORTAL_CONFIG_ID, key: env.STRIPE_SECRET_KEY, mode, livemode: live };
+    portal: env.STRIPE_COURTIQ_PORTAL_CONFIG_ID, key: env.STRIPE_SECRET_KEY, mode, livemode: live,
+    automaticTax: env.COURTIQ_STRIPE_AUTOMATIC_TAX_ENABLED === 'true' };
 }
 export function checkoutChoice(body, config) {
   if (!body || Array.isArray(body) || !Object.hasOwn(BILLING_PLANS, body.plan) || !['month', 'year'].includes(body.interval) ||
@@ -55,7 +56,9 @@ export function checkoutChoice(body, config) {
   return { plan: body.plan, interval: body.interval, requestId: body.requestId, price: config.prices[`${body.plan}:${body.interval}`], amount: body.amount };
 }
 export function assertPrice(price, config, plan, interval) {
+  const catalogAmount = BILLING_PLANS[plan]?.[interval === 'month' ? 'monthly' : 'annual'];
   if (!price || price.id !== config.prices[`${plan}:${interval}`] || price.livemode !== !!config.livemode || !price.active ||
+      price.unit_amount !== catalogAmount ||
       price.type !== 'recurring' || price.currency !== 'usd' || !Number.isSafeInteger(price.unit_amount) || price.unit_amount <= 0 ||
       price.recurring?.interval !== interval || price.recurring.interval_count !== 1 ||
       (price.recurring.usage_type && price.recurring.usage_type !== 'licensed'))
