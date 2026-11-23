@@ -14,6 +14,7 @@ async function loginFixture(overrides = {}) {
     react: h.react, '@/lib/firebase': { ...provider, ...overrides }, '@/components/ui/Icons': { default: () => null, __esModule: true },
     '@/components/ui/BrandLogo': { default: () => null, __esModule: true },
     './GoogleIdentityButton': { default: () => null, __esModule: true },
+    'next/link': {default:'a',__esModule:true},
   }, { process: { env: {} } });
   h.render(Login); h.flush();
   action(h.output,'button',p=>p['aria-controls']==='existing-email-signin').props.onClick(); h.flush();
@@ -75,6 +76,7 @@ async function callbackFixture(search, result = { data: { session: { user: { id:
   const { safeNextPath, passwordError } = await import('../src/lib/webAuth.mjs');
   const { default: Callback } = await loadComponent(new URL('../src/components/auth/AuthCallback.jsx', import.meta.url), {
     react: h.react, '@/lib/webAuth.mjs': { safeNextPath, passwordError },
+    'next/link': {default:'a',__esModule:true},
     '@/lib/supabase': { supabase: { auth: {
       exchangeCodeForSession(code) { calls.push(['exchange', code]); return exchange.promise; },
       updateUser(data) { calls.push(['update', data]); return updates.promise; },
