@@ -19,13 +19,11 @@ function hasAcknowledged(accountId) {
 export default function FirstGameGuide({ accountId, hasSessions, historyReady = false, hasPlayer = false,
   onStartGame = () => {}, onSelectPlayer = () => {}, onOpenGames = () => {} }) {
   const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
   useEffect(() => {
-    setDismissed(false);
     setOpen(historyReady && !hasSessions && !hasAcknowledged(accountId));
   }, [accountId, historyReady, hasSessions]);
   const close = () => {
-    setOpen(false); setDismissed(true);
+    setOpen(false);
     if (accountId && typeof window !== 'undefined') {
       try { window.localStorage.setItem(guideKey(accountId), 'done'); } catch { /* private browsing */ }
     }
