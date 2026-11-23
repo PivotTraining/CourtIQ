@@ -43,7 +43,7 @@ const props = {
   sessionType: 'game', shots: [], selectedZone: null, selectZone: noop,
   gameStats: { ast: 0, reb: 0, stl: 0, blk: 0, to: 0, pf: 0, min: 0 }, updateStat: noop,
   saving: false, ending: false, tab: 'court', setTab: noop, darkMode: true, onToggleTheme: noop,
-  courtTheme: 'tan', setCourtTheme: noop, undoCount: 0, undoLast: noop, endSession: noop, logShot: noop, logFreeThrow: noop,
+  courtTheme: 'tan', setCourtTheme: noop, undoCount: 0, undoLast: noop, endSession: noop, logShotAtZone: noop, logFreeThrow: noop,
 };
 const render = (component, values) => renderToStaticMarkup(React.createElement(component, values));
 
@@ -54,15 +54,17 @@ test('mounted court includes every keyboard-accessible zone and shared theme con
   for (const zone of constants.COURT_ZONES.filter(zone => zone.pts !== 1)) assert.ok(html.includes(`aria-label="${zone.label},`), zone.id);
   assert.match(html, /Made FT/);
   assert.doesNotMatch(html, /<select\b/, 'shot entry should not present a redundant location dropdown');
-  assert.match(html, /Tap a court spot to select the shot location/);
+  assert.match(html, /Tap a court spot once to record a made shot/);
+  assert.match(html, /data-shot-mode="made"[^>]*aria-pressed="true"/);
+  assert.match(html, /data-shot-mode="missed"[^>]*aria-pressed="false"/);
   assert.match(html, /Add assist, current count 0/);
-  const selected = render(Tracker, { ...props, darkMode: false, selectedZone: 'top-key-3' });
-  assert.match(selected, /Switch to dark mode/);
-  assert.match(selected, /Top Key 3 · 3PT/);
-  assert.match(selected, /Selected: Top Key 3 · 3PT/);
-  assert.doesNotMatch(selected, /<select\b/);
-  assert.doesNotMatch(selected, /Keep location/);
-  assert.doesNotMatch(selected, />Made FT</);
+  const oneTap = render(Tracker, { ...props, darkMode: false });
+  assert.match(oneTap, /Switch to dark mode/);
+  assert.match(oneTap, /Top Key 3, 3 points, 0 made of 0; tap to record a made shot/);
+  assert.doesNotMatch(oneTap, /Selected:/);
+  assert.doesNotMatch(oneTap, /<select\b/);
+  assert.doesNotMatch(oneTap, /Keep location/);
+  assert.match(oneTap, />Made FT</);
 });
 
 test('every stat button sends its own exact stat key, never a neighboring one', () => {

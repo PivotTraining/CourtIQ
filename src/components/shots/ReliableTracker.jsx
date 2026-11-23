@@ -40,7 +40,6 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
   const [context, setContext] = useState({ date: new Date().toLocaleDateString('en-CA'), opponent: '', season: '', competition: '', location: 'home', format: 'quarters', team_score: '', opponent_score: '' });
   const [period, setPeriod] = useState(1);
   const [clock, setClock] = useState('00:00');
-  const [selectedZone, setSelectedZone] = useState(null);
   const [tab, setTab] = useState('court');
   const [courtTheme, setCourtTheme] = useState('tan');
   const [timeline, setTimeline] = useState(false);
@@ -373,7 +372,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
       <small className="tracker-hint">{status}</small>
     </details>
   </section>;
-  return <CourtTrackerView sessionType={snapshot.session.type} shots={shots} selectedZone={selectedZone} selectZone={setSelectedZone}
+  return <CourtTrackerView sessionType={snapshot.session.type} shots={shots}
     gameStats={stats} updateStat={(key, delta) => entry({ kind: 'stat', key, delta })}
     saving={conflict || ending} ending={ending} saveError={error} tab={tab} setTab={setTab} darkMode={darkMode} onToggleTheme={onToggleTheme}
     courtTheme={courtTheme} setCourtTheme={setCourtTheme} undoCount={reversible.length}
@@ -388,7 +387,7 @@ export function ReliableTrackerWorkspace({ accountId, playerId, playerName='', r
     setClock={teamControls?()=>{}:setClock}
     gameContext={snapshot.session.tracker_context}
     onEditGame={()=>{setContext(snapshot.session.tracker_context||context);setShowContext(true);setToolOpen(true);}}
-    logShot={made => { if(selectedZone) entry({ kind: 'shot', zone_id: selectedZone, made }); } }
+    logShotAtZone={(zoneId, made) => entry({ kind: 'shot', zone_id: zoneId, made })}
     logFreeThrow={made => entry({ kind: 'shot', zone_id: 'free-throw', made })} ticker={tools}
      videoDock={snapshot.session.type==='game'?
        <GameTrackerRecorder accountId={accountId} playerId={playerId} sessionId={snapshot.session.id} events={snapshot.events}

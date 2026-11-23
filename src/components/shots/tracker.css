@@ -253,3 +253,15 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
 .tracker-stat-grid.compact .tracker-stat-input strong{margin-left:auto;font-size:16px;font-variant-numeric:tabular-nums}
 .tracker-stat-label{font-size:11px;font-weight:800;color:var(--color-text-sec);margin:6px 0 0}
 @media(min-width:680px) and (orientation:landscape){.tracker-stat-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* One-tap shot recording: the result is selected first, so each court tap is the saved attempt. */
+.tracker-shot-mode { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 4px 0 10px; }
+.tracker-shot-mode button { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 9px 12px; border: 1px solid var(--color-border); background: var(--color-card); border-radius: 12px; font-size: 14px; font-weight: 850; color: var(--color-text-sec); }
+.tracker-shot-mode button[aria-pressed="true"] { color: var(--color-text); border: 2px solid var(--stat-tone); background: color-mix(in srgb,var(--stat-tone) 9%,var(--color-card)); }
+.tracker-shot-mode button:focus-visible, .tracker-zone:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+.tracker-shot-instruction { color: var(--color-text-sec); font-size: 12px; line-height: 1.5; margin: 0 0 8px !important; }
+.tracker-zone[data-last-recorded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb,var(--color-accent) 55%,transparent); z-index: 2; }
+.tracker-free-throw-actions { padding: 10px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-muted); }
+.tracker-free-throw-actions > span { display: block; font-size: 11px; font-weight: 850; color: var(--color-text-sec); margin-bottom: 7px; }
+.tracker-free-throw-actions > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.tracker-shot-ack { margin: 3px 0 8px !important; padding: 8px 10px; border-radius: 10px; font-size: 12px; line-height: 1.35; background: var(--color-muted); border: 1px solid var(--color-border); color: var(--color-text); }
