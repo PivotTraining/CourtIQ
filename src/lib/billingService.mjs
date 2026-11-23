@@ -65,13 +65,14 @@ export function createBillingService({ stripe, store, config }) {
           trial_settings: { end_behavior: { missing_payment_method: 'cancel' } } } : {}) };
       const session = await stripe.checkout.sessions.create({ mode: 'subscription', customer: account.customer_id,
         payment_method_collection: 'always',
+        ...(config.automaticTax ? { automatic_tax: { enabled: true } } : {}),
         line_items: [{ price: choice.price, quantity: 1 }], subscription_data: subscriptionData,
         expires_at: Math.floor(Date.parse(claim.expires_at) / 1000),
         integration_identifier: `courtiq-${claim.request_id.replaceAll('-', '').slice(0, 8).replace(/[0-9]/g, digit => String.fromCharCode(97 + Number(digit)))}`,
         success_url: `${config.origin}/billing?checkout=returned`, cancel_url: `${config.origin}/billing?checkout=canceled` },
       { idempotencyKey: `courtiq:checkout:${user.id}:${claim.request_id}` });
       const url = providerUrl(session.url, 'checkout');
-      if (session.livemode !== !!config.livemode || id(session.customer) !== account.customer_id) throw new BillingError('Test checkout could not be verified.', 503);
+      if (session.livemode !== !!config.livemode || id(session.customer) !== account.customer_id) throw new BillingError('CourtIQ checkout could not be verified.', 503);
       await store.finishCheckout(user.id, claim.request_id, session.id, url);
       return { url };
     } catch (error) {
