@@ -1,0 +1,31 @@
+name: CourtIQ Public Site Smoke Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: court-iq-read-only-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-site-smoke:
+    name: Public Pages, App Routes, API Guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Check live app and marketing site without user credentials
+        run: node scripts/smoke-site.mjs
+        env:
+          SMOKE_APP_URL: https://app.getcourtiq.com
+          SMOKE_MARKETING_URL: https://getcourtiq.com
