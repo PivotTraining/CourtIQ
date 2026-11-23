@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { safeNextPath, passwordError } from "@/lib/webAuth.mjs";
 
@@ -114,7 +115,7 @@ export default function AuthCallback() {
           </form>
         )}
         {message !== "Finishing sign in…" && !recoveryReady && (
-          <a href="/dashboard" style={{ color: "#FF6B35", fontWeight: 700 }}>Return to CourtIQ</a>
+          <Link href="/dashboard" style={{ color: "#FF6B35", fontWeight: 700 }}>Return to CourtIQ</Link>
         )}
       </div>
     </main>
