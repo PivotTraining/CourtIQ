@@ -9,10 +9,10 @@ import './tracker.css';
 const STAT_INPUTS = [
   { key: 'ast', label: 'Assist', short: 'AST', icon: 'eye', tone: 'green' },
   { key: 'reb', label: 'Rebound', short: 'REB', icon: 'refresh', tone: 'amber' },
-  { key: 'stl', label: 'Steal', short: 'STL', icon: 'lock', tone: 'teal' },
+  { key: 'stl', label: 'Steal', short: 'STL', icon: 'hand', tone: 'teal' },
   { key: 'blk', label: 'Block', short: 'BLK', icon: 'shield', tone: 'violet' },
   { key: 'to', label: 'Turnover', short: 'TO', icon: 'zap', tone: 'red' },
-  { key: 'pf', label: 'Foul', short: 'PF', icon: 'hand', tone: 'amber' },
+  { key: 'pf', label: 'Foul', short: 'PF', icon: 'alert', tone: 'amber' },
 ];
 // Spread touch targets apart on small courts; all zones remain named and selectable.
 const TOUCH_POSITIONS = {
@@ -25,11 +25,11 @@ const TOUCH_POSITIONS = {
 
 function StatInputs({ stats, updateStat, busy, compact = false }) {
   return <div className={`tracker-stat-grid ${compact ? 'compact' : ''}`}>
-    {STAT_INPUTS.filter(stat=>!compact||['ast','reb','stl','to'].includes(stat.key)).map(stat => <button key={stat.key} className="tracker-stat-input" data-tone={stat.tone}
+    {STAT_INPUTS.map(stat => <button type="button" key={stat.key} className="tracker-stat-input" data-stat-key={stat.key} data-tone={stat.tone}
       disabled={busy} aria-label={`Add ${stat.label.toLowerCase()}, current count ${stats[stat.key]}`}
       onClick={() => updateStat(stat.key, 1)}>
       <Icon name={stat.icon} size={compact ? 18 : 24} />
-      <span>{compact ? stat.short : stat.label}</span><strong>{stats[stat.key]}</strong>
+      <span>{stat.label}</span><strong>{stats[stat.key]}</strong>
     </button>)}
   </div>;
 }
@@ -148,6 +148,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
                 <button className="tracker-result" data-tone="red" disabled={busy} onClick={() => selected ? logShot(false) : logFreeThrow(false)}><Icon name="x" size={18} />{selected ? 'Missed' : 'Missed FT'}</button>
               </div>
             </div>
+            <p className="tracker-stat-label">Live stats · Tap to add one</p>
             <StatInputs stats={gameStats} updateStat={updateStat} busy={busy} compact />
             <p className="tracker-hint tracker-tracking-tip">Tap a court location, then Made or Missed. Undo fixes your last entry.</p>
           </section>
