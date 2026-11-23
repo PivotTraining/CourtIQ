@@ -6,6 +6,7 @@ import Icon from "@/components/ui/Icons";
 import { signOutUser } from "@/lib/firebase";
 import PasswordAccess from "./PasswordAccess";
 import GymArrivalSettings from "./GymArrivalSettings";
+import SavedStatsRecovery from "./SavedStatsRecovery";
 
 function Row({ icon, title, description, action, actionLabel }) {
   return (
@@ -33,6 +34,7 @@ export default function SettingsScreen({ onEditProfile, onManagePlayers, darkMod
         <div style={{ marginTop: 3, fontSize: 11, color: "var(--color-text-sec)" }}>{user?.email || "Signed-in account"}</div>
         <Row icon="user" title="Player profile" description="Name, team, jersey, position and age." action={onEditProfile} actionLabel="Edit" />
         <Row icon="user" title="Players & family" description="Add, remove or switch managed player profiles." action={onManagePlayers} actionLabel="Manage" />
+        <SavedStatsRecovery />
         <PasswordAccess key={user?.id || "guest"} email={user?.email || ""} emailConfirmed={!!user?.email_confirmed_at} />
       </section>
 
