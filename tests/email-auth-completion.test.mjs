@@ -16,7 +16,8 @@ async function loginFixture(actions = {}) {
   const { default: Login } = await loadComponent(
     new URL('../src/components/auth/LoginScreen.jsx', import.meta.url),
     { react: h.react, '@/lib/firebase': {}, '@/components/ui/BrandLogo': { default: () => null, __esModule: true },
-    './GoogleIdentityButton': { default: () => null, __esModule: true } },
+    './GoogleIdentityButton': { default: () => null, __esModule: true },
+    'next/link': {default:'a',__esModule:true} },
     { window: { location: { replace: path => redirects.push(path) } }, process: { env: {} } },
   );
   h.render(Login, { actions: { ...defaults, ...actions } }); h.flush();
@@ -89,6 +90,7 @@ async function callbackFixture(query) {
   const url=new URL('../src/components/auth/AuthCallback.jsx',import.meta.url);
   const { default: Callback }=await loadComponent(url, {
     react:h.react, '@/lib/supabase':{supabase:fake},'@/lib/webAuth.mjs':web,
+    'next/link': {default:'a',__esModule:true},
   },{
     window:{location:{search:query,hash:'',replace:x=>redirects.push(x)}},URLSearchParams,
     setTimeout:()=>1, clearTimeout:()=>{},console:{error(){}},
