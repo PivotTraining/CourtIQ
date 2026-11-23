@@ -584,11 +584,12 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false
   }, [session, mode, playerId]);
 
   const updateStat = (key, delta) => {
-    if (pendingWrite.current || ending || (delta < 0 && gameStats[key] <= 0)) return;
+    if (pendingWrite.current || ending || (delta < 0 && gameStats[key] <= 0)) return false;
     haptic();
     playTap();
     setGameStats((prev) => ({ ...prev, [key]: Math.max(0, prev[key] + delta) }));
     setUndoStack((prev) => [...prev, { type: "stat", key, delta }]);
+    return true;
   };
 
   const startSession = useCallback(async (selectedType = sessionType) => {
@@ -653,7 +654,6 @@ function LegacyShotLogger({ onClose, darkMode, onToggleTheme, quickStart = false
     setSaving(true);
     setSaveError(null);
     const zoneToLog = selectedZone;
-    setSelectedZone(null); // clear selection optimistically
     try {
       const shot = await insertShot(session.id, playerId, zoneToLog, made);
       setShots((prev) => [...prev, { id: shot.id, zone_id: zoneToLog, made }]);
