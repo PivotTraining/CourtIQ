@@ -25,7 +25,7 @@ const TOUCH_POSITIONS = {
 
 export function StatInputs({ stats, updateStat, busy, compact = false }) {
   return <div className={`tracker-stat-grid ${compact ? 'compact' : ''}`} role="group" aria-label="Record a player statistic">
-    {STAT_INPUTS.filter(stat=>!compact||['ast','reb','stl','to'].includes(stat.key)).map(stat => <button
+    {STAT_INPUTS.map(stat => <button
       key={stat.key} type="button" className="tracker-stat-input" data-tone={stat.tone} data-stat-key={stat.key}
       disabled={busy} aria-label={`Add ${stat.label.toLowerCase()}, current count ${stats[stat.key] ?? 0}`}
       onClick={() => updateStat(stat.key, 1, stat.label)}>
@@ -150,6 +150,7 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
                 <button className="tracker-result" data-tone="red" disabled={busy} onClick={() => selected ? logShot(false) : logFreeThrow(false)}><Icon name="x" size={18} />{selected ? 'Missed' : 'Missed FT'}</button>
               </div>
             </div>
+            <p className="tracker-stat-label">Live stats · Tap to add one</p>
             <StatInputs stats={gameStats} updateStat={recordStat} busy={busy} compact />
             {lastStat && <p className="tracker-stat-ack" role="status" aria-live="polite">{lastStat}</p>}
             <p className="tracker-hint tracker-tracking-tip">Tap a spot on the court, then Made or Missed. The location stays selected for the next shot until you tap another spot or Free throws. Undo fixes your last entry.</p>
