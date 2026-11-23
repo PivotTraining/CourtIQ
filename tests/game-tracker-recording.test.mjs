@@ -115,7 +115,7 @@ test('in-game view mounts game video outside court and stats conditional',async(
   assert.match(screen,/onBusyChange=\{setMediaBusy\}/);
   assert.match(screen,/if\(mediaBusy\).*Stop the game recording/);
   assert.match(screen,/snapshot\.session\.type==='game'/);
-  assert.match(screen,/logShot=\{made =>/);
+  assert.match(screen,/logShotAtZone=\{\(zoneId, made\) => entry/);
   assert.match(screen,/logFreeThrow=\{made =>/);
 });
 
