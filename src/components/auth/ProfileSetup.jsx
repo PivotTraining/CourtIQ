@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { createPlayerProfile } from "@/lib/queries";
+import { createPlayerProfile, acceptPlayerInvite, fetchManagedPlayers } from "@/lib/queries";
 import Icon from "@/components/ui/Icons";
 import SignOutButton from './SignOutButton';
 
@@ -20,7 +20,7 @@ const inputStyle = {
   borderRadius: 12,
   border: "1px solid var(--color-border)",
   background: "var(--color-input-bg)",
-  fontSize: 15,
+  fontSize: 16,
   color: "var(--color-text)",
   outline: "none",
   boxSizing: "border-box",
@@ -37,6 +37,8 @@ export default function ProfileSetup() {
     level: "intermediate",
   });
   const [loading, setLoading] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const alive = useRef(false);
@@ -79,6 +81,39 @@ export default function ProfileSetup() {
     }
   };
 
+  const handleJoin = async (e) => {
+    e.preventDefault();
+    const code = joinCode.trim();
+    if (inFlight.current || !user?.id) return;
+    if (!/^CI-[a-f0-9]{48}$/.test(code)) {
+      setError("Enter the complete private invitation code from the original player account.");
+      return;
+    }
+    inFlight.current = true;
+    setLoading(true);
+    setError("");
+    let inviteAccepted = false;
+    try {
+      const playerId = await acceptPlayerInvite(code);
+      inviteAccepted = true;
+      // Read back through ordinary owner/share RLS. Never trust an invitation
+      // code alone as a player object or change identities across accounts.
+      const available = await fetchManagedPlayers(user.id);
+      const player = available.find((p) => p.id === playerId);
+      if (!player) throw new Error("Shared player access was saved, but the profile could not be loaded. Reload CourtIQ to restore the player. Do not create a duplicate.");
+      if (!alive.current) return;
+      setPlayerProfile(player);
+      setNeedsProfile(false);
+    } catch (err) {
+      if (alive.current) setError(inviteAccepted
+        ? "The invitation was accepted, but CourtIQ could not load the saved player yet. Reload CourtIQ; do not create a duplicate profile."
+        : err?.message || "The invitation could not be accepted. Ask the original account for a new private code.");
+    } finally {
+      inFlight.current = false;
+      if (alive.current) setLoading(false);
+    }
+  };
+
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
@@ -101,8 +136,39 @@ export default function ProfileSetup() {
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <div style={{ marginBottom: 8 }}><Icon name="hand" size={40} color="#FF6B35" /></div>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--color-text)", margin: 0 }}>Who are you tracking?</h1>
-        <p style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 6 }}>Parents: create your child&apos;s player profile first. Add more athletes from Family Mode anytime.</p>
+        <p style={{ fontSize: 13, color: "var(--color-text-sec)", marginTop: 6 }}>Create a new player, or join an existing player shared by another parent to keep their saved games and stats.</p>
       </div>
+
+      <section style={{ width: "100%", maxWidth: 400, marginBottom: 16, boxSizing: "border-box", padding: 18,
+        borderRadius: 16, border: "1px solid var(--color-border)", background: "var(--color-card)" }}>
+        <button type="button" disabled={loading} aria-expanded={showJoin}
+          aria-controls="join-existing-player-form"
+          onClick={() => { setShowJoin(value => !value); setError(""); }}
+          style={{ width: "100%", border: 0, background: "transparent", color: "var(--color-accent)",
+            fontSize: 15, fontWeight: 800, textAlign: "left", minHeight: 44, cursor: "pointer" }}>
+          Already have a player with saved games? Join existing player
+        </button>
+        {showJoin && <form id="join-existing-player-form" onSubmit={handleJoin}
+          style={{ display: "grid", gap: 12, marginTop: 10 }}>
+          <p style={{ fontSize: 12, color: "var(--color-text-sec)", lineHeight: 1.6, margin: 0 }}>
+            Sign in to the original CourtIQ account, open Family, select the player
+            and choose Invite another parent. Enter that one-time code here.
+            This will share the same saved game history without creating another player.
+          </p>
+          <label htmlFor="existing-player-code" style={{ color: "var(--color-text)", fontSize: 13, fontWeight: 700 }}>
+            Private invitation code
+          </label>
+          <input id="existing-player-code" autoComplete="off" spellCheck="false"
+            value={joinCode} disabled={loading} maxLength={51}
+            onChange={e => { setJoinCode(e.target.value.trim()); setError(""); }}
+            placeholder="CI-…" style={inputStyle} required />
+          <button type="submit" disabled={loading || !joinCode.trim()}
+            style={{ padding: "13px 16px", background: "var(--color-accent)", border: 0,
+              color: "#fff", borderRadius: 12, fontWeight: 800, minHeight: 48 }}>
+            {loading ? "Linking securely…" : "Join existing player"}
+          </button>
+        </form>}
+      </section>
 
       <div style={{
         width: "100%",
