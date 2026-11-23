@@ -28,7 +28,7 @@ test('saved-stats recovery checks only current signed-in account and opens real 
   assert.match(JSON.stringify(h.output),/chrisdavism@gmail.com/);
   await button(h.output,'Find my saved games').props.onClick();await h.settle();
   const html=JSON.stringify(h.output);
-  assert.match(html,/2 shot entries/);assert.match(html,/1 shot entries/);
+  assert.match(html,/Caleb/);assert.match(html,/Jaxon/);
   assert.deepEqual(calls,[['players','owner-1'],['history','caleb-1'],['history','jaxon-2']]);
   const openButtons=[];
   const walk=node=>{
@@ -38,6 +38,18 @@ test('saved-stats recovery checks only current signed-in account and opens real 
     walk(node.props?.children);
   };
   walk(h.output);assert.equal(openButtons.length,2);
+  const counts=[];
+  const collect=node=>{
+    if(Array.isArray(node))return node.forEach(collect);
+    if(!node || typeof node!=='object')return;
+    const parts=node.props?.children;
+    if(node.type==='span' && Array.isArray(parts) &&
+      parts.some(item=>typeof item==='string'&&item.includes('shot entries')))
+      counts.push(parts.at(-2));
+    collect(parts);
+  };
+  collect(h.output);
+  assert.deepEqual(counts,[2,1]);
   await openButtons[1].props.onClick();await h.settle();
   assert.deepEqual(calls.at(-1),['switch','jaxon-2']);
   assert.deepEqual(nav,['gamelog']);
