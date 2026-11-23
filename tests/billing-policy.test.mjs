@@ -91,6 +91,19 @@ test('eligible first-time accounts can start a seven-day card-on-file Checkout s
   assert.equal(checkout.line_items[0].price, 'price_pm');
   assert.equal(h.calls.at(-1)[0], 'finishCheckout');
 });
+test('prices must match approved CourtIQ rates and optional Stripe Tax is enabled only when configured', async () => {
+  const h = harness();
+  h.prices.price_pm.unit_amount = 499;
+  await assert.rejects(h.service.catalog(),/configured CourtIQ price/);
+  assert.equal(h.calls.some(call => call[0] === 'checkout'), false);
+  const withTax = harness();
+  withTax.stripe.subscriptions.list = async()=>({data:[],has_more:false});
+  const taxedService=createBillingService({config:{...config,automaticTax:true},stripe:withTax.stripe,store:withTax.store});
+  await taxedService.checkout({id:owner,email:'fixture@example.test'},body,{status:'eligible'});
+  assert.deepEqual(withTax.calls.find(call=>call[0]==='checkout')[1].automatic_tax,{enabled:true});
+  assert.equal(billingConfig(env).automaticTax,false);
+  assert.equal(billingConfig({...env,COURTIQ_STRIPE_AUTOMATIC_TAX_ENABLED:'true'}).automaticTax,true);
+});
 test('an eligible account with earlier provider subscriptions cannot silently pay full price instead of the promised free trial', async () => {
   const h = harness();
   await assert.rejects(h.service.checkout({ id: owner, email: 'fixture@example.test' }, body, { status: 'eligible' }), /first-time subscribers/);
