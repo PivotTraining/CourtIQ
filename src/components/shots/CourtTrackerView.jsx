@@ -168,9 +168,9 @@ export default function CourtTrackerView({ sessionType, shots, gameStats, update
               {lastShot && <p className="tracker-shot-ack" role="status" aria-live="polite">{lastShot}</p>}
               <div className="tracker-free-throw-actions" role="group" aria-label="One-tap free throws">
                 <span>Free throws</span>
-                <div>
-                  <button type="button" className="tracker-result" data-tone="green" disabled={busy} onClick={() => logFreeThrow(true)}><Icon name="check" size={18} />Made FT</button>
-                  <button type="button" className="tracker-result" data-tone="red" disabled={busy} onClick={() => logFreeThrow(false)}><Icon name="x" size={18} />Missed FT</button>
+                <div className="tracker-free-throw-buttons">
+                  <button type="button" className="tracker-result" data-tone="green" aria-label="Record a made free throw" disabled={busy} onClick={() => logFreeThrow(true)}><Icon name="check" size={18} />Made FT</button>
+                  <button type="button" className="tracker-result" data-tone="red" aria-label="Record a missed free throw" disabled={busy} onClick={() => logFreeThrow(false)}><Icon name="x" size={18} />Missed FT</button>
                 </div>
               </div>
             </div>
