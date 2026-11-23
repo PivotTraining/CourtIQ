@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import RecordsUnavailable from "@/components/ui/RecordsUnavailable";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from '@/context/AuthContext';
+import FirstGameGuide from './FirstGameGuide';
 import { fetchSessionHistory } from "@/lib/queries";
 import { computeSkillRatings } from "@/lib/intelligence";
 import { computeBadges } from "@/lib/badges";
@@ -39,8 +41,9 @@ function ratingTier(overall = 0) {
   return { label: "Rookie", color: "#8B5CF6" };
 }
 
-export default function HomeDashboard() {
+export default function HomeDashboard({ onStartGame = () => {}, onSelectPlayer = () => {} }) {
   const { setScreen, player, playerId, journalEntries, loading } = useApp();
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [ratings, setRatings] = useState(null);
   const [badges, setBadges] = useState(null);
@@ -48,8 +51,10 @@ export default function HomeDashboard() {
   const [prescription, setPrescription] = useState(null);
   const [showRatingInfo, setShowRatingInfo] = useState(false);
   const [historyError, setHistoryError] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
 
   useEffect(() => {
+    setHistoryReady(false);
     if (!playerId) return;
 
     let active = true;
@@ -58,13 +63,14 @@ export default function HomeDashboard() {
         if (!active) return;
         const computedRatings = history.length ? computeSkillRatings(history) : null;
         setSessions(history);
+        setHistoryReady(true);
         setRatings(computedRatings);
         setBadges(history.length ? computeBadges(history, player?.streak || 0, journalEntries.length) : null);
         setNextMove(computeNextMove(history, computedRatings));
         setPrescription(buildTrainingPrescription({ sessions: history, ratings: computedRatings, drills: DRILL_BANK, age: player?.age }));
       })
       .catch(() => {
-        if (active) setHistoryError(true);
+        if (active) { setHistoryError(true); setHistoryReady(true); }
       });
 
     return () => {
@@ -91,6 +97,9 @@ export default function HomeDashboard() {
       <div style={{ textAlign: "center", padding: "4px 0" }}>
         <BrandLogo width={280} />
       </div>
+      <FirstGameGuide accountId={user?.id} hasSessions={hasSessions} historyReady={historyReady}
+        hasPlayer={!!playerId} onStartGame={onStartGame} onSelectPlayer={onSelectPlayer}
+        onOpenGames={() => setScreen('gamelog')} />
 
       {player && (
         <section style={{

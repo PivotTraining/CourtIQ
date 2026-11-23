@@ -65,10 +65,17 @@ export function createDeviceVideoStore(factory=globalThis.indexedDB) {
       clipKey(accountId,sessionId);validateClip(blob);
       const id=JSON.stringify([accountId,sessionId,'segment',crypto.randomUUID()]);
       return transaction('readwrite',(store,done,fail)=>{
-        const request=store.getAll();
+        // A short auto-save occurs repeatedly during long games; avoid loading
+        // every previous video blob into a giant getAll() array on iOS.
+        let used=0;
+        const request=store.openCursor();
         request.onsuccess=()=>{
-          const used=request.result.filter(row=>row.accountId===accountId)
-            .reduce((sum,row)=>sum+row.blob.size,0);
+          const cursor=request.result;
+          if(cursor){
+            if(cursor.value.accountId===accountId)used+=cursor.value.blob?.size||0;
+            cursor.continue();
+            return;
+          }
           if(used+blob.size>MAX_ACCOUNT_VIDEO_BYTES){
             fail(new Error('The 250 MB account video storage limit was reached. Download or delete old clips first.'));
             return;

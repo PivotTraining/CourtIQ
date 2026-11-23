@@ -103,7 +103,7 @@ export default function Shell() {
 
   const renderScreen = () => {
     switch (displayScreen) {
-      case "home": return <HomeDashboard />;
+      case "home": return <HomeDashboard onStartGame={() => setShowLogger(true)} onSelectPlayer={() => setShowSwitcher(true)} />;
       case "train":
       case "gametime": return <TrainScreen />;
       case "skills": return <SkillsScreen />;
@@ -120,7 +120,7 @@ export default function Shell() {
       case "settings": return <SettingsScreen onEditProfile={() => setShowProfile(true)} onManagePlayers={() => setShowSwitcher(true)} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />;
       case "film": return <FilmLab />;
       case "developmentProfile": return <DevelopmentProfile />;
-      default: return <HomeDashboard />;
+      default: return <HomeDashboard onStartGame={() => setShowLogger(true)} onSelectPlayer={() => setShowSwitcher(true)} />;
     }
   };
 

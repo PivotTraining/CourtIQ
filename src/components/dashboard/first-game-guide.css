@@ -1,0 +1,16 @@
+.first-game-guide{border:1px solid var(--color-border);border-radius:18px;padding:16px;background:var(--color-card);color:var(--color-text);box-shadow:var(--shadow-card)}
+.first-game-guide-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.first-game-guide-eyebrow{font-size:10px;letter-spacing:.12em;font-weight:800;color:var(--color-accent)}
+.first-game-guide h2{font-size:17px;line-height:1.3;margin:5px 0 0;font-weight:850}
+.first-game-guide button{border:1px solid var(--color-border);border-radius:11px;padding:10px 12px;min-height:44px;background:var(--color-muted);color:var(--color-text);font-size:12px;font-weight:800;cursor:pointer}
+.first-game-guide button:focus-visible{outline:3px solid var(--color-accent);outline-offset:2px}
+.first-game-guide-intro{font-size:13px;color:var(--color-text-sec);line-height:1.5;margin:12px 0}
+.first-game-guide ol{padding:0;margin:0;display:grid;gap:8px;list-style:none}
+.first-game-guide li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--color-border);background:var(--color-muted);padding:12px;border-radius:12px}
+.first-game-guide li>span{font-size:13px;font-weight:900;color:var(--color-accent);flex-shrink:0}
+.first-game-guide li strong{font-size:13px;font-weight:800}
+.first-game-guide li p{font-size:12px;line-height:1.5;color:var(--color-text-sec);margin:5px 0 0}
+.first-game-guide-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.first-game-guide .first-game-guide-primary{background:var(--color-accent);color:white;border-color:var(--color-accent)}
+.first-game-guide-footnote{font-size:11px;line-height:1.5;color:var(--color-text-sec);margin:12px 0 0}
+@media(max-width:390px){.first-game-guide{padding:12px}.first-game-guide-heading button{width:100%}.first-game-guide-actions button{flex:1 1 44%}}
