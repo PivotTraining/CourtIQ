@@ -10,7 +10,8 @@ test('live Gametime defaults to compact visible totals and an expandable tools p
  assert.match(tracker,/\{conflict&&<div className="tracker-merge-controls"/);
  assert.match(tracker,/setToolOpen\(true\)/);
  assert.match(view,/tracker-shot-options/);
- assert.match(view,/\['ast','reb','stl','to'\]/);
+ assert.match(view,/STAT_INPUTS\.map\(stat => <button/);
+ assert.match(view, /\{ key: 'blk', label: 'Block'/);
  assert.match(view,/Free throws/);
  assert.match(view,/Keep location/);
  assert.match(view,/Shot chart/);
