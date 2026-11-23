@@ -24,7 +24,7 @@ export function createBillingService({ stripe, store, config }) {
     const portal = await stripe.billingPortal.configurations.retrieve(config.portal);
     const allowedProducts = new Set(entries.map(([, price]) => id(price.product)));
     const updates = portal.features?.subscription_update;
-    if (portal.livemode !== false || !portal.active || !portal.features?.subscription_cancel?.enabled || portal.features.subscription_cancel.mode !== 'at_period_end' ||
+    if (portal.livemode !== !!config.livemode || !portal.active || !portal.features?.subscription_cancel?.enabled || portal.features.subscription_cancel.mode !== 'at_period_end' ||
         (updates?.enabled && (!Array.isArray(updates.products) || !updates.products.length || updates.products.some(product =>
           !allowedProducts.has(product.product) || !Array.isArray(product.prices) || !product.prices.length || product.prices.some(price => !Object.values(config.prices).includes(price))))))
       throw new BillingError('CourtIQ-only billing management could not be verified.', 503);
@@ -44,12 +44,12 @@ export function createBillingService({ stripe, store, config }) {
       if (!account?.customer_id) {
         const customer = await stripe.customers.create({ email: user.email, metadata: { app: 'courtiq' } },
           { idempotencyKey: `courtiq:customer:${user.id}` });
-        if (customer.livemode !== false || !/^cus_/.test(customer.id)) throw new BillingError('Test customer could not be verified.', 503);
+        if (customer.livemode !== !!config.livemode || !/^cus_/.test(customer.id)) throw new BillingError('CourtIQ billing customer could not be verified.', 503);
         await store.bindCustomer(user.id, customer.id);
         account = { customer_id: customer.id };
       }
       const customer = await stripe.customers.retrieve(account.customer_id);
-      if (customer.deleted || customer.livemode !== false || customer.metadata?.app !== 'courtiq')
+      if (customer.deleted || customer.livemode !== !!config.livemode || customer.metadata?.app !== 'courtiq')
         throw new BillingError('CourtIQ customer could not be verified.', 503);
       const promoEligible = isCheckoutPromoEligible(trial);
       // A verified eligible account can use the promotion only if this CourtIQ
@@ -71,7 +71,7 @@ export function createBillingService({ stripe, store, config }) {
         success_url: `${config.origin}/billing?checkout=returned`, cancel_url: `${config.origin}/billing?checkout=canceled` },
       { idempotencyKey: `courtiq:checkout:${user.id}:${claim.request_id}` });
       const url = providerUrl(session.url, 'checkout');
-      if (session.livemode !== false || id(session.customer) !== account.customer_id) throw new BillingError('Test checkout could not be verified.', 503);
+      if (session.livemode !== !!config.livemode || id(session.customer) !== account.customer_id) throw new BillingError('Test checkout could not be verified.', 503);
       await store.finishCheckout(user.id, claim.request_id, session.id, url);
       return { url };
     } catch (error) {
@@ -84,7 +84,7 @@ export function createBillingService({ stripe, store, config }) {
     const account = await store.account(owner);
     if (!account?.customer_id) throw new BillingError('No CourtIQ billing account exists yet.', 404);
     const customer = await stripe.customers.retrieve(account.customer_id);
-    if (customer.deleted || customer.livemode !== false || customer.metadata?.app !== 'courtiq') throw new BillingError('CourtIQ customer could not be verified.', 503);
+    if (customer.deleted || customer.livemode !== !!config.livemode || customer.metadata?.app !== 'courtiq') throw new BillingError('CourtIQ customer could not be verified.', 503);
     const session = await stripe.billingPortal.sessions.create({ customer: account.customer_id,
       configuration: config.portal, return_url: `${config.origin}/billing` });
     return { url: providerUrl(session.url, 'portal') };
@@ -111,7 +111,7 @@ export function createBillingService({ stripe, store, config }) {
     }
   }
   async function webhook(event) {
-    if (event.livemode !== false || (event.account && event.account !== config.account) || !supportedEvents.has(event.type))
+    if (event.livemode !== !!config.livemode || (event.account && event.account !== config.account) || !supportedEvents.has(event.type))
       return { received: true, ignored: true };
     const object = event.data?.object;
     let subscriptionId, customerId = id(object?.customer);
@@ -130,7 +130,7 @@ export function createBillingService({ stripe, store, config }) {
     if (!account?.customer_id) return { received: true, noSubscription: true };
     return synchronize(`reconcile_${randomUUID()}`, 'reconcile', account.customer_id, async () => {
       const customer = await stripe.customers.retrieve(account.customer_id);
-      if (customer.id !== account.customer_id || customer.deleted || customer.livemode !== false || customer.metadata?.app !== 'courtiq')
+      if (customer.id !== account.customer_id || customer.deleted || customer.livemode !== !!config.livemode || customer.metadata?.app !== 'courtiq')
         throw new BillingError('CourtIQ customer needs billing review.', 422);
       const subscriptions = [];
       let cursor;
