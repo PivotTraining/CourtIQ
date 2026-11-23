@@ -1,20 +1,22 @@
 name: One-time CourtIQ lockfile refresh for patched dependencies
 
 on:
-  push:
+  pull_request:
     branches:
-      - security/repair-npm-audit-20261122
+      - main
 
 permissions:
   contents: write
 
 jobs:
   refresh-lock:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'security/repair-npm-audit-20261122' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
