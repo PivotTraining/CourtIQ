@@ -1,0 +1,70 @@
+name: CourtIQ Public Site Smoke Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: court-iq-read-only-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-site-smoke:
+    name: Public Pages, App Routes, API Guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Check live app and marketing site without user credentials
+        run: node scripts/smoke-site.mjs
+        env:
+          SMOKE_APP_URL: https://app.getcourtiq.com
+          SMOKE_MARKETING_URL: https://getcourtiq.com
+
+  tracker-browser-smoke:
+    name: Free Throw UI — Mobile & Desktop Browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install app and temporary Playwright browser driver
+        run: |
+          npm ci
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.56.1
+      - name: Ensure Chrome is available
+        run: |
+          if command -v google-chrome >/dev/null; then
+            echo "SMOKE_CHROME_CHANNEL=chrome" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+            echo "SMOKE_CHROME_CHANNEL=chromium" >> "$GITHUB_ENV"
+          fi
+      - name: Start isolated sample game preview (never production auth)
+        run: |
+          COURTIQ_LOCAL_PREVIEW=true NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=sample-only npm run dev -- --hostname 127.0.0.1 --port 3334 >/tmp/courtiq-sample.log 2>&1 &
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:3334/dev/tracker >/dev/null; then
+              echo "Local sample tracker is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          tail -n 100 /tmp/courtiq-sample.log
+          exit 1
+      - name: Check actual browser FT layout and independent made/missed saves
+        run: node scripts/smoke-tracker-browser.mjs
+        env:
+          SMOKE_LOCAL_PREVIEW_URL: http://127.0.0.1:3334/dev/tracker

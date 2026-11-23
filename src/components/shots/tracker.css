@@ -47,7 +47,8 @@ html.dark .tracker-zone[aria-pressed="true"] { border-color: #ffbc78; box-shadow
 .tracker-controls { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .tracker-shot-actions p { margin: 0 0 6px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; font-size: 12px; font-weight: 750; }
 .tracker-shot-actions p span { color: var(--color-text-sec); font-weight: 500; font-size: 10px; }
-.tracker-shot-actions > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* Only the button rows use two columns. The enclosing FT card must stack its heading above the buttons. */
+.tracker-shot-actions > .tracker-shot-mode, .tracker-free-throw-actions > .tracker-free-throw-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .stat-tracker [data-tone="green"] { --stat-tone: var(--stat-green); }
 .stat-tracker [data-tone="red"] { --stat-tone: var(--stat-red); }
 .stat-tracker [data-tone="amber"] { --stat-tone: var(--stat-amber); }
@@ -140,7 +141,7 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
   .tracker-stat-grid.compact .tracker-stat-input {
     min-height: 60px; flex-direction: row; flex-wrap: nowrap; gap: 5px;
   }
-  .tracker-shot-actions > div { gap: 6px; }
+  .tracker-shot-actions > .tracker-shot-mode, .tracker-free-throw-actions > .tracker-free-throw-buttons { gap: 6px; }
   .tracker-result { min-height: 44px; }
   .tracker-controls { gap: 8px; }
   .tracker-recovery-tools { margin: 3px auto 10px; }
@@ -261,7 +262,9 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
 .tracker-shot-mode button:focus-visible, .tracker-zone:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
 .tracker-shot-instruction { color: var(--color-text-sec); font-size: 12px; line-height: 1.5; margin: 0 0 8px !important; }
 .tracker-zone[data-last-recorded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb,var(--color-accent) 55%,transparent); z-index: 2; }
-.tracker-free-throw-actions { padding: 10px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-muted); }
-.tracker-free-throw-actions > span { display: block; font-size: 11px; font-weight: 850; color: var(--color-text-sec); margin-bottom: 7px; }
-.tracker-free-throw-actions > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.tracker-free-throw-actions { display: block; width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-muted); }
+.tracker-free-throw-actions > span { display: block; font-size: 12px; font-weight: 850; color: var(--color-text-sec); margin-bottom: 10px; }
+.tracker-free-throw-actions > .tracker-free-throw-buttons { width: 100%; min-width: 0; }
+.tracker-free-throw-buttons > .tracker-result { width: 100%; min-width: 0; min-height: 52px; padding: 8px 10px; white-space: nowrap; touch-action: manipulation; font-size: 13px !important; gap: 5px; }
+@media (max-width: 359px) { .tracker-free-throw-actions { padding: 9px; } .tracker-free-throw-buttons > .tracker-result { font-size: 12px !important; gap: 3px; padding: 7px 5px; } }
 .tracker-shot-ack { margin: 3px 0 8px !important; padding: 8px 10px; border-radius: 10px; font-size: 12px; line-height: 1.35; background: var(--color-muted); border: 1px solid var(--color-border); color: var(--color-text); }
