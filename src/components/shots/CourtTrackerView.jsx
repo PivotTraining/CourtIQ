@@ -35,14 +35,16 @@ export function StatInputs({ stats, updateStat, busy, compact = false }) {
   </div>;
 }
 
-export default function CourtTrackerView({ sessionType, shots, selectedZone, selectZone, gameStats, updateStat,
+export default function CourtTrackerView({ sessionType, shots, gameStats, updateStat,
   saving, ending, saveError, tab, setTab, darkMode, onToggleTheme, courtTheme, setCourtTheme,
-  undoCount, undoLast, endSession, logShot, logFreeThrow, ticker, videoDock,
+  undoCount, undoLast, endSession, logShotAtZone, logFreeThrow, ticker, videoDock,
   period=1,setPeriod=()=>{},clock='00:00',setClock=()=>{},
   gameContext={},onEditGame=()=>{},endLabel = 'End session', headerTitle }) {
   const busy = saving || ending;
-  const selected = COURT_ZONES.find(zone => zone.id === selectedZone);
   const [lastStat, setLastStat] = useState('');
+  const [shotMode, setShotMode] = useState('made');
+  const [lastShot, setLastShot] = useState('');
+  const [lastShotZone, setLastShotZone] = useState(null);
   // Confirm the precise stat the app accepted locally; never claim cloud sync
   // while a game command may still be pending.
   const recordStat = (key, delta, label) => {
@@ -50,6 +52,18 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
     const accepted = updateStat(key, delta);
     if (accepted === true) setLastStat(`${label} ${delta > 0 ? '+1' : '−1'} added to this game`);
     return accepted;
+  };
+  const recordCourtShot = zone => {
+    if (busy) return;
+    // Durable device state is written by the tracker entry() function before
+    // it returns true. A tap alone is the shot event, never a zone selection.
+    const accepted = logShotAtZone?.(zone.id, shotMode === 'made');
+    if (accepted === true) {
+      setLastShotZone(zone.id);
+      setLastShot(`${shotMode === 'made' ? 'Made' : 'Missed'} ${zone.pts}-point attempt recorded · ${zone.label}`);
+    } else {
+      setLastShot('Shot not recorded. Please tap the location again.');
+    }
   };
   const dialogRef = useRef(null);
   useEffect(() => {
@@ -124,8 +138,8 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
                 const attempts = shots.filter(shot => shot.zone_id === zone.id);
                 const made = attempts.filter(shot => shot.made).length;
                 const [x, y] = TOUCH_POSITIONS[zone.id] || [zone.x, zone.y];
-                return <button key={zone.id} className="tracker-zone" aria-label={`${zone.label}, ${zone.pts} points, ${made} made of ${attempts.length}`} aria-pressed={selectedZone === zone.id}
-                  disabled={busy} onClick={() => selectZone(zone.id)}
+                return <button key={zone.id} type="button" className="tracker-zone" aria-label={`${zone.label}, ${zone.pts} points, ${made} made of ${attempts.length}; tap to record a ${shotMode === 'made' ? 'made' : 'missed'} shot`}
+                  data-last-recorded={lastShotZone === zone.id} disabled={busy} onClick={() => recordCourtShot(zone)}
                   style={{ left: `${x}%`, top: `${y}%`, ...(attempts.length ? { background: getHeatColor(made / attempts.length * 100) } : {}) }}>
                   {attempts.length ? `${made}/${attempts.length}` : zone.pts === 3 ? '3' : '2'}
                 </button>;
@@ -133,27 +147,37 @@ export default function CourtTrackerView({ sessionType, shots, selectedZone, sel
             </div>
             <div className="tracker-location-row">
               <p className="tracker-location-feedback" role="status" aria-live="polite">
-                {selected ? `Selected: ${selected.label} · ${selected.pts}PT` : 'Tap a court spot to select the shot location'}
+                {`Tap a court spot once to record a ${shotMode === 'made' ? 'made' : 'missed'} shot`}
               </p>
               <button type="button" aria-label="Change court surface" title="Change court surface" onClick={() => setCourtTheme(courtTheme === 'tan' ? 'gray' : 'tan')} className="tracker-surface-button"><Icon name="paint" size={18} /></button>
             </div>
           </section>
           <section className="tracker-controls" aria-label="Stat inputs">
             <div className="tracker-shot-actions">
-              <div className="tracker-quick-zone-controls">
-                <button className={selectedZone===null?'tracker-free-throw-active':''} type="button" disabled={busy} onClick={()=>selectZone(null)}>Free throws</button>
- 
+              <p className="tracker-shot-instruction">Choose the result, then tap the court once. Each tap records one attempt.</p>
+              <div className="tracker-shot-mode" role="group" aria-label="Shot result for next court tap">
+                <button type="button" data-shot-mode="made" data-tone="green" aria-pressed={shotMode === 'made'}
+                  disabled={busy} onClick={() => {setShotMode('made');setLastShot('');}}>
+                  <Icon name="check" size={17} /> Made
+                </button>
+                <button type="button" data-shot-mode="missed" data-tone="red" aria-pressed={shotMode === 'missed'}
+                  disabled={busy} onClick={() => {setShotMode('missed');setLastShot('');}}>
+                  <Icon name="x" size={17} /> Missed
+                </button>
               </div>
-              <p>{selected ? `${selected.label} · ${selected.pts}PT` : 'Free throws'}<span>{saving ? 'Saving…' : 'Tap a court spot, then Made or Missed'}</span></p>
-              <div>
-                <button className="tracker-result" data-tone="green" disabled={busy} onClick={() => selected ? logShot(true) : logFreeThrow(true)}><Icon name="check" size={18} />{selected ? 'Made' : 'Made FT'}</button>
-                <button className="tracker-result" data-tone="red" disabled={busy} onClick={() => selected ? logShot(false) : logFreeThrow(false)}><Icon name="x" size={18} />{selected ? 'Missed' : 'Missed FT'}</button>
+              {lastShot && <p className="tracker-shot-ack" role="status" aria-live="polite">{lastShot}</p>}
+              <div className="tracker-free-throw-actions" role="group" aria-label="One-tap free throws">
+                <span>Free throws</span>
+                <div>
+                  <button type="button" className="tracker-result" data-tone="green" disabled={busy} onClick={() => logFreeThrow(true)}><Icon name="check" size={18} />Made FT</button>
+                  <button type="button" className="tracker-result" data-tone="red" disabled={busy} onClick={() => logFreeThrow(false)}><Icon name="x" size={18} />Missed FT</button>
+                </div>
               </div>
             </div>
             <p className="tracker-stat-label">Live stats · Tap to add one</p>
             <StatInputs stats={gameStats} updateStat={recordStat} busy={busy} compact />
             {lastStat && <p className="tracker-stat-ack" role="status" aria-live="polite">{lastStat}</p>}
-            <p className="tracker-hint tracker-tracking-tip">Tap a spot on the court, then Made or Missed. The location stays selected for the next shot until you tap another spot or Free throws. Undo fixes your last entry.</p>
+            <p className="tracker-hint tracker-tracking-tip">Made is the default. Switch to Missed to record misses with one tap per attempt. The mode stays active until changed. Free throws have separate one-tap buttons. Undo reverses the last entry.</p>
           </section>
         </div> : <section className="tracker-boxscore" aria-label="Player box score inputs">
           <h2>Player box score</h2>
