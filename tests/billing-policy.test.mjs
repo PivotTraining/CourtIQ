@@ -43,7 +43,7 @@ test('live payments need separate release approval, correct key, signed webhook 
   const candidate={...env,COURTIQ_BILLING_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture_only'};
   assert.throws(()=>billingConfig(candidate),/approved Stripe credentials/);
   assert.throws(()=>billingConfig({...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true'}),/approved Stripe credentials/);
-  const approved={...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true',STRIPE_WEBHOOK_SECRET:'whsec_fixture_only',
+  const approved={...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true',STRIPE_COURTIQ_WEBHOOK_SECRET:'whsec_fixture_only',
     COURTIQ_APP_URL:'https://app.getcourtiq.com'};
   const validated=billingConfig(approved);
   assert.equal(validated.mode,'live');
