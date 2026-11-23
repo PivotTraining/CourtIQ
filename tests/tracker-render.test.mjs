@@ -82,9 +82,9 @@ test('every stat button sends its own exact stat key, never a neighboring one', 
   }
   assert.deepEqual(received, expected.map(([key,label])=>[key,1,label]));
   const compact = StatInputs({stats, busy:false, compact:true, updateStat:()=>true});
-  for(const key of ['ast','reb','stl','to'])
+  for(const key of ['ast','reb','stl','blk','to','pf'])
     assert.ok(findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']===key));
-  assert.equal(findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']==='blk'),null);
+  assert.ok(findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']==='blk'),'Block must remain visible while logging shots');
   const steal=findElement(compact,node=>node.type==='button'&&node.props?.['data-stat-key']==='stl');
   assert.equal(steal.props.children[0].props.name,'hand','Steal must never appear locked');
   assert.equal(steal.props.children[1].props.children,'Steal');
@@ -172,4 +172,15 @@ test('filming and stat court share workspace without blocking shot selection in 
   assert.match(recordingCss,/\.tracker-workspace-video > \.game-video-dock\s*\{[^}]*max-height: clamp\(118px, 23dvh, 178px\)/);
   assert.match(recordingCss,/\.game-video-live-controls \.game-video-camera\s*\{[^}]*height: clamp\(76px, 12dvh, 104px\)/);
   assert.match(recordingCss,/\.game-video-camera\[hidden\]\{display:none!important\}/);
+});
+
+
+test('Block is directly available alongside all six named live stats in Shot chart mode',()=>{
+  const html=render(Tracker,{...props,tab:'court'});
+  for(const [key,label] of [['ast','assist'],['reb','rebound'],['stl','steal'],['blk','block'],['to','turnover'],['pf','foul']]){
+    assert.match(html,new RegExp('data-stat-key="'+key+'"'));
+    assert.match(html,new RegExp('Add '+label+', current count 0'));
+  }
+  assert.match(html,/Live stats/);
+  assert.doesNotMatch(html,/aria-label="Add block[^"]*"[^>]*disabled/);
 });
