@@ -1,6 +1,27 @@
 # CourtIQ seven-day card-on-file trial — release checklist
 
-**Status: NOT LIVE.** This PR prepares an opt-in subscription promotion; it must not be merged and production billing must not be enabled before the items below are verified.
+**Status: SUBSCRIPTION CHARGES DISABLED.** This branch safely stages opt-in subscription code. It may be merged only with live billing activation gates disabled; do not enable production billing until all remaining prerequisites pass.
+
+## Completed implementation and production checks — November 22, 2026
+
+- Found and verified the original CourtIQ player's account under signed-in owner RLS: 2 players, 12 sessions and 94 recorded shots; all remain accessible and were not altered.
+- Production subscription foundation and paid-trialing migrations installed in dependency order after a successful transactional dry run. Database tables and service-only billing RPC grants verified; **billing policy.enabled=false**, **enforce_access=false**, zero newly created subscriptions. Existing records unaffected.
+- Ohio (OH) Stripe Tax registration active. Independent CourtIQ Player and Coach live products and $9 / $79 / $29 / $249 recurring prices are configured. Existing CourtIQ $4.99 recurring product unchanged.
+- Dedicated CourtIQ live billing portal allows payment method updates and cancellation at period end; Vercel production portal/price IDs and automatic-tax flag staged.
+- Dedicated Stripe webhook **disabled** until launch, with its signing secret stored as an encrypted production-only variable. All other Pivot webhooks are unchanged.
+- Patched Next.js and dependency security audit merged to main with zero vulnerabilities; latest CI for this branch passes lint, tests, build, and security audit. An end-to-end real Stripe test-mode checkout, signed event processing, trial expiration, payment failure and cancellation verification is still required.
+- Public Terms page updated to describe the seven-day card-on-file trial, automatic renewal, exact prices, taxes, and cancellation instructions. Keep COURTIQ_BILLING_ENABLED=false and COURTIQ_LIVE_BILLING_APPROVED=false until full release checks pass.
+
+## Remaining manual/secure prerequisites
+
+1. Provision a **least-privilege Stripe live secret or restricted key** directly in Vercel production as `STRIPE_SECRET_KEY`. This cannot be retrieved or generated from the connected Stripe tools. Do not paste the secret into any chat or code repository.
+2. Provision CourtIQ's Supabase server service-role key directly in Vercel production as `SUPABASE_SERVICE_ROLE_KEY`; never expose it with a NEXT_PUBLIC prefix. The connected Supabase project tools do not expose this secret.
+3. Run Stripe **test-mode end-to-end** Checkout using an isolated test account/test products/test webhook secret and test database or safe fixture. Validate signed and duplicate/reordered events, successful charge after day seven, payment failure, and cancellation before conversion.
+4. Confirm trial-ending reminder emails and all required customer notices in the Stripe Dashboard: https://docs.stripe.com/billing/subscriptions/trials/manage-trial-compliance
+5. Verify production user authorization, privacy and billing access gating with separate real accounts; independently enable the CourtIQ webhook only after the server endpoint is live with valid keys and test verification.
+6. Finally set billing policy and rollout gates only when all remaining checks pass; watch logs and event delivery.
+
+
 
 ## Approved offer to confirm before launch
 
