@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createDeviceVideoStore, validateClip } from '@/lib/deviceVideo.mjs';
-import { createRecordingCollector, supportedRecordingType, FORM_IQ_RECORD_MAX_MS } from '@/lib/formIqRecording.mjs';
+import { createRecordingCollector, supportedRecordingType } from '@/lib/formIqRecording.mjs';
 import { downloadBlob } from '@/lib/browserDownload.mjs';
 import FamilyCloudVideo from './FamilyCloudVideo';
 import './game-tracker-recorder.css';
@@ -10,7 +10,9 @@ import './game-tracker-recorder.css';
 // A parent/coach films from the same phone that is logging stats. Media is
 // device-only, silent, and separate from the authoritative game-stat events.
 const STORE = createDeviceVideoStore;
-const RECORDING_LIMIT_SECONDS = FORM_IQ_RECORD_MAX_MS / 1000;
+// Stop, persist, then restart frequently. This protects earlier footage if iOS
+// Safari later suspends a camera tab before a long recording can be finalized.
+const RECORDING_LIMIT_SECONDS = 30;
 const explain = cause => {
   if(cause?.name==='NotAllowedError')return 'Camera permission was denied. Allow camera access in your browser settings.';
   if(cause?.name==='NotFoundError')return 'No camera was found on this device.';
@@ -206,21 +208,24 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
         recorderRef.current=null;
         const continueAfterSave=autoContinueRef.current;
         autoContinueRef.current=false;
-        if(!aliveRef.current)return;
-        setState('saving');savingRef.current=true;
-        setInfo('Finishing game clip…');
+        // Persist even if the tracker unmounted while the last recording was
+        // stopping. State updates must be skipped after unmount, not the write.
+        if(aliveRef.current)setState('saving');
+        savingRef.current=true;
+        if(aliveRef.current)setInfo('Saving this game clip to this device…');
         let retainedClip=false;
         try{
           const blob=collector.finish(rec.mimeType||type);
           validateClip(blob);
           pendingMetaRef.current={recordedAt,endedAt:new Date().toISOString()};
-          setPending(blob); // retained if IndexedDB quota prevents attaching
+          if(aliveRef.current)setPending(blob); // retained if IndexedDB quota prevents attaching
           retainedClip=true;
+          // The IndexedDB transaction commits before UI reports that a clip is saved.
           const stored=await storeRef.current.putSegment(accountId,sessionId,blob,pendingMetaRef.current);
           if(!aliveRef.current||ownerRef.current!==JSON.stringify([accountId,sessionId]))return;
           setSaved(stored);setClips(existing=>[...existing,stored]);
           setPending(null);pendingMetaRef.current=null;retainedClip=false;
-          setInfo('Game clip saved locally. '+(continueAfterSave?'Starting next clip…':'Review and download a backup.'));
+          setInfo('Saved on this device. '+(continueAfterSave?'Recording the next 30-second clip…':'Play or download a backup below.'));
           setError('');
         }catch(cause){
           if(aliveRef.current)setError('Game video could not be stored: '+explain(cause)+' The finished clip is kept in this open tab; download it before leaving.');
@@ -235,8 +240,9 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
           }
         }
       };
-      // Recording is bounded to four minutes. Avoid the repeating one-second
-      // chunk encoding overhead that can stall iOS while logging game stats.
+      // Each self-contained 30-second recording is saved to IndexedDB before the
+      // next one starts. Don't store raw MediaRecorder timeslices as independent
+      // files: Safari doesn't guarantee they can play separately.
       rec.start();
       recorderRef.current=rec;
       setSeconds(0);setState('recording');markBusy(true);
@@ -245,7 +251,7 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
         const elapsed=Math.floor((performance.now()-started)/1000);
         setSeconds(elapsed);
         if(elapsed>=RECORDING_LIMIT_SECONDS){
-          setInfo('Four-minute segment complete. Saving clip and automatically continuing when storage succeeds.');
+          setInfo('30 seconds recorded. Saving locally before the next clip starts…');
           stopRecording(true);
         }
       },1000);
@@ -317,6 +323,7 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
       <div><strong>GAME VIDEO</strong><span>{playerName||'Your player'} · {clips.length} saved {clips.length===1?'clip':'clips'}</span></div>
       <span className={recording?'game-video-live':''} role="status">{recording?'● REC '+elapsed:state==='saving'?'Saving clip…':cameraRef.current?'● CAMERA ON':'Camera off'}</span>
     </div>
+    <p className="game-video-save-guidance">Record clips save automatically to <strong>this device</strong> about every 30 seconds. The red REC timer confirms filming. Download important footage to Files or Photos for a separate backup.</p>
     <div className="game-video-actions">
       <label className="game-video-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} disabled={recording||state==='saving'}/> Filming permission confirmed</label>
 
@@ -351,7 +358,7 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
           onClick={()=>{stopCamera();setVisible(false);}}>Close camera</button>}
       </div>
     </details>
-    {clips.length>0&&<details className="game-video-saved"><summary>Review game footage · {clips.length} saved {clips.length===1?'clip':'clips'}</summary>
+    {clips.length>0&&<details className="game-video-saved" open><summary>Saved on this device · {clips.length} {clips.length===1?'clip':'clips'} · Tap to review or download</summary>
       <label className="game-video-clip-select">Selected clip
         <select value={saved?.id||''} onChange={event=>setSaved(clips.find(item=>item.id===event.target.value)||null)}>
           {clips.map((clip,index)=><option key={clip.id} value={clip.id}>Clip {index+1} · {new Date(clip.recordedAt||clip.savedAt).toLocaleTimeString()} · {(clip.blob.size/1048576).toFixed(1)} MB</option>)}
@@ -385,7 +392,7 @@ export default function GameTrackerRecorder({ accountId, playerId, sessionId, pl
     {info&&<p className="game-video-info" role="status">{info}</p>}
     <details className="game-video-info-details">
       <summary>Recording limits &amp; privacy</summary>
-      <p className="game-video-note">Video is silent and stored only on this device. Clips are up to four minutes and 100 MB each, with a 250 MB account limit. The next clip starts after the previous clip saves. Download important game film for backup. Footage is not cloud-synced and never automatically changes statistics.</p>
+      <p className="game-video-note">Video is silent and saved on this browser/device in about 30-second segments, up to 100 MB each, with a 250 MB account limit. Filming continues only after the previous clip saves. The last incomplete segment can still be lost if the device or browser crashes. Clips are not automatically stored in Photos, Files or the cloud: download important footage for a separate backup. Recorded video never changes game statistics.</p>
     </details>
   </section>;
 }
