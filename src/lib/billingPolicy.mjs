@@ -23,7 +23,7 @@ export function billingConfig(env = process.env) {
   const live = mode === 'live';
   if (live) {
     if (env.COURTIQ_LIVE_BILLING_APPROVED !== 'true' || !/^sk_live_/.test(env.STRIPE_SECRET_KEY ?? '') ||
-      !/^whsec_/.test(env.STRIPE_WEBHOOK_SECRET ?? ''))
+      !/^whsec_/.test(env.STRIPE_COURTIQ_WEBHOOK_SECRET ?? ''))
       throw new BillingError('Live billing requires separately approved Stripe credentials, webhook verification and launch checks.', 503);
   } else if (mode !== 'test' || !/^(rk|sk)_test_/.test(env.STRIPE_SECRET_KEY ?? '')) {
     throw new BillingError('A verified Stripe test environment is required.', 503);
