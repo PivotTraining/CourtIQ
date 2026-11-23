@@ -245,3 +245,11 @@ html.dark .tracker-result, html.dark .tracker-stat-input { border-color: color-m
   }
   .tracker-workspace-video .tracker-court { width: min(100%, 300px); }
 }
+
+/* Six first-class live stat actions; Blocks no longer require Box Score tab. */
+.tracker-stat-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tracker-stat-grid.compact .tracker-stat-input{min-height:50px;flex-wrap:nowrap;justify-content:space-between;gap:6px;padding:8px 10px;touch-action:manipulation}
+.tracker-stat-grid.compact .tracker-stat-input span{font-size:12px;line-height:1.15;overflow-wrap:anywhere}
+.tracker-stat-grid.compact .tracker-stat-input strong{margin-left:auto;font-size:16px;font-variant-numeric:tabular-nums}
+.tracker-stat-label{font-size:11px;font-weight:800;color:var(--color-text-sec);margin:6px 0 0}
+@media(min-width:680px) and (orientation:landscape){.tracker-stat-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr))}}
