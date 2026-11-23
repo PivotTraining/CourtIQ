@@ -39,6 +39,21 @@ test('billing configuration rejects live keys, unsafe returns and duplicated pri
   assert.throws(() => sameOrigin(new Request('http://localhost:4312/api/billing/checkout', { headers: { origin: 'https://foreign.test' } }), config), /CourtIQ/);
   assert.throws(() => providerUrl('https://checkout.stripe.com.evil.test/pay', 'checkout'));
 });
+test('live payments need separate release approval, correct key, signed webhook configuration, and verified HTTPS app host', () => {
+  const candidate={...env,COURTIQ_BILLING_MODE:'live',STRIPE_SECRET_KEY:'sk_live_fixture_only'};
+  assert.throws(()=>billingConfig(candidate),/approved Stripe credentials/);
+  assert.throws(()=>billingConfig({...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true'}),/approved Stripe credentials/);
+  const approved={...candidate,COURTIQ_LIVE_BILLING_APPROVED:'true',STRIPE_WEBHOOK_SECRET:'whsec_fixture_only',
+    COURTIQ_APP_URL:'https://app.getcourtiq.com'};
+  const validated=billingConfig(approved);
+  assert.equal(validated.mode,'live');
+  assert.equal(validated.livemode,true);
+  assert.throws(()=>billingConfig({...approved,COURTIQ_APP_URL:'https://example.test'}),/verified CourtIQ application/);
+  assert.throws(()=>billingConfig({...approved,STRIPE_SECRET_KEY:'sk_test_fixture'}),/approved Stripe credentials/);
+  assert.equal(isCheckoutPromoEligible({status:'unavailable'}),true);
+  assert.equal(isCheckoutPromoEligible({status:'active'}),false);
+  assert.equal(isCheckoutPromoEligible({status:'expired'}),false);
+});
 test('checkout requires explicit matching consent, price and a known plan, and refuses client customer/account/access fields', () => {
   assert.equal(checkoutChoice(body, config).price, 'price_pm');
   for (const changes of [{ consent: false }, { termsVersion: 'old' }, { plan: '__proto__' }, { customer: 'cus_other' }, { owner }, { access: 'coach' }, { amount: 0 }, { currency: 'gbp' }])
