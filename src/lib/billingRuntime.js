@@ -72,5 +72,5 @@ export async function billingStatus(client) {
   const { config, service } = billingRuntime(), catalog = await service.catalog();
   const plans = Object.fromEntries(Object.entries(BILLING_PLANS).map(([key, plan]) => [key, { ...plan,
     month: catalog[`${key}:month`].unit_amount, year: catalog[`${key}:year`].unit_amount }]));
-  return { ...state, trialAvailable, checkoutAvailable: true, mode: 'test', termsVersion: config.termsVersion, plans, proposed: false };
+  return { ...state, trialAvailable, checkoutAvailable: true, mode: config.mode, termsVersion: config.termsVersion, plans, proposed: false };
 }
