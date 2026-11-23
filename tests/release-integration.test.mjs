@@ -45,8 +45,8 @@ test('reviewed lint-only replacement retains all 21 Next rules and their severit
   for (const [names, severity] of [[errors, 2], [warnings, 1]])
     for (const name of names) assert.equal(config.rules[`@next/next/${name}`][0], severity, name);
   const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url)));
-  assert.equal(pkg.dependencies.next, '15.5.28'); // Security-patched Next.js release
-  assert.equal(pkg.devDependencies['eslint-config-next'], '15.5.27');
+  assert.equal(pkg.dependencies.next, '15.5.29'); // Security-patched Next.js release
+  assert.equal(pkg.devDependencies['eslint-config-next'], '15.5.29');
 });
 
 test('actual lint configuration still detects async client components and synchronous scripts', async () => {
@@ -65,7 +65,7 @@ test('compatibility wrapper preserves ancestor-based duplicate-Head checks under
 test('reviewed directory matcher retains explicit and globbed Next root-directory discovery', () => {
   const require = createRequire(import.meta.url);
   const { getRootDirs } = require(join(dirname(require.resolve('@next/eslint-plugin-next')), 'utils/get-root-dirs.js'));
-  const context = { getCwd: () => process.cwd(), settings: {} };
+  const context = { cwd: process.cwd(), getCwd: () => process.cwd(), settings: {} };
   assert.deepEqual(getRootDirs(context), [process.cwd()]);
   const exact = getRootDirs({ ...context, settings: { next: { rootDir: process.cwd() } } });
   assert.ok(exact.some(path => path.replace(/\/$/, '') === process.cwd()));
