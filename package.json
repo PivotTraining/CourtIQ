@@ -31,8 +31,10 @@
       "postcss": "8.5.28"
     },
     "dompurify": "3.4.17",
-    "minimatch": "11.0.9",
-    "glob": "14.0.6"
+    "glob": "14.0.6",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.9"
+    }
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
