@@ -4,8 +4,9 @@ import {readFile} from 'node:fs/promises';
 import {loadComponent, reactHarness, findElement} from './helpers/reactHarness.mjs';
 import * as recording from '../src/lib/formIqRecording.mjs';
 
-async function fixture({saved=null, fail=false, recorderSupported=true, neverPlay=false, pendingCamera=false}={}) {
-  const h=reactHarness(), writes=[],busy=[],downloads=[],stopped=[];
+async function fixture({saved=null, fail=false, recorderSupported=true, neverPlay=false, pendingCamera=false, deferredStop=false}={}) {
+  const h=reactHarness(), writes=[],busy=[],downloads=[],stopped=[],deferred=[];
+  let fakeTime=100, tick=null;
   let allowCamera;
   const waitForCamera=new Promise(resolve=>{allowCamera=resolve;});
   const stream={getTracks(){return [{stop(){stopped.push('camera');}}];}};
@@ -18,8 +19,11 @@ async function fixture({saved=null, fail=false, recorderSupported=true, neverPla
     requestData(){}
     stop(){
       this.state='inactive';
-      this.ondataavailable?.({data:new Blob(['recorded-game'],{type:'video/mp4'})});
-      this.onstop?.();
+      const finish=()=>{
+        this.ondataavailable?.({data:new Blob(['recorded-game'],{type:'video/mp4'})});
+        this.onstop?.();
+      };
+      if(deferredStop)deferred.push(finish);else finish();
     }
   }
   const store={
@@ -50,8 +54,8 @@ async function fixture({saved=null, fail=false, recorderSupported=true, neverPla
         return pendingCamera?waitForCamera:stream;
       }}},
       MediaRecorder:Recorder,
-      Blob,performance:{now:()=>100},
-      setInterval:()=>1,clearInterval:()=>{},setTimeout:()=>2,clearTimeout:()=>{},
+      Blob,performance:{now:()=>fakeTime},
+      setInterval:callback=>{tick=callback;return 1;},clearInterval:()=>{},setTimeout:()=>2,clearTimeout:()=>{},
       URL:{createObjectURL:()=> 'blob:game-video',revokeObjectURL(){}},
       document:{hidden:false,addEventListener(){},removeEventListener(){}},
       window:{confirm:()=>true},
@@ -66,7 +70,10 @@ async function fixture({saved=null, fail=false, recorderSupported=true, neverPla
   consent.props.onChange({target:{checked:true}});h.flush();
   const button=label=>findElement(h.output,node=>node.type==='button' &&
     [node.props.children].flat(Infinity).join('')===label);
-  return {h,button,stream,video,writes,busy,downloads,stopped,allowCamera};
+  return {h,button,stream,video,writes,busy,downloads,stopped,allowCamera,
+    advanceSeconds(value){fakeTime+=value*1000;tick?.();},
+    completeDeferredStops(){const callbacks=deferred.splice(0);callbacks.forEach(run=>run());},
+  };
 }
 
 test('in-game recording opens visible preview and captures silent clip while tracking session stays open',async()=>{
@@ -220,4 +227,36 @@ test('live game recording continues with video preview hidden so the court can f
   await f.h.settle();
   assert.equal(f.writes.length,1,'video still saves after preview was temporarily hidden');
   f.h.unmount();
+});
+
+
+test('recording automatically saves a complete local clip every 30 seconds and resumes recording',async()=>{
+  const f=await fixture();
+  await f.button('● Record game').props.onClick();await f.h.settle();
+  f.advanceSeconds(30);
+  await f.h.settle();
+  assert.equal(f.writes.length,1,'the first 30 seconds are committed without pressing Stop');
+  assert.ok(f.button('■ Stop & save clip'),'filming resumes after device save');
+  f.button('■ Stop & save clip').props.onClick();await f.h.settle();
+  assert.equal(f.writes.length,2,'second saved clip remains separate');
+  f.h.unmount();
+});
+
+test('recording stopped by leaving the tracker still persists its last completed segment',async()=>{
+  const f=await fixture({deferredStop:true});
+  await f.button('● Record game').props.onClick();await f.h.settle();
+  f.h.unmount();
+  f.completeDeferredStops();
+  await Promise.resolve();await Promise.resolve();await Promise.resolve();
+  assert.equal(f.writes.length,1,'local write must outlive the React recorder view');
+  assert.deepEqual(f.writes[0].slice(0,2),['parent-1','session-1']);
+});
+
+test('game-film UI explains automatic device saves, download backup and visible saved clips',async()=>{
+  const file=await readFile(new URL('../src/components/shots/GameTrackerRecorder.jsx',import.meta.url),'utf8');
+  assert.match(file,/const RECORDING_LIMIT_SECONDS = 30/);
+  assert.match(file,/about every 30 seconds/);
+  assert.match(file,/game-video-saved" open/);
+  assert.match(file,/Download selected clip backup/);
+  assert.doesNotMatch(file,/if\(!aliveRef\.current\)return;\s*setState\('saving'\)/);
 });
